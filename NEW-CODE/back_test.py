@@ -24,7 +24,7 @@ class CustomError(Exception):
         self.message = message
         super().__init__(self.message)
 
-# class Cunstom
+
 class stratified:
     def __init__(self,factor_frame,factor_name,buydays,selldays,bins_num=5,plot=True):
         self.factor_frame=tools.clean_data(factor_frame)
