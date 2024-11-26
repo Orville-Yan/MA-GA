@@ -18,7 +18,21 @@ class TypeF(torch.int):
 
 class TypeG(torch.float32):
     pass
+    
+def change_name(formula_list,substitute_list):
+    renamed_individual_code = []
+    renamed_individual_str = []
+    for individual in formula_list:
+        for i,node in enumerate(individual):
+            if isinstance(node,gp.Terminal) and node.name.startswith('ARG'):
+                arg_index = int(node.name[3:])
+                new_name = substitute_list[arg_index]
+                individual[i]=gp.Terminal(new_name, node.ret, node.value)
 
+        renamed_individual_code.append(individual)
+        renamed_individual_str.append(str(individual))
+    return renamed_individual_code,renamed_individual_str
+    
 class Tree:
     def __init__(self, root):
         self.root = root
