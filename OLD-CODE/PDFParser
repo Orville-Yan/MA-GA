@@ -1,0 +1,154 @@
+from pathlib import Path
+from openai import OpenAI
+import json
+
+pdf_path="C:\\Users\\74989\\Desktop\\【东吴金工 专题精品】“求索动量因子”系列研究（二）：交易者结构对动量因子的改进.pdf"
+api_key=api_key
+
+client = OpenAI(
+    api_key = api_key,
+    base_url = "https://api.moonshot.cn/v1",
+)
+file_object = client.files.create(file=Path(pdf_path), purpose="file-extract")
+file_content = client.files.content(file_id=file_object.id).text
+messages = [
+    {
+        "role": "system",
+        "content": "你是 Kimi，擅长根据客户的提示从文本中抽取客户需要的内容",
+    },
+    {
+        "role": "system",
+        "content": file_content,
+    },
+    {
+        "role": "user",
+        "content": "你只需要关注文章中涉及到因子构造的部分"
+     },
+    {
+        "role":"user",
+        "content":'首先你要判断作者在构造因子的时候用到了什么数据'
+    },
+    {
+        "role":"user",
+        "content":'其次请你给出123....的次序，告诉我它都对这些数据做了哪些处理。'
+    },
+    
+]
+completion = client.chat.completions.create(
+  model="moonshot-v1-32k",
+  messages=messages,
+  temperature=0.3,)
+op_info={
+    'ts_pctchg':
+        {'input_parameters':
+            {
+            'tensor':'shape=(day_len,num_stock),只允许输入这一个变量',
+            },
+        'output':
+            {
+            'tensor':'shape=(day_len,num_stock)',
+            'description':'计算当日值相较于昨日值的涨跌幅,(tensor-tensor.shift(1))/tensor'
+            },
+    },
+    'Mask_max':
+        {'input_parameters':
+            {
+            'parameters1：tensor':'shape=(day_len,num_stock)',
+            'parameters2：rolling_days':'int'
+            },
+        'output':
+            {
+            'output1：mask_tensor':'shape=(day_len,num_stock,rolling_days)',
+            'description':'对于输入的tensor，用torch做unfold rolling_days，找到最大的1/5,将其标注为True，其余为False'
+            },
+    },
+    'ts_mask_mean':
+        {'input_parameters':
+            {
+                'parameters1：tensor':'shape=(day_len,num_stock)',
+                'parameters2：mask':'shape=(day_len,num_stock,rolling_days)'
+            },
+        'output':
+            {
+            'output1:tensor':'shape=(day_len,num_stock)',
+            'description':'先将tensor做unfold成和mask一样的shape，然后对于mask中为True的部分求平均'
+            },
+        }
+}
+data_info={
+    'open':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日开盘价'
+    },
+    'close':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日收盘价'
+    },
+    'high':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日最高价'
+    },
+    'low':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日最低价'
+    },
+    'volume':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日成交额'
+    },
+    'small':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日散户成交额占所有成交额的比重'
+    },
+    'mid':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日中户成交额占所有成交额的比重'
+    },
+    'big':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日大户成交额占所有成交额的比重'
+    },
+    'superbig':{
+        'shape':'(day_len,num_stock)',
+        'description':'当日机构成交额占所有成交额的比重'
+    },
+}
+op_info = json.dumps(op_info, ensure_ascii=False, indent=4)
+data_info=json.dumps(data_info, ensure_ascii=False, indent=4)
+way={'step1':'你现在有以下这些算子'+op_info,'step2':'你还有以下的数据'+data_info,'step3':'请你判断你需要用到什么数据和什么算子','step4':'请你按照研报总结中的因子数据处理步骤构建逆波兰表达式'}
+way=json.dumps(way, ensure_ascii=False, indent=4)
+previous_message=[
+    {
+        'role':'system','content':'在之前你已经对一份研报做出了正确的总结，接下去你要继续在assistant的引导下，完成user的任务'
+    },
+    {
+        'role':'system','content':'对研报的总结如下'+completion.choices[0].message.content
+    },
+    {
+        'role':'user','content':'希望你利用正确的算子给出small_MOMpart5因子的逆波兰表达式'
+    },
+    {
+        'role':'assistant','content':'你现在有以下这些算子'+op_info
+    },
+    {
+        'role':'assistant','content':'你还有以下的数据'+data_info
+    },
+    {
+        'role':'assistant','content':'请你按照研报总结中的因子数据处理步骤构建逆波兰表达式'
+    },
+]
+response = client.chat.completions.create(
+  model="moonshot-v1-32k",
+  messages=previous_message,
+  temperature=0.3,
+)
+previous_message1=[
+    {'role':'system','content':'在之前的消息中，你已经将研报中对因子构造过程做出了拆解，并给出了因子表达式'},
+    {'role':'system','content':response.choices[0].message.content},
+    {'role':'user','content':'你只要给我逆波兰表达式就够了'}
+]
+response1= client.chat.completions.create(
+  model="moonshot-v1-32k",
+  messages=previous_message1,
+  temperature=0.3,
+)
