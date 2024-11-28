@@ -20,7 +20,7 @@ class OP_G:
 
 class OP_Basic:
     def __init__(self):
-        self.func_list = []
+        self.func_list = ["nanmean","nanstd","corrwith","rank_corrwith","multi_regress","regress"]
     def nanmean(self,tensor,dim=-1):
         return torch.nansum(tensor, dim=dim) / torch.sum(~torch.isnan(tensor), dim=dim)
 
