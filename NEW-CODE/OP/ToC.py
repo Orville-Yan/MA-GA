@@ -1,6 +1,6 @@
 import torch
 
-class ToC():
+class op_AF2C:
     def __init__(self): 
         self.func_list = ["Dmask_min", "Dmask_max", "Dmask_middle", "Dmask_mean_plus_std", "Dmask_mean_sub_std"]
 
