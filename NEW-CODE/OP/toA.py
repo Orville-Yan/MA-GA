@@ -1,5 +1,7 @@
 import torch
 
+OPclass_name_2A=['OP_A2A',....]  
+
 class op_A2A:
     def __init__(self):
         self.func_list=['at_abs','cs_rank','cs_scale','cs_zscore','cs_harmonic_mean','cs_demean','cs_winsor']
