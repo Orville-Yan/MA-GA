@@ -3,19 +3,25 @@ OPclass_name_others=['OP_Closure','OP_Basic']
 class OP_Closure:
     def __init__(self):
         self.func_list = ["id_industry","id_int","id_float"]
+    @staticmethod
     def id_industry(industry):
         return industry
+    @staticmethod
     def id_int(int):
         return int
+    @staticmethod
     def id_float(thresh):
         return thresh
     
 class OP_Basic:
     def __init__(self):
         self.func_list = ["nanmean","nanstd","corrwith","rank_corrwith","multi_regress","regress"]
+
+    @staticmethod
     def nanmean(self,tensor,dim=-1):
         return torch.nansum(tensor, dim=dim) / torch.sum(~torch.isnan(tensor), dim=dim)
 
+    @staticmethod
     def nanstd(self,x,dim=-1):
         mean = self.nanmean(x, dim=dim)
         centered_tensor = (x - mean.unsqueeze(dim))
@@ -24,6 +30,7 @@ class OP_Basic:
         n = torch.sum(~torch.isnan(x), dim=dim)
         return torch.sqrt(var / n-1)
 
+    @staticmethod
     def corrwith(self,tensor1,tensor2,dim=-1):
         mask = ~(torch.isnan(tensor1) | torch.isnan(tensor2))
         tensor1 = torch.where(mask, tensor1, float('nan'))
@@ -39,6 +46,7 @@ class OP_Basic:
         correlation = covariance / (tensor1_std * tensor2_std)
         return correlation
 
+    @staticmethod
     def rank_corrwith(self,tensor1,tensor2,dim=-1):
         nan_mask = torch.isnan(tensor1) | torch.isnan(tensor2)
         tensor1 = tensor1.masked_fill(nan_mask, float('nan'))
@@ -58,7 +66,7 @@ class OP_Basic:
         correlation = covariance / (tensor1_std * tensor2_std)
         return correlation
 
-
+    @staticmethod
     def multi_regress(self,y, x_s, dim=-1):
         down_epsilon = 1e-10
         up_epsilon = 1e20
@@ -86,5 +94,6 @@ class OP_Basic:
         res = torch.where(abs(res) < down_epsilon, 0, res)
         return k, b, res
 
+    @staticmethod
     def regress(self,y, x_s, dim=-1):
         return self.multi_regress(y, x_s.unsqueeze(-1), dim=dim)
