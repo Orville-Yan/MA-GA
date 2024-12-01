@@ -127,7 +127,7 @@ class OP_BA2D:
         day_expanded = day_expanded.permute(1, 0, 2)
         mask = day_expanded > m_tensor
         return mask
-class OP_BF2D():
+class OP_BF2D:
     def __init__(self):
         self.func_list = [
         'Mmask_rolling_plus', 
@@ -150,7 +150,7 @@ class OP_BF2D():
         d_min_mean = OP_BD2A.D_Minute_area_mean(m_tensor, OP_B2D.Mmask_min(m_tensor))
         result = OP_BA2D.Mmask_day_sub(m_tensor, OP_AF2A.ts_min(d_min_mean, lookback))
         return result
-class OP_DD2D():
+class OP_DD2D:
     def __init__(self):
         self.func_list = [
         'Mmask_and', 
