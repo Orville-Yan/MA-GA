@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Nov 29 19:38:28 2024
-
-@author: 朱培元
-"""
 import torch
 
 class op_B2B:
