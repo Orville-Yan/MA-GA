@@ -237,7 +237,7 @@ class op_BF2B: # B*F-B
             'M_ts_std_right_neighbor',
             'M_ts_product_left_neighbor',
             'M_ts_product_mid_neighbor',
-            'M_ts_product_right_neighbor',
+            'M_ts_product_right_neighbor'
 
         ]  # B*F-B
     @staticmethod
