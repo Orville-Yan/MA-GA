@@ -9,11 +9,11 @@ class OP_B2D:
         'Mmask_min_to_max', 
         'Mmask_mean_plus_std', 
         'Mmask_mean_sub_std',
-        'Mmask_1h_after_OPen(x)',
-        'Mmask_1h_before_close(x)',
-        'Mmask_2h_middle(x)',
-        'Mmask_morning(x)',
-        'Mmask_afternoon(x)',
+        'Mmask_1h_after_open',
+        'Mmask_1h_before_close',
+        'Mmask_2h_middle',
+        'Mmask_morning',
+        'Mmask_afternoon',
         ]
     
     @staticmethod
@@ -76,7 +76,7 @@ class OP_B2D:
         x_zscore = (x - x_mean) / x_std
         mask = x_zscore < 1
         return mask
-    def Mmask_1h_after_OPen(x):
+    def Mmask_1h_after_open(x):
         """
         功能简介: 取开盘后的第1个小时
         """
