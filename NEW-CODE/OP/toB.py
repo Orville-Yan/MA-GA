@@ -220,7 +220,7 @@ class OP_BG2B: #B*G-B
         return torch.where((M_tensor <= 0.3) | (M_tensor >= 0.7), M_tensor.flip(dims=[-1]), flipped)
 
 
-class op_BF2B: # B*F-B
+class OP_BF2B: # B*F-B
     def __init__(self):
         self.func_list = [
             'M_ts_delta',
