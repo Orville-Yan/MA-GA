@@ -1,6 +1,6 @@
 import torch
-
-class op_B2B:
+OPclass_name_2A=['OP_B2B',....]  
+class OP_B2B:
     def __init__(self):
         self.func_list=['ignore_wobble','cs_rank','cs_scale','cs_zscore','at_abs','cs_demean','cs_winsor','ts_pctchg']
     @staticmethod
