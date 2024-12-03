@@ -1,9 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Nov 29 19:38:28 2024
 
-@author: 朱培元
-"""
+
 import torch
 from Others import OP_Basic
 OPclass_name_2B=['OP_B2B','OP_BB2B','OP_BA2B','OP_BG2B',
