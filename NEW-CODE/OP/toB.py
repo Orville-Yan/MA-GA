@@ -201,7 +201,7 @@ class OP_BB2B:
     
 class OP_BA2B: #B*A-B
     def __init__(self):
-        self.variable1_func_list = ['M_toD_standard']  # B*A-B
+        self.func_list = ['M_toD_standard']  # B*A-B
 
 
     @staticmethod
@@ -212,7 +212,7 @@ class OP_BA2B: #B*A-B
 
 class OP_BG2B: #B*G-B
     def __init__(self):
-        self.variable2_func_list = ['M_cs_edge_flip']  # B*G-B
+        self.func_list = ['M_cs_edge_flip']  # B*G-B
 
     @staticmethod
     def M_cs_edge_flip(M_tensor, thresh):
@@ -220,38 +220,65 @@ class OP_BG2B: #B*G-B
         return torch.where((M_tensor <= 0.3) | (M_tensor >= 0.7), M_tensor.flip(dims=[-1]), flipped)
 
 
-class OP_BF2B: # B*F-B
+class op_BF2B: # B*F-B
     def __init__(self):
-        self.variable3_func_list = [
+        self.func_list = [
             'M_ts_delta',
-            'M_ts_mean_xx_neighbor',
-            'M_ts_std_xx_neighbor',
-            'M_ts_product_xx_neighbor'
+            'M_ts_mean_left_neighbor',
+            'M_ts_mean_mid_neighbor',
+            'M_ts_mean_right_neighbor',
+            'M_ts_std_left_neighbor',
+            'M_ts_std_mid_neighbor',
+            'M_ts_std_right_neighbor',
+            'M_ts_product_left_neighbor',
+            'M_ts_product_mid_neighbor',
+            'M_ts_product_right_neighbor',
+
         ]  # B*F-B
     @staticmethod
     def M_ts_delta(m_tensor, lookback):
         return m_tensor - m_tensor.roll(lookback, dims=-1)
 
     @staticmethod
-    def M_ts_mean_xx_neighbor(m_tensor, neighbor_range, orit):
-        if orit == 0:
-            return m_tensor.mean(dim=-1)
-        else:
-            rolled = m_tensor.roll(orit * neighbor_range, dims=-1)
-            return rolled.mean(dim=-1)
+    def M_ts_mean_left_neighbor(m_tensor, neighbor_range):
+        rolled = m_tensor.roll(-1 * neighbor_range, dims=-1)
+        return rolled.mean(dim=-1)
 
     @staticmethod
-    def M_ts_std_xx_neighbor(m_tensor, neighbor_range, orit):
-        if orit == 0:
-            return m_tensor.std(dim=-1)
-        else:
-            rolled = m_tensor.roll(orit * neighbor_range, dims=-1)
-            return rolled.std(dim=-1)
+    def M_ts_mean_mid_neighbor(m_tensor, neighbor_range):
+        return m_tensor.mean(dim=-1)
 
     @staticmethod
-    def M_ts_product_xx_neighbor(m_tensor, neighbor_range, orit):
-        if orit == 0:
-            return torch.prod(m_tensor, dim=-1)
-        else:
-            rolled = m_tensor.roll(orit * neighbor_range, dims=-1)
-            return torch.prod(rolled, dim=-1)
+    def M_ts_mean_right_neighbor(m_tensor, neighbor_range):
+        rolled = m_tensor.roll(neighbor_range, dims=-1)
+        return rolled.mean(dim=-1)
+
+    @staticmethod
+    def M_ts_std_left_neighbor(m_tensor, neighbor_range):
+        rolled = m_tensor.roll(-1 * neighbor_range, dims=-1)
+        return rolled.std(dim=-1)
+
+    @staticmethod
+    def M_ts_std_mid_neighbor(m_tensor, neighbor_range):
+        return m_tensor.std(dim=-1)
+
+    @staticmethod
+    def M_ts_std_right_neighbor(m_tensor, neighbor_range):
+        rolled = m_tensor.roll(neighbor_range, dims=-1)
+        return rolled.std(dim=-1)
+
+    @staticmethod
+    def M_ts_product_left_neighbor(m_tensor, neighbor_range):
+        rolled = m_tensor.roll(-1 * neighbor_range, dims=-1)
+        return torch.prod(rolled, dim=-1)
+
+    @staticmethod
+    def M_ts_product_mid_neighbor(m_tensor, neighbor_range):
+        return torch.prod(m_tensor, dim=-1)
+
+
+    @staticmethod
+    def M_ts_product_right_neighbor(m_tensor, neighbor_range):
+        rolled = m_tensor.roll(neighbor_range, dims=-1)
+        return torch.prod(rolled, dim=-1)
+
