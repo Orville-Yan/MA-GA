@@ -1,6 +1,14 @@
 import torch
 from deap import gp,base,creator,tools
 
+seed_name = [
+    'M_ts_mean_right_neighbor','M_O','M_C','M_ts_mean_left_neighbor'
+]
+class CustomError(Exception):
+    def __init__(self, message="发生了自定义错误"):
+        self.message = message
+        super().__init__(self.message)
+        
 class TypeA(torch.Tensor):
     pass
 
@@ -25,6 +33,7 @@ class TypeG(torch.Tensor):
     def __new__(cls,*args,**kwargs):
         return super(TypeF,cls).__new__(cls,*args,dtype=torch.float32,**kwargs)
     pass
+
     
 def change_name(formula_list,substitute_list):
     renamed_individual_code = []
@@ -41,50 +50,111 @@ def change_name(formula_list,substitute_list):
     return renamed_individual_code,renamed_individual_str
     
 class Tree:
-    def __init__(self, deap_formula_str_list, pset) -> None:
+    def __init__(self, root):
+        
+        if not isinstance(root,gp.Primitive):
+            raise CustomError('Build Tree without a root!')
+        self.root = root
+        self.name = root.name
+        self.node = []
+        self.node_name = []
+        self.roots = ""
+        self.seed = []
+
+    def get_node(self, node):
+        if isinstance(node, Tree):
+            self.node.append(node)
+            self.node_name.append(node.root.name)
+        else:
+            self.node.append(node)
+            self.node_name.append(node.name)
+            
+    def get_root(self):
+        if len(self.node) == 0:
+            raise CustomError(f'Something went wrong when building the tree with root {self.name}')
+        output = f"{self.name}"
+        output += '('
+        for i, node in enumerate(self.node):
+            if isinstance(node,Tree):
+                output += node.get_root()
+            else:
+                output += node.name
+            if i < len(self.node) - 1:
+                output += ', '
+            # else:
+        output +=')'
+        self.roots = output
+        return output
+    
+    def get_seed(self):
+        if len(self.node) == 0:
+            raise CustomError(f'Something went wrong when building the tree with root {self.name}')
+        self.seed = []
+        flag = True if self.root.name in seed_name else False
+        for i, node in enumerate(self.node):
+            if isinstance(node,Tree):
+                # if node.root.name in seed_name:
+                seed = node.get_seed()
+                self.seed.extend(seed)
+                # else:
+                #     flag = False
+                #     seed = node.get_seed()
+                #     self.seed.extend(seed)
+            else:
+                self.seed.append(node.name)
+        if flag:
+            self.seed.append(self.get_root())
+        return self.seed
+            
+    
+class Treebuilder: 
+    def __init__(self,deap_formula_str_list,pset) -> None:
         self.deap_formula_str_list = deap_formula_str_list
         self.deap_formula_code_list = [gp.PrimitiveTree.from_string(k, pset) for k in deap_formula_str_list]
+        self.feature_names = [[node.name for node in self.deap_formula_code_list[k]] for k in range(len(deap_formula_str_list))]
         self.pset = pset
-        self.Tree_Structure = None
-        self.seed = {}
-        self.root = {}
-        self.Tree = {}
-        
-    def get_Tree_Structure(self):
-        self.Tree_Structure = {}
-        self.seed = {}
-        self.root = {}
-        self.Tree = {}
-
-        for i, tree in enumerate(self.deap_formula_code_list):
-            tree_structure, _ = self.split_tree(tree)
-            self.Tree_Structure[i] = tree_structure
-            self.seed[i] = str(tree)
-            self.root[i] = tree_structure[0].name
-            self.Tree[i] = self.build_tree(tree_structure)
-
-    def split_tree(self, tree):
-        if isinstance(tree, gp.PrimitiveTree):
-            root = tree[0]
-            children = []
-            start_index = 1
-            for _ in range(root.arity):
-                child_tree, end_index = self.split_tree(tree[start_index:])
-                children.append(child_tree)
-                start_index = end_index
-            return (root, children), start_index
-        else:
-            return tree, 1
-
-    def build_tree(self, tree_structure):
-        if isinstance(tree_structure, tuple):
-            root, children = tree_structure
-            subtree = [root]
-            for child in children:
-                subtree.extend(self.build_tree(child))
-            return subtree
-        else:
-            return [tree_structure]
+        pass
+           
+    def get_tree(self,x):
+        root_cache = []
+        terminals = [0]
+        root_terminals = []
+        output = ''
+        for i, node in enumerate(self.deap_formula_code_list[x]):
+            if i == 0 & isinstance(node, gp.Primitive):
+                output += node.name + '('
+                ode = Tree(node)
+                root_terminals.append(ode)
+                root_cache.append(ode)
+                terminals.append(node.arity)
+                continue
+            if isinstance(node, gp.Primitive):
+                terminals.append(node.arity)
+                ode = Tree(node)
+                root_terminals[-1].get_node(ode)
+                root_terminals.append(ode)
+                root_cache.append(ode)
+                output += node.name + '('
+            else:
+                if isinstance(node, gp.Terminal):
+                    output += self.feature_names[x][i]
+                    
+                elif isinstance(node, int):
+                    if self.feature_names is None:
+                        output += self.feature_names[x][i]
+                else:
+                    output += self.feature_names[x][i]
+                root_terminals[-1].get_node(node)
+                terminals[-1] -= 1
+                while terminals[-1] == 0:
+                    terminals.pop()
+                    terminals[-1] -= 1
+                    root_terminals.pop()
+                    output += ')'
+                if i != len(self.deap_formula_code_list[x]) - 1:
+                    output += ', '
+        self.output = output
+        self.root_cache = root_cache
             
 deap_formula_str_list = [
     "at_div(M_ts_mean_left_neighbor(M_O, 5, -1), M_ts_mean_right_neighbor(M_C, 10, 1))",
@@ -98,62 +168,9 @@ pset.addPrimitive(lambda x, y, z: f"M_ts_mean_right_neighbor({x}, {y}, {z})", [T
 pset.addTerminal("M_O", TypeB)
 pset.addTerminal("M_C", TypeB)
 
-tree = Tree(deap_formula_str_list, pset)
-tree.get_Tree_Structure()
+builder = Treebuilder(deap_formula_str_list,pset)
+builder.get_tree(0)
+# print(output)
+print('Seed:',builder.root_cache[1].get_seed())
+print('Root:',builder.root_cache[0].get_root())
 
-print("Seed:", tree.seed)
-print("Root:", tree.root)
-print("Tree:", tree.Tree)
-print("Tree_Structure:", tree.Tree_Structure)
-
-# class Correction:
-#     def __init__(self, deap_formula_str_list, pset):
-#         self.deap_formula_str_list = deap_formula_str_list
-#         self.deap_formula_code_list = [gp.PrimitiveTree.from_string(k, pset) for k in deap_formula_str_list]
-#         self.pset = pset
-
-#     def trancate_formula(self, tuple_list, dict, replace_terminal):
-#         y = []
-#         i = 0
-#         k = 0
-#         for s in tuple_list:
-#             if isinstance(s[0], gp.Primitive):
-#                 k += 1
-#         if k > 1:
-#             y.append(tuple_list[i])
-#             i += 1
-
-#         while i < len(tuple_list):
-#             if (i + 1 < len(tuple_list)):
-#                 if isinstance(tuple_list[i][0], gp.Primitive) & isinstance(tuple_list[i + 1][0], gp.Terminal):
-#                     t = Tree(tuple_list[i][1])
-#                     for j in range(i, i + tuple_list[i][0].arity + 1):
-#                         t.get_leaf(dict[tuple_list[j][1]])
-
-#                     for j in range(i + 1, i + tuple_list[i][0].arity + 1):
-#                         t.get_node(dict[tuple_list[j][1]])
-
-#                     dict[tuple_list[i][1]] = t
-#                     y.append((replace_terminal, tuple_list[i][1]))
-#                     i += tuple_list[i][0].arity + 1
-#                 else:
-#                     y.append(tuple_list[i])
-#                     i += 1
-#             else:
-#                 y.append(tuple_list[i])
-#                 i += 1
-#         return y, dict
-
-#     def test_no_prim(self, tuple_list):
-#         num_count = 0
-#         for item in tuple_list:
-#             if isinstance(item[0], gp.Primitive):
-#                 num_count += 1
-#         return num_count
-
-#     def transform_formala2tree_constructure(self,deap_formula_code):
-#         x = [(deap_formula_code[i], i) for i in range(len(deap_formula_code))]
-#         area = {i: i for i in range(len(deap_formula_code))}
-#         while self.test_no_prim(x) > 0:
-#             x, area = self.trancate_formula(x, area, self.byword_2)
-#         return area
