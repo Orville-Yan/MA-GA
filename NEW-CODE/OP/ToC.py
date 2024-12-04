@@ -1,7 +1,8 @@
 import torch
-OPclass_name_2C=['OP_AF2C']  
+from Others import OP_Basic
+OPclass_name_2C=['OP_AF2C']
 class OP_AF2C:
-    def __init__(self): 
+    def __init__(self):
         self.func_list = ["Dmask_min", "Dmask_max", "Dmask_middle", "Dmask_mean_plus_std", "Dmask_mean_sub_std"]
 
     @staticmethod
@@ -33,8 +34,8 @@ class OP_AF2C:
         """
         功能简介: unfold过去lookback天的数据，取中间的1/2天
         """
-        mask1 = ToC.Dmask_max(x, lookback)  # 取最大1/4
-        mask2 = ToC.Dmask_min(x, lookback)  # 取最小1/4
+        mask1 = OP_AF2C.Dmask_max(x, lookback)  # 取最大1/4
+        mask2 = OP_AF2C.Dmask_min(x, lookback)  # 取最小1/4
         mask3 = mask1 | mask2  # 合并最大最小部分
         return ~mask3  # 返回中间部分
 
@@ -44,8 +45,8 @@ class OP_AF2C:
         功能简介: unfold过去lookback天的数据，进行标准化处理，取大于均值+标准差的部分
         """
         unfolded = x.unfold(0, lookback, 1)
-        unfolded_mean = nanmean(unfolded, dim=-1).unsqueeze(-1)
-        unfolded_std = nanstd(unfolded, dim=-1).unsqueeze(-1)
+        unfolded_mean = OP_Basic.nanmean(unfolded, dim=-1).unsqueeze(-1)
+        unfolded_std = OP_Basic.nanstd(unfolded, dim=-1).unsqueeze(-1)
         unfolded_zscore = (unfolded - unfolded_mean) / unfolded_std
         mask = (unfolded_zscore) > 1  # 大于均值+标准差的部分
         return mask
@@ -56,8 +57,8 @@ class OP_AF2C:
         功能简介: unfold过去lookback天的数据，进行标准化处理，取小于均值-标准差的部分
         """
         unfolded = x.unfold(0, lookback, 1)
-        unfolded_mean = nanmean(unfolded, dim=1).unsqueeze(1)
-        unfolded_std = nanstd(unfolded, dim=1).unsqueeze(1)
+        unfolded_mean = OP_Basic.nanmean(unfolded, dim=1).unsqueeze(1)
+        unfolded_std = OP_Basic.nanstd(unfolded, dim=1).unsqueeze(1)
         unfolded_zscore = (unfolded - unfolded_mean) / unfolded_std
         mask = (unfolded_zscore) < 1  # 小于均值-标准差的部分
         return mask

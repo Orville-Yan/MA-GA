@@ -5,7 +5,7 @@ OPclass_name_others = ['OP_Closure', 'OP_Basic']
 
 class OP_Closure:
     def __init__(self):
-        self.func_list = ["id_industry", "id_int", "id_float","id_tensor"]
+        self.func_list = ["id_industry", "id_int", "id_float", "id_tensor"]
 
     @staticmethod
     def id_industry(industry):
@@ -18,7 +18,7 @@ class OP_Closure:
     @staticmethod
     def id_float(thresh):
         return thresh
-    
+
     @staticmethod
     def id_tensor(tensor):
         return tensor
