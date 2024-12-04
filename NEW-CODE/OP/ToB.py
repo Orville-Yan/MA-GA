@@ -6,8 +6,8 @@ OPclass_name_2B=['OP_B2B','OP_BB2B','OP_BA2B','OP_BG2B',
 
 class OP_B2B:
     def __init__(self):
-        self.func_list = ['ignore_wobble', 'cs_rank', 'cs_scale', 'cs_zscore', 'at_abs', 'cs_demean', 'cs_winsor',
-                          'ts_pctchg']
+        self.func_list = ['M_ignore_wobble', 'M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_at_abs', 'M_cs_demean', 'M_cs_winsor',
+                          'M_ts_pctchg']
 
     @staticmethod
     def M_ignore_wobble(M_tensor, window_size=5):
