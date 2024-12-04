@@ -159,7 +159,7 @@ def save_data_by_column(datas: pd.DataFrame, batch_id: int, num_stocks: int) -> 
             flag = True
         years = datas["time"].str[:4].unique()
         for year in years:
-            cur_df.loc[cur_df.index.str.startswith(year)].to_parquet(f"./processed_data/{col}/{col}_{year}_{batch_id}.parquet")
+            cur_df.loc[cur_df.index.str.startswith(year)].to_parquet(f"{PROCESSED_DATA_PATH}/{col}/{col}_{year}_{batch_id}.parquet")
     return flag
 
 def process_by_batch(batch: list, batch_id: int) -> None:
@@ -169,11 +169,11 @@ def process_by_batch(batch: list, batch_id: int) -> None:
     """
     # check if the data is already processed
     try:
-        datas = pd.read_parquet(f"./processed_data/Original/Original_{batch_id}.parquet")
+        datas = pd.read_parquet(f"{PROCESSED_DATA_PATH}/Original/Original_{batch_id}.parquet")
     except:
         datas = [process_data(file_name) for file_name in tqdm(batch)]
         datas = pd.concat(datas, axis=0).sort_values(by=["time", "stock_name"]).reset_index(drop=True)
-        datas.to_parquet(f"./processed_data/Original/Original_{batch_id}.parquet")
+        datas.to_parquet(f"{PROCESSED_DATA_PATH}/Original/Original_{batch_id}.parquet")
 
     num_stocks = len(batch)
     aflag = False
