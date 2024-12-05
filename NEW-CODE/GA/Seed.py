@@ -5,7 +5,7 @@ from ToC import *
 from ToD import *
 from Others import *
 
-class other:
+class other:#看到的其他算子，不用管
     def break_high(D_C):#创新高
         return OP_AF2A.D_is_max(D_C == OP_AF2A.D_ts_max(D_C,lookback = 240))
     
