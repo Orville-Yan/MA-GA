@@ -262,16 +262,15 @@ class OP_BF2B:  # B*F-B
         return rolled.mean(dim=-1)
 
     @staticmethod
-    
     def M_ts_mean_mid_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range * 2 + 1
+        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)  
+        window_mean = unfolded.mean(dim=-1)  
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        for stock_idx in range(m_tensor.shape[0]):
-            for day_idx in range(m_tensor.shape[1]):
-                for minute_idx in range(neighbor_range, m_tensor.shape[2] - neighbor_range):
-                    window = m_tensor[stock_idx, day_idx, minute_idx - neighbor_range:minute_idx + neighbor_range + 1]
-                    window_mean = window.mean()
-                    result_tensor[stock_idx, day_idx, minute_idx] = window_mean
+        result_tensor[:, :, neighbor_range:-neighbor_range] = window_mean
         return result_tensor
+    
+
 
 
     @staticmethod
@@ -286,16 +285,13 @@ class OP_BF2B:  # B*F-B
 
     @staticmethod
     def M_ts_std_mid_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range * 2 + 1
+        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)  
+        window_std = unfolded.std(dim=-1)  
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        for stock_idx in range(m_tensor.shape[0]):
-            for day_idx in range(m_tensor.shape[1]):
-                for minute_idx in range(neighbor_range, m_tensor.shape[2] - neighbor_range):
-                    window = m_tensor[stock_idx, day_idx, minute_idx - neighbor_range:minute_idx + neighbor_range + 1]
-                    window_std = window.std()
-                    result_tensor[stock_idx, day_idx, minute_idx] = window_std
+        result_tensor[:, :, neighbor_range:-neighbor_range] = window_std
         return result_tensor
-
-
+    
     @staticmethod
     def M_ts_std_right_neighbor(m_tensor, neighbor_range):
         rolled = m_tensor.roll(neighbor_range, dims=-1)
@@ -308,14 +304,14 @@ class OP_BF2B:  # B*F-B
 
     @staticmethod
     def M_ts_product_mid_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range * 2 + 1
+        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)  
+        window_prod= unfolded.prod(dim=-1)  
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        for stock_idx in range(m_tensor.shape[0]):
-            for day_idx in range(m_tensor.shape[1]):
-                for minute_idx in range(neighbor_range, m_tensor.shape[2] - neighbor_range):
-                    window = m_tensor[stock_idx, day_idx, minute_idx - neighbor_range:minute_idx + neighbor_range + 1]
-                    window_prod= window.prod()
-                    result_tensor[stock_idx, day_idx, minute_idx] = window_prod
+        result_tensor[:, :, neighbor_range:-neighbor_range] = window_prod
         return result_tensor
+
+
 
     @staticmethod
     def M_ts_product_right_neighbor(m_tensor, neighbor_range):
