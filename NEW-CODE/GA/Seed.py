@@ -5,8 +5,8 @@ from ToC import *
 from ToD import *
 from Others import *
 
-class other:#记录一些看到的算子
-    def break_high(D_C):#创新高记录
+class other:
+    def break_high(D_C):#创新高
         return OP_AF2A.D_is_max(D_C == OP_AF2A.D_ts_max(D_C,lookback = 240))
     
     def calculate_PATV(M_v):#持续异常交易量
@@ -61,19 +61,19 @@ class DP_Seed:
         #self.OP_AC2A_func_list=['D_ts_mask_mean','D_ts_mask_std']
     def generate_toolbox(self):
 
-        self.pset=gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
+        self.pset=gp.PrimitiveSetTyped("MAIN", [TypeA] * len(self.input), TypeA)
         int_values = [int(i) for i in [2, 3, 5, 8, 10 ,30]]   
         #注册需要用到的primitives和terminals
         #AF2A
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
         for constant_value in int_values:
             self.pset.addTerminal(constant_value, int)
         
         #A2A
         func = getattr(OP_A2A, self.OP_A2A_func_list) 
-        self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+        self.pset.addPrimitive(func, TypeA, TypeA, name=func_name)
        
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("DP_Seed", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
@@ -104,23 +104,23 @@ class DV_Seed:
         self.OP_AA2A_func_list=['D_at_mean']
 
     def generate_toolbox(self):
-        self.pset=gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
+        self.pset=gp.PrimitiveSetTyped("MAIN", [TypeA] * len(self.input), TypeA)
         
         int_values = [int(i) for i in [5, 10, 20, 30, 60]]
         #注册需要用到的primitives和terminals
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
         for constant_value in int_values:
             self.pset.addTerminal(constant_value, int)
 
         for func_name in self.OP_A2A_func_list:
             func = getattr(OP_A2A, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, TypeA, TypeA, name=func_name)
 
         for func_name in self.OP_AA2A_func_list:
             func = getattr(OP_AA2A, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
 
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -156,18 +156,18 @@ class MP_Seed:
         #注册需要用到的primitives和terminals
         for func_name in self.OP_B2A_func_list:
             func = getattr(OP_B2A, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, TypeB, TypeA, name=func_name)
         
         for constant_value in int_values:
             self.pset.addTerminal(constant_value, int)
 
         for func_name in self.OP_B2B_func_list:
             func = getattr(OP_B2B, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, TypeB, TypeB, name=func_name)
         
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
         
        
 
@@ -207,11 +207,11 @@ class MV_Seed:
 
         for func_name in self.OP_B2B_func_list:
             func = getattr(OP_B2B, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, TypeB, TypeB, name=func_name)
         
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name) 
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
         
        
 
