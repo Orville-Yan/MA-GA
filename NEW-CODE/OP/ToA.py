@@ -539,3 +539,28 @@ class OP_BBD2A:
             return mask
         return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, Mmask_day_plus(m_tensor_y,OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))),
         OP_BD2A.D_Minute_area_std(m_tensor_x,Mmask_day_sub(m_tensor_y, OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))))
+
+class OP_BB2A:
+    def __init__(self):
+        self.func_list = ['D_Minute_corr','D_Minute_weight_mean']
+
+    @staticmethod
+    def D_Minute_corr(x,y):
+        corr = OP_Basic.corrwith(x, y)
+        return torch.where((corr==torch.inf)|(corr==-torch.inf),float('nan'),corr)
+
+    @staticmethod
+    def D_Minute_weight_mean(x,weight=1):
+        x_ = x * weight
+        s = OP_Basic.nanmean(x_)
+        return torch.where((s==torch.inf)|(s==-torch.inf),float('nan'),s)
+
+
+class OP_D2A:
+    def __init__(self):
+        self.func_list = ['D_Minute_abnormal_point_count']
+
+    @staticmethod
+    def D_Minute_abnormal_point_count(mask):
+        s = torch.nansum(mask, dim=-1)
+        return torch.where((s==torch.inf)|(s==-torch.inf),float('nan'),s)
