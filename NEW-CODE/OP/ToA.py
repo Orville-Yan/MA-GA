@@ -77,7 +77,7 @@ class OP_AE2A:
     def __init__(self):
         self.func_list = ['D_cs_demean_industry', 'D_cs_industry_neutra']
 
-    def D_cs_demean_industry(day_OHLCV, industry):
+    def D_cs_demean_industry(day_OHLCV, industry):#行业均值计算
         day_len, num_stock = day_OHLCV.shape
         _, _, industry_num = industry.shape
 
@@ -95,7 +95,7 @@ class OP_AE2A:
 
         return demeaned_abs
 
-    def D_cs_industry_neutra(day_OHLCV, industry):  # 如果用回归做中性化的话，自变量是啥嘞
+    def D_cs_industry_neutra(day_OHLCV, industry):  # 行业中性化
         return OP_AE2A.D_cs_demean_industry(day_OHLCV, industry)
 
 
@@ -137,11 +137,11 @@ class OP_AA2A:
         return result
 
     @staticmethod
-    def D_at_sub(x, y):  # 除
+    def D_at_sub(x, y):  # 减
         return torch.sub(x, y)
 
     @staticmethod
-    def D_at_prod(d_tensor_x, d_tensor_y):
+    def D_at_prod(d_tensor_x, d_tensor_y):#除
         mask = ~((d_tensor_y == 0) | torch.isnan(d_tensor_y))
         result = torch.full_like(d_tensor_x, float('nan'))
         result[mask] = torch.div(d_tensor_x[mask], d_tensor_y[mask])
@@ -149,7 +149,7 @@ class OP_AA2A:
         return result
 
     @staticmethod
-    def D_at_mean(x, y):
+    def D_at_mean(x, y):#均值
         return OP_AA2A.D_at_add(x, y) / 2
 
 
@@ -224,11 +224,11 @@ class OP_AAF2A:
         return k, b, res
 
     @staticmethod
-    def D_ts_regress_res(x, y, lookback):
+    def D_ts_regress_res(x, y, lookback):#回归取残差
         return OP_AAF2A.D_ts_regress(x, y, lookback)[2]
 
     @staticmethod
-    def D_ts_weight_mean(x, y, lookback):
+    def D_ts_weight_mean(x, y, lookback):#回溯lookback天，以d_tensor_y为权重，计算d_tensor_x 的加权平均
         if lookback == 1:
             return x
         else:
@@ -252,7 +252,7 @@ class OP_AF2A:
                           ]
 
     @staticmethod
-    def D_ts_max(x, lookback):
+    def D_ts_max(x, lookback):#lookback天内最大值
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         max_tensor = torch.max(x_3d, dim=-1)[0]
@@ -260,7 +260,7 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_min(x, lookback):
+    def D_ts_min(x, lookback):#最小值
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         max_tensor = torch.min(x_3d, dim=-1)[0]
@@ -290,7 +290,7 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_mean(x, lookback):
+    def D_ts_mean(x, lookback):#均值
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         x_mean = OP_Basic.nanmean(x_3d)
@@ -298,7 +298,7 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_harmonic_mean(x, lookback):
+    def D_ts_harmonic_mean(x, lookback):#调和平均
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         mask = (x_3d == 0) | torch.isnan(x_3d)
@@ -320,7 +320,7 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_to_max(x, lookback):
+    def D_ts_to_max(x, lookback):#d_tensor/D_ts_max(d_tensor, lookback)
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         max_tensor = torch.max(x_3d, dim=-1)[0]
@@ -338,13 +338,13 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_to_mean(x, lookback):
+    def D_ts_to_mean(x, lookback):#d_tensor/D_ts_mean(d_tensor, lookback)
         mean_tensor = OP_AF2A.D_ts_mean(x, lookback)
         s = x / mean_tensor
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_max_to_min(x, lookback):
+    def D_ts_max_to_min(x, lookback):#d_tensor/(D_ts_max(d_tensor, lookback)-D_ts_min(d_tensor, lookback))
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         min_tensor = torch.min(x_3d, dim=-1)[0]
@@ -364,7 +364,7 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_norm(x, lookback):
+    def D_ts_norm(x, lookback):#时序标准化
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         x_mean = OP_Basic.nanmean(x_3d)
@@ -375,7 +375,7 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_detrend(x, lookback):  # ts_regress
+    def D_ts_detrend(x, lookback):  # ts_regress，去除lookback天内的趋势
         x = x.float()
         time_idx = torch.arange(x.shape[0], dtype=torch.float32).unsqueeze(-1)
         time_idx_expanded = time_idx.repeat(1, x.shape[1])
