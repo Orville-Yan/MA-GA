@@ -492,15 +492,15 @@ class OP_BBD2A:
     @staticmethod
     def D_Minute_area_bifurcate_mean(m_tensor_x, m_tensor_y, mask):
         def Mmask_day_plus(m_tensor, d_tensor):
-          day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
-          day_expanded = day_expanded.permute(1, 0, 2)
-          mask = day_expanded < m_tensor
-          return mask
+            day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
+            day_expanded = day_expanded.permute(1, 0, 2)
+            mask = day_expanded < m_tensor
+            return mask
         def Mmask_day_sub(m_tensor, d_tensor):
-          day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)
-          day_expanded = day_expanded.permute(1, 0, 2)
-          mask = day_expanded > m_tensor
-          return mask
+            day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)
+            day_expanded = day_expanded.permute(1, 0, 2)
+            mask = day_expanded > m_tensor
+            return mask
         return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, Mmask_day_plus(m_tensor_y,OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))),
         OP_BD2A.D_Minute_area_mean(m_tensor_x,Mmask_day_sub(m_tensor_y, OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))))
     
