@@ -3,7 +3,7 @@ from Others import OP_Basic
 from ToD import OP_BA2D
 
 OPclass_name_2A = ['OP_A2A', 'OP_AE2A', 'OP_AA2A', 'OP_AG2A',
-                   'OP_AAF2A', 'OP_AF2A', 'OP_BD2A', 'OP_BBD2A', 'OP_BB2A', 'OP_B2A', 'OP_D2A']
+                   'OP_AAF2A', 'OP_AF2A','OP_AC2A', 'OP_BD2A', 'OP_BBD2A', 'OP_BB2A', 'OP_B2A', 'OP_D2A']
 
 
 class OP_A2A:
