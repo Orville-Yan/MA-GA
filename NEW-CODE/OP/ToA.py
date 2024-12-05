@@ -464,6 +464,26 @@ class OP_BD2A:
         s[all_nan] = float('nan')
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
+class OP_B2A:
+    def __init__(self):
+        self.fun_list=['D_Minute_std','D_Minute_mean','D_Minute_trend']
+    @staticmethod
+    def D_Minute_std(m_tensor):
+        # 计算日内标准差。
+        return OP_Basic.nanstd(m_tensor, dim=-1)
+
+    @staticmethod
+    def D_Minute_mean(m_tensor):
+        # 计算日内均值。
+        return OP_Basic.nanmean(m_tensor, dim=-1)
+
+    @staticmethod
+    def D_Minute_trend(m_tensor):
+        # 计算日内数据的变化趋势。
+        time_index = torch.arange(m_tensor.shape[-1], dtype=torch.float32)
+        time_index = time_index.unsqueeze(0).expand_as(m_tensor)
+        slopes, _, _ = OP_Basic.regress(m_tensor, time_index, dim=-1)
+        return slopes.squeeze(-1)
 
 class OP_BBD2A:
     def __init__(self):
