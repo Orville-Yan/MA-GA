@@ -24,17 +24,16 @@ class Tree:
 
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name)
-            self.pset.addPrimitive(func, [TypeA, int], TypeA, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
 
         for subtree in self.subtrees:
             self.pset.addTerminal(subtree, TypeA)
 
         int_values = [int(i) for i in [2, 3, 5, 10, 20, 60]]
         for constant_value in int_values:
-            self.pset.addTerminal(constant_value, int)
+            self.pset.addTerminal(constant_value, TypeF)
 
-        constant_function = None#create_constant_function(2)
-        self.pset.addPrimitive(constant_function, [torch.Tensor], int, name='')
+        self.pset.addPrimitive(OP_Closure.id_int, [torch.Tensor], TypeF, name='id_int')
 
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
