@@ -30,25 +30,6 @@ class DataReader:
     def __init__(self, data_path: str):
         self.data_path = data_path
         self.cols = ["open", "high", "low", "close", "volume"] # "amount"
-
-    # def _load_with_mmap(self, file_path: str) -> torch.Tensor:
-    #     """
-    #     load .pt file with mmap
-    #     """
-    #     with open(file_path, "rb") as f:
-    #         # read data with mmap
-    #         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-    #         # load tensor data
-    #         tensor_data = torch.load(mmapped_file)
-    #         mmapped_file.close()
-    #     return tensor_data
-
-    # def _load_with_mmap(self, file_path: str) -> pd.DataFrame:
-    #     with open(file_path, "rb") as f:
-    #         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-    #         df = pd.read_parquet(mmapped_file)
-    #         mmapped_file.close()
-    #     return df
     
     def dataframe_to_tensor(self, df: pd.DataFrame, minute_len=242):
         """
