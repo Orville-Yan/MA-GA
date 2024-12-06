@@ -1,11 +1,13 @@
 from GA_tools import *
 from OP import *
 import OP
+import torch
 
 class MP_Root:
     def __init__(self, MP_Seed: [str], population_size=10):
         self.input = MP_Seed
         self.population_size = population_size
+        self.int_values = [torch.tensor(i,dtype=torch.int) for i in [2, 3, 5, 8, 10 ,30]]   
         self.OP_A2A_func_list = ['D_cs_scale', 'D_cs_zscore''D_cs_harmonic_mean']
         self.OP_AA2A_func_list = ['D_cs_norm_spread']
         self.OP_AF2A_func_list = ['D_ts_to_max','D_ts_to_min', 'D_ts_to_mean','D_ts_norm','D_ts_harmonic_mean']
@@ -27,52 +29,72 @@ class MP_Root:
         self.pset_E = gp.PrimitiveSetTyped("MAIN_E", [TypeE] * len(self.input), TypeE)
         self.pset_F = gp.PrimitiveSetTyped("MAIN_F", [TypeF] * len(self.input), TypeF)
 
+        for seed in self.input:
+            self.pset_A.addTerminal(seed,TypeA)
+
+        for seed in self.input:
+            self.pset_B.addTerminal(seed,TypeA)
+            self.pset_B.addTerminal(seed,TypeB)
+
+        for seed in self.input:
+            self.pset_C.addTerminal(seed,TypeA)
+        
+        for seed in self.input:
+            self.pset_D.addTerminal(seed,TypeB)
+
         for func_name in self.OP_A2A_func_list:
             func = getattr(OP.OP_A2A, func_name, None)
             self.pset_A.addPrimitive(func,TypeA, TypeA, name=func_name)
-            self.pset_A.addTerminal(func,ret_type=TypeA,name=func_name)
+            # self.pset_A.addTerminal(func,ret_type=TypeA,name=func_name)
 
         for func_name in self.OP_AA2A_func_list:
             func = getattr(OP.OP_AA2A, func_name, None)
             self.pset_A.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
-            self.pset_A.addTerminal(func,ret_type=TypeA,name=func_name)
+            # self.pset_A.addTerminal(func,ret_type=TypeA,name=func_name)
+
+        for constant in self.int_values:
+            self.pset_A.addTerminal(constant,TypeF)
 
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP.OP_AF2A, func_name, None)
             self.pset_A.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
-            self.pset_A.addTerminal(func,ret_type=TypeA,name=func_name)
+            # self.pset_A.addTerminal(func,ret_type=TypeA,name=func_name)
 
         for func_name in self.OP_B2B_func_list:
             func = getattr(OP.OP_B2B, func_name, None)
             self.pset_B.addPrimitive(func, TypeB, TypeB, name=func_name)
-            self.pset_B.addTerminal(func,ret_type=TypeB,name=func_name)
+            # self.pset_B.addTerminal(func,ret_type=TypeB,name=func_name)
 
         for func_name in self.OP_BB2B_func_list:
             func = getattr(OP.OP_BB2B, func_name, None)
             self.pset_B.addPrimitive(func, [TypeB,TypeB], TypeB, name=func_name)
-            self.pset_B.addTerminal(func,ret_type=TypeB,name=func_name)
+            # self.pset_B.addTerminal(func,ret_type=TypeB,name=func_name)
 
         for func_name in self.OP_BA2B_func_list:
             func = getattr(OP.OP_BA2B, func_name, None)
             self.pset_B.addPrimitive(func, [TypeB, TypeA], TypeB, name=func_name)
-            self.pset_B.addTerminal(func,ret_type=TypeB,name=func_name)
+            # self.pset_B.addTerminal(func,ret_type=TypeB,name=func_name)
 
-
+        for constant in self.int_values:
+            self.pset_C.addTerminal(constant,TypeF)
 
         for func_name in self.OP_AF2C_func_list:
             func = getattr(OP.OP_AF2C, func_name, None)
             self.pset_C.addPrimitive(func, [TypeA, TypeF], TypeC, name=func_name)
-            self.pset_C.addTerminal(func,ret_type=TypeC,name=func_name)
+            # self.pset_C.addTerminal(func,ret_type=TypeC,name=func_name)
 
         for func_name in self.OP_B2D_func_list:
             func = getattr(OP.OP_B2D, func_name, None)
             self.pset_D.addPrimitive(func, TypeB, TypeD, name=func_name)
-            self.pset_D.addTerminal(func,ret_type=TypeD,name=func_name)
+            # self.pset_D.addTerminal(func,ret_type=TypeD,name=func_name)
+
+        for constant in self.int_values:
+            self.pset_D.addTerminal(constant,TypeF)
 
         for func_name in self.OP_BF2D_func_list:
             func = getattr(OP.OP_BF2D, func_name, None)
             self.pset_D.addPrimitive(func, [TypeB, TypeF], TypeD, name=func_name)
-            self.pset_D.addTerminal(func,ret_type=TypeD,name=func_name)
+            # self.pset_D.addTerminal(func,ret_type=TypeD,name=func_name)
 
 
         # ......
