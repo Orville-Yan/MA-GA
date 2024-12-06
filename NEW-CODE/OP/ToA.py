@@ -351,7 +351,7 @@ class OP_AF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_to_maxmin_norm(x, lookback):
+    def D_ts_maxmin_norm(x, lookback):
         nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'))
         x_3d = x.unfold(0, lookback, 1)
         min_tensor = torch.min(x_3d, dim=-1)[0]
