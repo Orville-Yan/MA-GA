@@ -95,6 +95,19 @@ class DataReader:
         """
         return [self.read_data_by_col(col, year_lst) for col in self.cols]
 
+def get_barra(year_list):
+    barra=torch.load('barra.pt')
+    dict=torch.load('dict.pt')
+    s=[]
+    for year in year_list:
+        mask=pd.to_datetime(dict['index']).year==year
+        s.append(mask)
+
+    w=s[0]
+    for t in s:
+        w=w|t
+
+    return barra[w]
 
 if __name__ == "__main__":
     bgn_time = time.time()
