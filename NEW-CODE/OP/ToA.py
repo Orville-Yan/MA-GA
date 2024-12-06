@@ -1,7 +1,5 @@
 import torch
 from Others import OP_Basic
-from ToD import OP_BA2D
-
 OPclass_name_2A = ['OP_A2A', 'OP_AE2A', 'OP_AA2A', 'OP_AG2A',
                    'OP_AAF2A', 'OP_AF2A','OP_AC2A', 'OP_BD2A', 'OP_BBD2A', 'OP_BB2A', 'OP_B2A', 'OP_D2A']
 
@@ -511,34 +509,20 @@ class OP_BBD2A:
 
     @staticmethod
     def D_Minute_area_bifurcate_mean(m_tensor_x, m_tensor_y, mask):
-        def Mmask_day_plus(m_tensor, d_tensor):
-            day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
-            day_expanded = day_expanded.permute(1, 0, 2)
-            mask = day_expanded < m_tensor
-            return mask
-        def Mmask_day_sub(m_tensor, d_tensor):
-            day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)
-            day_expanded = day_expanded.permute(1, 0, 2)
-            mask = day_expanded > m_tensor
-            return mask
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, Mmask_day_plus(m_tensor_y,OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))),
-        OP_BD2A.D_Minute_area_mean(m_tensor_x,Mmask_day_sub(m_tensor_y, OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))))
+        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
+        day_expanded = day_expanded.permute(1, 0, 2)
+        maskplus = day_expanded < m_tensor_y
+        masksub = day_expanded > m_tensor_y
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_mean(m_tensor_x,masksub))
     
 
     @staticmethod
     def D_Minute_area_bifurcate_std(m_tensor_x, m_tensor_y, mask):
-        def Mmask_day_plus(m_tensor, d_tensor):
-            day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
-            day_expanded = day_expanded.permute(1, 0, 2)
-            mask = day_expanded < m_tensor
-            return mask
-        def Mmask_day_sub(m_tensor, d_tensor):
-            day_expanded = d_tensor.unsqueeze(-1).repeat(1, 1, 240)
-            day_expanded = day_expanded.permute(1, 0, 2)
-            mask = day_expanded > m_tensor
-            return mask
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, Mmask_day_plus(m_tensor_y,OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))),
-        OP_BD2A.D_Minute_area_std(m_tensor_x,Mmask_day_sub(m_tensor_y, OP_BD2A.D_Minute_area_mean(m_tensor_y, mask))))
+        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
+        day_expanded = day_expanded.permute(1, 0, 2)
+        maskplus = day_expanded < m_tensor_y
+        masksub = day_expanded > m_tensor_y
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_std(m_tensor_x,masksub))
 
 class OP_BB2A:
     def __init__(self):
