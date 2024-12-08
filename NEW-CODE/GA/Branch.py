@@ -26,9 +26,7 @@ class Branch:
     def generate_population(self):
         self.individuals_code = self.toolbox.population(n=self.population_size)
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
-    def run(self):
-        self.generate_toolbox()
-        self.generate_population()
+
 
 class M_Branch_MP2D(Branch):
     def __init__(self, mp_root: 'MP_Root', population_size: int):
