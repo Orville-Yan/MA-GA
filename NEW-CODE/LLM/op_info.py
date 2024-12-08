@@ -1,0 +1,37 @@
+op_info={
+    'ts_pctchg':
+        {'input_parameters':
+            {
+            'tensor':'shape=(day_len,num_stock),只允许输入这一个变量',
+            },
+        'output':
+            {
+            'tensor':'shape=(day_len,num_stock)',
+            'description':'计算当日值相较于昨日值的涨跌幅,(tensor-tensor.shift(1))/tensor'
+            },
+    },
+    'Mask_max':
+        {'input_parameters':
+            {
+            'parameters1：tensor':'shape=(day_len,num_stock)',
+            'parameters2：rolling_days':'int'
+            },
+        'output':
+            {
+            'output1：mask_tensor':'shape=(day_len,num_stock,rolling_days)',
+            'description':'对于输入的tensor，用torch做unfold rolling_days，找到最大的1/5,将其标注为True，其余为False'
+            },
+    },
+    'ts_mask_mean':
+        {'input_parameters':
+            {
+                'parameters1：tensor':'shape=(day_len,num_stock)',
+                'parameters2：mask':'shape=(day_len,num_stock,rolling_days)'
+            },
+        'output':
+            {
+            'output1:tensor':'shape=(day_len,num_stock)',
+            'description':'先将tensor做unfold成和mask一样的shape，然后对于mask中为True的部分求平均'
+            },
+        }
+}
