@@ -34,7 +34,7 @@ class DataReader:
             day_data.append(group.values)
 
         # exchange dimensions to (num_stock, day_len, minute_len), from (day_len, minute_len, num_stock)
-        tensor_data = torch.tensor(np.array(day_data, dtype=np.float32), dtype=torch.float32).permute(2, 0, 1)
+        tensor_data = torch.tensor(np.array(day_data, dtype=np.float32), dtype=torch.float32,device=self.device).permute(2, 0, 1)
         return tensor_data
 
     def read_data_by_col(self, col: str, year_lst: list[int]) -> torch.Tensor:
