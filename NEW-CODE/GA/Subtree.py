@@ -26,8 +26,6 @@ class Subtree:
             func = getattr(OP_BBD2A, func_name)
             self.pset_with_mask.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
 
-        self.pset_with_mask.addTerminal(np.random.rand(1)[0], TypeA)
-
         creator.create("FitnessMax_with_mask", base.Fitness, weights=(1.0,))
         creator.create("Subtree_withMask", gp.PrimitiveTree, fitness=creator.FitnessMax_with_mask, pset=self.pset_with_mask)
 
@@ -47,8 +45,6 @@ class Subtree:
         for func_name in self.OP_BB2A_func_list:
             func = getattr(OP_BB2A, func_name)
             self.pset_no_mask.addPrimitive(func, [TypeB, TypeB], TypeA, name=func_name)
-
-        self.pset_no_mask.addTerminal(np.random.rand(1)[0], TypeA)
 
         creator.create("FitnessMax_no_mask", base.Fitness, weights=(1.0,))
         creator.create("Subtree_noMask", gp.PrimitiveTree, fitness=creator.FitnessMax_no_mask, pset=self.pset_no_mask)
