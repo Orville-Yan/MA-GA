@@ -225,5 +225,35 @@ class stratified:
             plt.savefig(os.path.join(root_path, f'{self.factor_name}', f'{self.factor_name}_{now}_IC.png'))
         plt.close()
 
+class backtest:
+    # factor_target here is interval_return above
+    # period_num is used to calculate Sharpe & ICIR.
+    # If we predict 5days target,then period num=252/5=50
+    def __init__(self,factor_tensor,factor_target,bins_num,period_num):
+        self.factor=factor_tensor
+        self.factor_target=factor_target
+        self.bins_num=bins_num
+        self.period_num=period_num
 
+    def get_stratified_return(self):
+        #get every bin's every interval's return
+        #shape=factor's shape
+        pass
+
+    def get_mean_over_short_sharpe(self):
+        pass
+
+    def get_long_over_mean_sharpe(self):
+        pass
+
+    def get_rank_ICIR(self):
+        #please use OP.Basic.rank_corrwith
+        pass
+
+    def get_turnover(self):
+        #u can record the bins in functio--get_stratified_return,and then use the bins_record to get turnover
+        pass
+
+    def yield_analysis(self):
+        pass
 
