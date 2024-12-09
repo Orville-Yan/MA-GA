@@ -6,4 +6,4 @@
 - 需要调整的东西是文件路径，在Data_tools里面，分别是
   - root_path：整个日频文件夹的位置
   - barra_path/dict_path：barra和dict文件所在位置
-  - minute_data_path：分钟频数据所在位置
+  - minute_data_path：分钟频数据文件夹所在位置
