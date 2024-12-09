@@ -3,6 +3,7 @@ sys.path.append('..')
 
 from Tools.GA_tools import *
 from OP import *
+
 class Seed:
     def __init__(self,input_data,population_size=10):
         self.population_size=population_size
@@ -24,9 +25,8 @@ class Seed:
         self.individuals_code = self.toolbox.population(n=self.population_size)
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
-
+        
 class DP_Seed(Seed):
-
     def __init__(self,D_OHLC,population_size=10):
         super().__init__(D_OHLC,population_size)
         self.input=D_OHLC
@@ -37,12 +37,22 @@ class DP_Seed(Seed):
     
     def add_primitive(self):
         self.pset=gp.PrimitiveSetTyped("MAIN", [TypeA] * len(self.input), TypeA)
+
         int_values = [int(i) for i in [2, 3, 5, 8, 10 ,30]]
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name) 
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
+        
+        for func_name in self.OP_Closure_func:
+            func = getattr(OP_Closure, func_name) 
+            self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
+        
         for constant_value in int_values:
             self.pset.addTerminal(constant_value, int)
+        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+
+        super().generate_toolbox()
     
     def run(self):
         self.add_primitive()
@@ -71,12 +81,15 @@ class DV_Seed(Seed):
             func = getattr(OP_AA2A, func_name) 
             self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
 
+        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+        super().generate_toolbox()
+
     def run(self):
         self.add_primitive()
         self.generate_population()
     
 class MP_Seed(Seed):
-
     def __init__(self,M_OHLC,population_size=10):
         super().__init__(M_OHLC,population_size)
         self.input=M_OHLC
@@ -98,13 +111,15 @@ class MP_Seed(Seed):
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name) 
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
-    
+        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+        super().generate_toolbox()
+
     def run(self):
         self.add_primitive()
         self.generate_population()
        
 class MV_Seed(Seed):
-
     def __init__(self,M_V,population_size=10):
         super().__init__(M_V,population_size)
         self.input=M_V
@@ -121,8 +136,12 @@ class MV_Seed(Seed):
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name) 
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
+        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+        super().generate_toolbox()
         
     def run(self):
         self.add_primitive()
         self.generate_population()
+    
     
