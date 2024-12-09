@@ -32,7 +32,7 @@ class M_Branch_MP2D(Branch):
     def __init__(self, mp_root: 'MP_Root', population_size: int):
         super().__init__(mp_root, population_size)
         self.input = mp_root
-    def generate_toolbox(self):
+    def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB], TypeD)
         # 添加TypeB
         for root in self.input():
@@ -61,14 +61,14 @@ class M_Branch_MP2D(Branch):
         # 创建工具箱
         super().generate_toolbox()
     def run(self):
-        self.generate_toolbox()
+        self.add_primitive()
         self.generate.population()
 class M_Branch_MPDP2D(Branch):
     def __init__(self, mp_root: 'MP_Root', dp_root:'DP_Root',population_size: int):
         super().__init__(mp_root, population_size)
         self.input1 = mp_root
         self.input2 = dp_root
-    def generate_toolbox(self):
+    def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB,TypeA], TypeD)
         # 添加TypeB
         for root in self.input1():
@@ -105,13 +105,13 @@ class M_Branch_MPDP2D(Branch):
         # 创建工具箱
         super().generate_toolbox()
     def run(self):
-        self.generate_toolbox()
+        self.add_primitive()
         self.generate.population()
 class M_Branch_MV2D(Branch):
     def __init__(self, mv_root: 'MV_Root', population_size: int):
         super().__init__(mv_root, population_size)
         self.input = mv_root
-    def generate_toolbox(self):
+    def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB], TypeD)
         # 添加TypeB
         for root in self.input():
@@ -140,14 +140,14 @@ class M_Branch_MV2D(Branch):
         # 创建工具箱
         super().generate_toolbox()
     def run(self):
-        self.generate_toolbox()
+        self.add_primitive()
         self.generate.population()
 class M_Branch_MVDV2D(Branch):
     def __init__(self, mv_root: 'MV_Root', dv_root:'DV_Root',population_size: int):
         super().__init__(mv_root, population_size)
         self.input1 = mv_root
         self.input2 = dv_root
-    def generate_toolbox(self):
+    def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB,TypeA], TypeD)
         # 添加TypeB
         for root in self.input1():
@@ -184,5 +184,5 @@ class M_Branch_MVDV2D(Branch):
         # 创建工具箱
         super().generate_toolbox()
     def run(self):
-        self.generate_toolbox()
+        self.add_primitive()
         self.generate.population()
