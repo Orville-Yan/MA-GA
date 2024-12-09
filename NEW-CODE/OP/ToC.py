@@ -1,5 +1,5 @@
 import torch
-from Others import OP_Basic
+from OP.Others import OP_Basic
 OPclass_name_2C=['OP_AF2C']
 class OP_AF2C:
     def __init__(self):
