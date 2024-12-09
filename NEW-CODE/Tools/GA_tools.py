@@ -8,7 +8,7 @@ class CustomError(Exception):
     def __init__(self, message="发生了自定义错误"):
         self.message = message
         super().__init__(self.message)
-        
+
 class TypeA(torch.Tensor):
     pass
 
@@ -155,22 +155,22 @@ class Treebuilder:
                     output += ', '
         self.output = output
         self.root_cache = root_cache
-            
-deap_formula_str_list = [
-    "at_div(M_ts_mean_left_neighbor(M_O, 5, -1), M_ts_mean_right_neighbor(M_C, 10, 1))",
-    "at_div(M_ts_mean_right_neighbor(M_C, 10, 1), M_ts_mean_left_neighbor(M_O, 5, -1))"
-]
 
-pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * 2, TypeB)
-pset.addPrimitive(lambda x, y: x / y, [TypeB, TypeB], TypeB, name="at_div")
-pset.addPrimitive(lambda x, y, z: f"M_ts_mean_left_neighbor({x}, {y}, {z})", [TypeB, int, int], TypeB, name="M_ts_mean_left_neighbor")
-pset.addPrimitive(lambda x, y, z: f"M_ts_mean_right_neighbor({x}, {y}, {z})", [TypeB, int, int], TypeB, name="M_ts_mean_right_neighbor")
-pset.addTerminal("M_O", TypeB)
-pset.addTerminal("M_C", TypeB)
+if __name__ == "__main__":
+    deap_formula_str_list = [
+        "at_div(M_ts_mean_left_neighbor(M_O, 5, -1), M_ts_mean_right_neighbor(M_C, 10, 1))",
+        "at_div(M_ts_mean_right_neighbor(M_C, 10, 1), M_ts_mean_left_neighbor(M_O, 5, -1))"
+    ]
 
-builder = Treebuilder(deap_formula_str_list,pset)
-builder.get_tree(0)
-# print(output)
-print('Seed:',builder.root_cache[1].get_seed())
-print('Root:',builder.root_cache[0].get_root())
+    pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * 2, TypeB)
+    pset.addPrimitive(lambda x, y: x / y, [TypeB, TypeB], TypeB, name="at_div")
+    pset.addPrimitive(lambda x, y, z: f"M_ts_mean_left_neighbor({x}, {y}, {z})", [TypeB, int, int], TypeB, name="M_ts_mean_left_neighbor")
+    pset.addPrimitive(lambda x, y, z: f"M_ts_mean_right_neighbor({x}, {y}, {z})", [TypeB, int, int], TypeB, name="M_ts_mean_right_neighbor")
+    pset.addTerminal("M_O", TypeB)
+    pset.addTerminal("M_C", TypeB)
 
+    builder = Treebuilder(deap_formula_str_list,pset)
+    builder.get_tree(0)
+    # print(output)
+    print('Seed:',builder.root_cache[1].get_seed())
+    print('Root:',builder.root_cache[0].get_root())

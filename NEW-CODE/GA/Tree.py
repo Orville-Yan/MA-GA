@@ -1,11 +1,15 @@
+import sys
+sys.path.append('..')
+
 from deap import gp, creator, base, tools
 import numpy as np
-from GA_tools import *
-from ToA import *
-from Others import *
+from Tools.GA_tools import *
+from OP.ToA import *
+from OP.Others import *
 #from Subtree import Subtree
+
 class Tree:
-    def __init__(self, subtrees: [str], population_size=10):#subtree
+    def __init__(self, subtrees: list[str], population_size=10):#subtree
         self.subtrees = subtrees
         self.population_size = population_size
         self.OP_A2A_func_list = ['D_cs_rank', 'D_cs_scale', 'D_cs_zscore', 'D_cs_harmonic_mean', 'D_cs_demean',
@@ -50,9 +54,10 @@ class Tree:
     def generate_tree(self):
         self.generate_toolbox()
         self.generate_population()
-        
-Subtrees=['at_div(open,close)','at_div(high,low)','at_sign(at_sub(high,low))']
-tree=Tree(Subtrees)
-tree.generate_toolbox()
-tree.generate_tree()
-#print(tree.individuals_str)
+
+if __name__ == '__main__':
+    Subtrees=['at_div(open,close)','at_div(high,low)','at_sign(at_sub(high,low))']
+    tree=Tree(Subtrees)
+    tree.generate_toolbox()
+    tree.generate_tree()
+    #print(tree.individuals_str)

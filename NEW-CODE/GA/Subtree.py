@@ -1,8 +1,12 @@
-from GA_tools import *
+import sys
+sys.path.append('..')
+
+from Tools.GA_tools import *
 from OP.ToA import *
 from OP.Others import *
 import numpy as np
 from deap import gp, base, tools, creator
+
 class Subtree:
     def __init__(self,population_size=10):
         self.OP_BD2A_func_list = ['D_Minute_area_mean', 'D_Minute_area_std', 'D_Minute_area_sum', 'D_Minute_area_prod']

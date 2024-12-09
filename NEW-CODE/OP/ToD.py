@@ -1,8 +1,8 @@
 import torch
-from OP.ToA import *
-from OP.Others import OP_Basic
-OPclass_name_2D = ['OP_B2D', 'OP_BF2D', 'OP_BA2D', 'OP_DD2D']
+from .ToA import *
+from .Others import OP_Basic
 
+OPclass_name_2D = ['OP_B2D', 'OP_BF2D', 'OP_BA2D', 'OP_DD2D']
 
 class OP_B2D:
     def __init__(self):

@@ -1,8 +1,8 @@
 import torch
-from OP.Others import OP_Basic
+from .Others import OP_Basic
+
 OPclass_name_2B=['OP_B2B','OP_BB2B','OP_BA2B','OP_BG2B',
                  'OP_BF2B']
-
 
 class OP_B2B:
     def __init__(self):

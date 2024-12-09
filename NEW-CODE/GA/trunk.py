@@ -4,20 +4,14 @@ Created on Thu Dec  5 00:01:40 2024
 
 @author: 朱培元
 """
-from GA_tools import *
+import sys
+sys.path.append('..')
+
+from Tools.GA_tools import *
 from OP import *
-from OP.ToB import OP_BB2B
-from OP.ToB import OP_BA2B
-from OP.ToA import OP_A2A
-from OP.ToA import OP_AE2A
-from OP.ToA import OP_AA2A
-from OP.ToA import OP_AG2A
-from OP.ToA import OP_AAF2A
-from OP.ToA import OP_AF2A
-from OP.ToA import OP_BD2A
-from OP.ToA import OP_BBD2A
+
 class MP_Trunk:
-    def __init__(self,MP_Seed:[str],population_size=100):
+    def __init__(self,MP_Seed: list[str], population_size=100):
         self.input=MP_Seed
         self.population_size=population_size
         self.OP_BB2B_func_list=['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod', 'M_cs_norm_spread']#你这个class需要用到的算子类别的func_list
@@ -35,6 +29,7 @@ class MP_Trunk:
         self.OP_BD2A_func_list=['D_Minute_area_mean', 'D_Minute_area_std', 'D_Minute_area_sum', 'D_Minute_area_prod']
         self.OP_BBD2A_func_list=['D_Minute_area_weight_mean', 'D_Minute_area_corr', 'D_Minute_area_rankcorr',
                           'D_Minute_area_bifurcate_mean', 'D_Minute_area_bifurcate_std']
+
     def generate_toolbox(self):
         self.pset=gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
            
@@ -93,7 +88,8 @@ class MP_Trunk:
         self.individuals_code = self.toolbox.population(n=self.population_size)
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
-MP_Root=['at_div(open,close)','at_div(high,low)','at_sign(at_sub(high,low))']
-mp_trunk=MP_Trunk(MP_Root)
-mp_trunk.generate_toolbox()
-mp_trunk.generate_MP_Root()
+if __name__ == '__main__':
+    MP_Root=['at_div(open,close)','at_div(high,low)','at_sign(at_sub(high,low))']
+    mp_trunk=MP_Trunk(MP_Root)
+    mp_trunk.generate_toolbox()
+    mp_trunk.generate_MP_Root()

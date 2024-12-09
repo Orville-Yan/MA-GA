@@ -1,9 +1,8 @@
-from GA_tools import *
-from ToA import *
-from ToB import *
-from ToC import *
-from ToD import *
-from Others import *
+import sys
+sys.path.append('..')
+
+from Tools.GA_tools import *
+from OP import *
 
 class other:#看到的其他算子，不用管
     def break_high(D_C):#创新高
@@ -59,6 +58,7 @@ class DP_Seed:
                                 'D_ts_detrend','D_ts_std','D_ts_mean'] #你这个class需要用到的算子类别的func_list
         self.OP_A2A_func_list=['D_cs_demean']
         #self.OP_AC2A_func_list=['D_ts_mask_mean','D_ts_mask_std']
+    
     def generate_toolbox(self):
 
         self.pset=gp.PrimitiveSetTyped("MAIN", [TypeA] * len(self.input), TypeA)

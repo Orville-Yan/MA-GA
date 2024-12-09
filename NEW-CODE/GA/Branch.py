@@ -2,16 +2,21 @@ import torch
 import pandas as pd
 import numpy as np
 from deap import gp, base, tools, creator
+
+import sys
+sys.path.append('..')
+
 from OP import *
-from GA_tools import *
-from Root import *
+from Tools.GA_tools import *
+from .Root import *
 
 class Branch:
-    def __init__(self, mp_root: 'MP_Root', population_size: int):
+    def __init__(self, mp_root: MP_Root, population_size: int):
         self.population_size = population_size
         self.pset = None
         self.toolbox = None
         self.int_values = [torch.tensor(i, dtype=torch.int) for i in [2, 3, 5, 8, 10, 30]]
+
     def generate_toolbox(self):
         if not hasattr(creator, "FitnessMax"):
             creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -29,9 +34,10 @@ class Branch:
 
 
 class M_Branch_MP2D(Branch):
-    def __init__(self, mp_root: 'MP_Root', population_size: int):
+    def __init__(self, mp_root: MP_Root, population_size: int):
         super().__init__(mp_root, population_size)
         self.input = mp_root
+
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB], TypeD)
         # 添加TypeB
@@ -52,14 +58,18 @@ class M_Branch_MP2D(Branch):
             self.pset.addPrimitive(func, TypeB, TypeD)
         # 创建工具箱
         super().generate_toolbox()
+
     def run(self):
         self.add_primitive()
         self.generate.population()
+
 class M_Branch_MPDP2D(Branch):
-    def __init__(self, mp_root: 'MP_Root', dp_root:'DP_Root',population_size: int):
+    # missing DP_Root
+    def __init__(self, mp_root: MP_Root, dp_root: DP_Root,population_size: int):
         super().__init__(mp_root, population_size)
         self.input1 = mp_root
         self.input2 = dp_root
+
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB,TypeA], TypeD)
         # 添加TypeB
@@ -75,11 +85,14 @@ class M_Branch_MPDP2D(Branch):
             self.pset.addPrimitive(func, [TypeB,TypeA], TypeD)
         # 创建工具箱
         super().generate_toolbox()
+
     def run(self):
         self.add_primitive()
         self.generate.population()
+
 class M_Branch_MV2D(Branch):
-    def __init__(self, mv_root: 'MV_Root', population_size: int):
+    # missing MV_Root
+    def __init__(self, mv_root: MV_Root, population_size: int):
         super().__init__(mv_root, population_size)
         self.input = mv_root
     def add_primitive(self):
@@ -102,14 +115,18 @@ class M_Branch_MV2D(Branch):
             self.pset.addPrimitive(func, TypeB, TypeD)
         # 创建工具箱
         super().generate_toolbox()
+
     def run(self):
         self.add_primitive()
         self.generate.population()
+
 class M_Branch_MVDV2D(Branch):
-    def __init__(self, mv_root: 'MV_Root', dv_root:'DV_Root',population_size: int):
+    # missing MV_Root, DV_Root
+    def __init__(self, mv_root: MV_Root, dv_root: DV_Root,population_size: int):
         super().__init__(mv_root, population_size)
         self.input1 = mv_root
         self.input2 = dv_root
+
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB,TypeA], TypeD)
         # 添加TypeB
@@ -125,6 +142,7 @@ class M_Branch_MVDV2D(Branch):
             self.pset.addPrimitive(func, [TypeB,TypeA], TypeD)
         # 创建工具箱
         super().generate_toolbox()
+
     def run(self):
         self.add_primitive()
         self.generate.population()

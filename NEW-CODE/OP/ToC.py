@@ -1,6 +1,8 @@
 import torch
-from OP.Others import OP_Basic
+from .Others import OP_Basic
+
 OPclass_name_2C=['OP_AF2C']
+
 class OP_AF2C:
     def __init__(self):
         self.func_list = ["Dmask_min", "Dmask_max", "Dmask_middle", "Dmask_mean_plus_std", "Dmask_mean_sub_std"]
