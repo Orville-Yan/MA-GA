@@ -37,14 +37,6 @@ class M_Branch_MP2D(Branch):
         # 添加TypeB
         for root in self.input():
             self.pset.addTerminal(root,TypeB)      
-        op = OP_B2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, TypeB, TypeB)
-        op = OP_BB2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeB], TypeB)
         # 添加TypeF
         for constant in self.int_values():
             self.pset.addTerminal(constant,TypeF)
@@ -73,30 +65,9 @@ class M_Branch_MPDP2D(Branch):
         # 添加TypeB
         for root in self.input1():
             self.pset.addTerminal(root,TypeB)      
-        op = OP_B2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, TypeB, TypeB)
-        op = OP_BB2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeB], TypeB)
         # 添加TypeA
         for root in self.input2():
             self.pset.addTerminal(root,TypeA)      
-        op = OP_A2A()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, TypeA, TypeA)
-        op = OP_AA2A()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeA,TypeA], TypeA)
-        # 添加TypeF
-        for constant in self.int_values():
-            self.pset.addTerminal(constant,TypeF)
-        self.pset.addPrimitive(OP_Closure.id_int(),TypeF,TypeF)
-
         # 添加primitive
         op = OP_BA2D
         for name in op.func_list:
@@ -116,14 +87,6 @@ class M_Branch_MV2D(Branch):
         # 添加TypeB
         for root in self.input():
             self.pset.addTerminal(root,TypeB)      
-        op = OP_B2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, TypeB, TypeB)
-        op = OP_BB2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeB], TypeB)
         # 添加TypeF
         for constant in self.int_values():
             self.pset.addTerminal(constant,TypeF)
@@ -152,30 +115,9 @@ class M_Branch_MVDV2D(Branch):
         # 添加TypeB
         for root in self.input1():
             self.pset.addTerminal(root,TypeB)      
-        op = OP_B2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, TypeB, TypeB)
-        op = OP_BB2B()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeB], TypeB)
         # 添加TypeA
         for root in self.input2():
             self.pset.addTerminal(root,TypeA)      
-        op = OP_A2A()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, TypeA, TypeA)
-        op = OP_AA2A()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeA,TypeA], TypeA)
-        # 添加TypeF
-        for constant in self.int_values():
-            self.pset.addTerminal(constant,TypeF)
-        self.pset.addPrimitive(OP_Closure.id_int(),TypeF,TypeF)
-
         # 添加primitive
         op = OP_BA2D
         for name in op.func_list:
