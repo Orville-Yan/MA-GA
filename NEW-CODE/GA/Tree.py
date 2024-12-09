@@ -26,14 +26,12 @@ class Tree:
             func = getattr(OP_AF2A, func_name)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
 
-        for subtree in self.subtrees:
-            self.pset.addTerminal(subtree, TypeA)
 
         int_values = [int(i) for i in [2, 3, 5, 10, 20, 60]]
         for constant_value in int_values:
             self.pset.addTerminal(constant_value, TypeF)
 
-        self.pset.addPrimitive(OP_Closure.id_int, [torch.Tensor], TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
 
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
