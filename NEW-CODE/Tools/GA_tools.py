@@ -1,9 +1,7 @@
 import torch
 from deap import gp,base,creator,tools
 
-seed_name = [
-    'M_ts_mean_right_neighbor','M_O','M_C','M_ts_mean_left_neighbor'
-]
+
 class CustomError(Exception):
     def __init__(self, message="发生了自定义错误"):
         self.message = message
@@ -157,6 +155,9 @@ class Treebuilder:
         self.root_cache = root_cache
 
 if __name__ == "__main__":
+    seed_name = [
+    'M_ts_mean_right_neighbor','M_O','M_C','M_ts_mean_left_neighbor'
+]
     deap_formula_str_list = [
         "at_div(M_ts_mean_left_neighbor(M_O, 5, -1), M_ts_mean_right_neighbor(M_C, 10, 1))",
         "at_div(M_ts_mean_right_neighbor(M_C, 10, 1), M_ts_mean_left_neighbor(M_O, 5, -1))"
