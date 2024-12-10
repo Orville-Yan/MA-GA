@@ -83,6 +83,18 @@ class DataReader:
 
         return barra[w]
 
+    def get_labels(self,year_lst,freq=5):
+        index = tools.get_index(year_lst)
+        clean = tools.get_clean()[index]
+        D_O = torch.tensor(tools.open, dtype=torch.float32, device=self.device)[index]
+        D_C = torch.tensor(tools.close, dtype=torch.float32, device=self.device)[index]
+        D_O,D_C=[torch.where(clean|(tensor<1e-5),float('nan'),tensor) for tensor in [D_O,D_C]]
+        
+        open=OP_AF2A.D_ts_delay(D_O,-1)
+        close=OP_AF2A.D_ts_delay(D_C,-freq)
+        interval_return=close/open-1
+        return interval_return
+
 
 if __name__ == "__main__":
     # bgn_time = time.time()
