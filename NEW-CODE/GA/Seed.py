@@ -1,11 +1,10 @@
 import sys
-
 sys.path.append('..')
 
 from Tools.GA_tools import *
 from OP.ToA import *
-from OP.Others import *
 from OP.ToB import *
+from OP.Others import *
 
 class Seed:
     def __init__(self, input_data, population_size=10):
@@ -25,9 +24,9 @@ class Seed:
         self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, class_name))
         self.toolbox.register("compile", gp.compile, pset=self.pset)
 
-    def generate_population(self):
+    def generate_population(self, names: list[str]):
         self.individuals_code = self.toolbox.population(n=self.population_size)
-        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
+        self.individuals_code, self.individuals_str = change_name(self.individuals_code, names)
 
 
 class DP_Seed(Seed):
@@ -45,14 +44,14 @@ class DP_Seed(Seed):
 
         for constant_value in [2, 3, 5,  10, 20]:
             self.pset.addTerminal(constant_value, TypeF)
-        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, TypeA, TypeA, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeA], TypeA, name='id_tensor')
 
         super().generate_toolbox()
 
     def run(self):
         self.add_primitive()
-        self.generate_population()
+        self.generate_population(['D_O', 'D_H', 'D_L', 'D_C'])
 
 
 class DV_Seed(Seed):
@@ -77,13 +76,13 @@ class DV_Seed(Seed):
             func = getattr(OP_AA2A, func_name)
             self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
 
-        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, TypeB, TypeB, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeB], TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
         self.add_primitive()
-        self.generate_population()
+        self.generate_population(['D_V'])
 
 
 class MP_Seed(Seed):
@@ -102,13 +101,13 @@ class MP_Seed(Seed):
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
-        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, TypeB, TypeB, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeB], TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
         self.add_primitive()
-        self.generate_population()
+        self.generate_population(['M_O', 'M_H', 'M_L', 'M_C'])
 
 
 class MV_Seed(Seed):
@@ -127,12 +126,20 @@ class MV_Seed(Seed):
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
-        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, TypeB, TypeB, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeB], TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
         self.add_primitive()
-        self.generate_population()
+        self.generate_population(['M_V'])
 
 
+if __name__ == "__main__":
+    from Tools.DataReader import DataReader
+    data_reader = DataReader()
+    MO, MH, ML, MC, MV = data_reader.get_Minute_data([2016])
+    print(MO.shape)
+    mp_seed = MP_Seed([MO, MH, ML, MC], 10)
+    print("MP_Seed Individual Str: ", mp_seed.individuals_str)
+    print("MP_Seed Individual Code: ", mp_seed.individuals_code)
