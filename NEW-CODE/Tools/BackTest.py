@@ -1,8 +1,12 @@
-import pandas as pd
-from Tools import Data_tools as tools
-from OP.ToA import *
+import sys
+sys.path.append('..')
+
+import Tools.Data_tools as tools
+from OP.ToA import OP_AF2A, OP_Basic
 import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
+import torch
 import os
 from datetime import datetime
 

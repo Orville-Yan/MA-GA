@@ -1,3 +1,7 @@
+import sys
+sys.path.append('..')
+
+from OP.ToA import OP_AF2A
 import Tools.Data_tools as tools
 import pandas as pd
 import numpy as np
@@ -70,8 +74,8 @@ class DataReader:
         return D_O,D_H,D_L,D_C,D_V
 
     def get_barra(self,year_lst):
-        barra = torch.load(tools.barra_path,weights_only=True)
-        dict = torch.load(tools.dict_path,weights_only=True)
+        barra = torch.load(tools.barra_path, weights_only=True)
+        dict = torch.load(tools.dict_path, weights_only=True)
         s = []
         for year in year_lst:
             mask = pd.to_datetime(dict['index']).year == year
@@ -109,6 +113,7 @@ if __name__ == "__main__":
     # print("Open, High, Low, Close, Volume [2016, 2017] shape: ", open_data.shape, high_data.shape, low_data.shape,
     #       close_data.shape, volume_data.shape)
     # print("Time cost: ", time.strftime("%H:%M:%S", time.gmtime(time.time() - bgn_time)))
-    bgn_time = time.time()
-    data_reader=DataReader()
+    # bgn_time = time.time()
+    data_reader = DataReader()
     open_data, high_data, low_data, close_data, volume_data=data_reader.get_Minute_data([2016,2017,2018])
+    print("Open, High, Low, Close, Volume [2016, 2017, 2018] shape: ", open_data.shape, high_data.shape, low_data.shape, close_data.shape, volume_data.shape)

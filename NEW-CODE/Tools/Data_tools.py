@@ -1,15 +1,18 @@
+import sys
+sys.path.append('..')
+from OP.ToA import OP_AF2A
+
 import pandas as pd
 import numpy as np
 from scipy.io import loadmat
 import os
 from datetime import datetime
-from OP.ToA import OP_AF2A
 import torch
 
-root_path = "C:/个股日频数据 20240329"
-barra_path='barra.pt'
-dict_path='dict.pt'
-minute_data_path="D:/MA-GA-Data/Minute_Data"
+root_path = "../../Data/DailyData"
+minute_data_path="../../Data/Minute_data"
+barra_path="../../Data/barra.pt"
+dict_path="../../Data/dict.pt"
 
 status_path = os.path.join(root_path, 'AllStock_DailyStatus.mat')
 ST_path = os.path.join(root_path, 'AllStock_DailyST.mat')
