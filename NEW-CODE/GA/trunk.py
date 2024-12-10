@@ -32,7 +32,7 @@ class MP_Trunk:
 
     def generate_toolbox(self):
         self.pset=gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
-           
+        int_values = [int(i) for i in [2, 3, 5, 8, 10 ,30]]   
         #注册需要用到的primitives和terminals
         for func_name in self.OP_BB2B_func_list:
             func = getattr(OP_BB2B, func_name) 
@@ -74,7 +74,8 @@ class MP_Trunk:
             func = getattr(OP_BBD2A, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
         #......
-        
+        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("MP_Trunk", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
