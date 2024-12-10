@@ -14,9 +14,10 @@ from OP.ToA import *
 from OP.Others import *
 
 class Trunk:
-    def __init__(self, M_Root: list[str], population_size=100):
+    def __init__(self, M_Root: list[str], industry_used, population_size=100):
         self.input = M_Root
         self.population_size = population_size
+        self.industry=industry_used
         self.OP_BB2B_func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod',
                                   'M_cs_norm_spread']  # 你这个class需要用到的算子类别的func_list
         self.OP_BA2B_func_list = ['M_toD_standard']
@@ -82,6 +83,8 @@ class Trunk:
         # ......
         self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
         self.pset.addPrimitive(OP_Closure.id_industry, TypeE, TypeE, name='id_industry')
+        self.pset.addTerminal(self.industry,TypeE)
+        
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Trunk", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
