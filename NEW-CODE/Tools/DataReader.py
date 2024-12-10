@@ -70,8 +70,8 @@ class DataReader:
         return D_O,D_H,D_L,D_C,D_V
 
     def get_barra(self,year_lst):
-        barra = torch.load(tools.barra_path)
-        dict = torch.load(tools.dict_path)
+        barra = torch.load(tools.barra_path,weights_only=True)
+        dict = torch.load(tools.dict_path,weights_only=True)
         s = []
         for year in year_lst:
             mask = pd.to_datetime(dict['index']).year == year
