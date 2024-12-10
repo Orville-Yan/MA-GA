@@ -12,31 +12,20 @@ class Tree:
     def __init__(self, subtrees: list[str], population_size=10):#subtree
         self.subtrees = subtrees
         self.population_size = population_size
-        self.OP_A2A_func_list = ['D_cs_rank', 'D_cs_scale', 'D_cs_zscore', 'D_cs_harmonic_mean', 'D_cs_demean',
-                          'D_cs_winsor']
-        self.OP_AF2A_func_list = ['D_ts_max', 'D_ts_min', 'D_ts_delay', 'D_ts_delta', 'D_ts_pctchg',
-                          'D_ts_mean', 'D_ts_harmonic_mean', 'D_ts_std', 'D_ts_to_max',
-                          'D_ts_to_min', 'D_ts_to_mean', 'D_ts_max_to_min', 'D_ts_maxmin_norm',
-                          'D_ts_norm', 'D_ts_detrend']
+
+        self.OP_AF2A_func_list = ['D_ts_mean', 'D_ts_harmonic_mean', 'D_ts_std']
 
     def generate_toolbox(self):
         self.pset = gp.PrimitiveSetTyped("MAIN", [TypeA] * len(self.subtrees), TypeA)
-
-        for func_name in self.OP_A2A_func_list:
-            func = getattr(OP_A2A, func_name)
-            self.pset.addPrimitive(func, [TypeA], TypeA, name=func_name)
 
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
 
-
-        int_values = [int(i) for i in [2, 3, 5, 10, 20, 60]]
-        for constant_value in int_values:
+        for constant_value in [2, 3, 5, 10, 20]:
             self.pset.addTerminal(constant_value, TypeF)
 
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Tree", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
