@@ -84,7 +84,7 @@ class MP_Trunk:
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.MP_Trunk)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
         
-    def generate_MP_Root(self):
+    def generate_MP_Trunk(self):
         self.individuals_code = self.toolbox.population(n=self.population_size)
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
@@ -92,4 +92,4 @@ if __name__ == '__main__':
     MP_Root=['at_div(open,close)','at_div(high,low)','at_sign(at_sub(high,low))']
     mp_trunk=MP_Trunk(MP_Root)
     mp_trunk.generate_toolbox()
-    mp_trunk.generate_MP_Root()
+    mp_trunk.generate_MP_Trunk()
