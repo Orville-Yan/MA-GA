@@ -44,35 +44,35 @@ class MP_Trunk:
             
         for func_name in self.OP_A2A_func_list:
             func = getattr(OP_A2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA], TypeA, name=func_name)
             
         for func_name in self.OP_AE2A_func_list:
             func = getattr(OP_AE2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeE], TypeA, name=func_name)
             
         for func_name in self.OP_AA2A_func_list:
             func = getattr(OP_AA2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
             
         for func_name in self.OP_AG2A_func_list:
             func = getattr(OP_AG2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeG], TypeA, name=func_name)
             
         for func_name in self.OP_AAF2A_func_list:
             func = getattr(OP_AAF2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeA,TypeF], TypeA, name=func_name)
             
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
             
         for func_name in self.OP_BD2A_func_list:
             func = getattr(OP_BD2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeB, TypeD], TypeA, name=func_name)
             
         for func_name in self.OP_BBD2A_func_list:
             func = getattr(OP_BBD2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
+            self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
         #......
         
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
