@@ -10,9 +10,9 @@ sys.path.append('..')
 from Tools.GA_tools import *
 from OP import *
 
-class MP_Trunk:
-    def __init__(self,MP_Root: list[str], population_size=100):
-        self.input=MP_Root
+class Trunk:
+    def __init__(self,M_Root: list[str], population_size=100):
+        self.input=M_Root
         self.population_size=population_size
         self.OP_BB2B_func_list=['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod', 'M_cs_norm_spread']#你这个class需要用到的算子类别的func_list
         self.OP_BA2B_func_list=['M_toD_standard']
@@ -74,23 +74,23 @@ class MP_Trunk:
             func = getattr(OP_BBD2A, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
         #......
-        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_industry, TypeE, TypeE, name='id_industry')
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        creator.create("MP_Trunk", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
+        creator.create("Trunk", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
         self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=3) #树的深度按需求改
-        self.toolbox.register("MP_Trunk", tools.initIterate, creator.MP_Trunk, self.toolbox.expr)
-        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.MP_Trunk)
+        self.toolbox.register("Trunk", tools.initIterate, creator.Trunk, self.toolbox.expr)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.Trunk)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
         
-    def generate_MP_Trunk(self):
+    def generate_Trunk(self):
         self.individuals_code = self.toolbox.population(n=self.population_size)
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 if __name__ == '__main__':
     MP_Root=['at_div(open,close)','at_div(high,low)','at_sign(at_sub(high,low))']
-    mp_trunk=MP_Trunk(MP_Root)
+    mp_trunk=Trunk(M_Root)
     mp_trunk.generate_toolbox()
-    mp_trunk.generate_MP_Trunk()
+    mp_trunk.generate_Trunk()
