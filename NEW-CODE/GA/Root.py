@@ -10,9 +10,8 @@ class MP_Root:
     def __init__(self, MP_Seed: [str], population_size=10):
         self.input = MP_Seed
         self.population_size = population_size
-        self.int_values = [torch.tensor(i, dtype=torch.int) for i in [2, 3, 5, 8, 10, 30]]
         self.OP_B2B_func_list = ['M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_ts_pctchg']
-        self.OP_BB2B_func_list = ['M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_norm_spread']
+        self.OP_BB2B_func_list = ['M_at_div']
     def generate_toolbox(self):
         self.pset= gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
 
@@ -24,8 +23,6 @@ class MP_Root:
             func = getattr(OP.OP_BB2B, func_name, None)
             self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
 
-        for constant in self.int_values:
-            self.pset.addTerminal(constant, int)
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("MP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
@@ -44,9 +41,8 @@ class MV_Root:
     def __init__(self, MV_Seed: [str], population_size=10):
         self.input = MV_Seed
         self.population_size = population_size
-        self.int_values = [torch.tensor(i, dtype=torch.int) for i in [2, 3, 5, 8, 10, 30]]
         self.OP_B2B_func_list = ['M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_ts_pctchg']
-        self.OP_BB2B_func_list = ['M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_norm_spread']
+        self.OP_BB2B_func_list = ['M_at_div']
 
     def generate_toolbox(self):
         self.pset= gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
@@ -58,11 +54,6 @@ class MV_Root:
         for func_name in self.OP_BB2B_func_list:
             func = getattr(OP.OP_BB2B, func_name, None)
             self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
-
-
-        for constant in self.int_values:
-            self.pset.addTerminal(constant, int)
-
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("MV_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
