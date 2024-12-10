@@ -1,6 +1,9 @@
+import sys
+sys.path.append('..')
+
+from OP.ToA import OP_BD2A, OP_AF2A
+from OP.Others import OP_Basic
 import torch
-from .ToA import *
-from .Others import OP_Basic
 
 OPclass_name_2D = ['OP_B2D', 'OP_BF2D', 'OP_BA2D', 'OP_DD2D']
 

@@ -1,5 +1,8 @@
+import sys
+sys.path.append('..')
+
+from OP.Others import OP_Basic
 import torch
-from .Others import OP_Basic
 
 OPclass_name_2C=['OP_AF2C']
 
