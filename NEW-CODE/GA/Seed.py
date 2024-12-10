@@ -66,7 +66,7 @@ class DV_Seed(Seed):
 
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN", [TypeA] * len(self.input), TypeA)
-        int_values = [int(i) for i in [5, 10, 20, 30, 60]]
+        int_values = [int(i) for i in [1,2,3,5, 10, 20]]
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
@@ -77,8 +77,8 @@ class DV_Seed(Seed):
             func = getattr(OP_AA2A, func_name)
             self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
 
-        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, TypeB, TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
@@ -90,26 +90,20 @@ class MP_Seed(Seed):
     def __init__(self, M_OHLC, population_size=10):
         super().__init__(M_OHLC, population_size)
         self.input = M_OHLC
-        self.OP_B2A_func_list = ['D_Minute_std', 'D_Minute_mean']
-
         self.OP_BF2B_func_list = ['M_ts_delta', 'M_ts_mean_left_neighbor',
                                   'M_ts_mean_mid_neighbor', 'M_ts_mean_right_neighbor']
 
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
-        int_values = [int(i) for i in [1, 2, 3, 5, 10, 20, 60]]
-        for func_name in self.OP_B2A_func_list:
-            func = getattr(OP_B2A, func_name)
-            self.pset.addPrimitive(func, TypeB, TypeA, name=func_name)
 
-        for constant_value in int_values:
-            self.pset.addTerminal(constant_value, int)
+        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20]]:
+            self.pset.addTerminal(constant_value, TypeF)
 
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
-        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, TypeB, TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
@@ -133,8 +127,8 @@ class MV_Seed(Seed):
         for func_name in self.OP_BF2B_func_list:
             func = getattr(OP_BF2B, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
-        self.pset.addPrimitive(OP_Closure.id_int, int, int, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, torch.tensor, torch.tensor, name='id_tensor')
+        self.pset.addPrimitive(OP_Closure.id_int, TypeF, TypeF, name='id_int')
+        self.pset.addPrimitive(OP_Closure.id_tensor, TypeB, TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
