@@ -7,58 +7,104 @@ from OP.Others import *
 import numpy as np
 from deap import gp, base, tools, creator
 
-class Subtree:
-    def __init__(self,population_size=10):
-        self.OP_BD2A_func_list = ['D_Minute_area_mean', 'D_Minute_area_std', 'D_Minute_area_sum', 'D_Minute_area_prod']
-        self.OP_B2A_func_list = ['D_Minute_std', 'D_Minute_mean', 'D_Minute_trend']
-        self.OP_BBD2A_func_list = ['D_Minute_area_weight_mean', 'D_Minute_area_corr', 'D_Minute_area_rankcorr','D_Minute_area_bifurcate_mean', 'D_Minute_area_bifurcate_std']
-        self.OP_BB2A_func_list = ['D_Minute_corr', 'D_Minute_weight_mean']
+class SubtreeBase:
+    def __init__(self, population_size=10):
         self.population_size = population_size
+        self.pset = None
+        self.toolbox = None
 
-    def generate_toolbox_with_mask(self):
-        self.pset_with_mask = gp.PrimitiveSetTyped("MAIN_with_mask", [TypeB, TypeD], TypeA)
+    def generate_toolbox(self, class_name, pset):
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+
+        fitness_class_name = f"FitnessMax_{class_name}"
+        individual_class_name = f"Subtree_{class_name}"
+
+        if not hasattr(creator, fitness_class_name):
+            creator.create(fitness_class_name, base.Fitness, weights=(1.0,))
+        if not hasattr(creator, individual_class_name):
+            creator.create(individual_class_name, gp.PrimitiveTree, fitness=getattr(creator, fitness_class_name), pset=pset)
+
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=1)
+        self.toolbox.register("individual", tools.initIterate, getattr(creator, individual_class_name), self.toolbox.expr)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+        self.toolbox.register("compile", gp.compile, pset=pset)
+
+    def generate_population(self):
+        self.individuals_code = self.toolbox.population(n=self.population_size)
+
+    def add_primitive(self):
+        raise NotImplementedError
+
+    def run(self):
+        self.add_primitive()
+        self.generate_population()
+
+    # TODO
+    def compile(self):
+        return
+
+
+class SubtreeWithMask(SubtreeBase):
+    def __init__(self, input1, input2, population_size=10):
+        super().__init__(population_size)
+        self.input1 = input1
+        self.input2 = input2
+        self.OP_BD2A_func_list = ['D_Minute_area_mean', 'D_Minute_area_std', 'D_Minute_area_sum', 'D_Minute_area_prod']
+        self.OP_BBD2A_func_list = ['D_Minute_area_weight_mean', 'D_Minute_area_corr', 'D_Minute_area_rankcorr',
+                                   'D_Minute_area_bifurcate_mean', 'D_Minute_area_bifurcate_std']
+
+    def add_primitive(self):
+        self.pset = gp.PrimitiveSetTyped("MAIN_with_mask", [TypeB]*len(self.input1) + [TypeD]*len(self.input2), TypeA)
 
         for func_name in self.OP_BD2A_func_list:
             func = getattr(OP_BD2A, func_name)
-            self.pset_with_mask.addPrimitive(func, [TypeB, TypeD], TypeA, name=func_name)
+            self.pset.addPrimitive(func, [TypeB, TypeD], TypeA, name=func_name)
 
         for func_name in self.OP_BBD2A_func_list:
             func = getattr(OP_BBD2A, func_name)
-            self.pset_with_mask.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
+            self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
 
-        creator.create("FitnessMax_with_mask", base.Fitness, weights=(1.0,))
-        creator.create("Subtree_withMask", gp.PrimitiveTree, fitness=creator.FitnessMax_with_mask, pset=self.pset_with_mask)
+        self.generate_toolbox("with_mask", self.pset)
 
-        self.toolbox_with_mask = base.Toolbox()
-        self.toolbox_with_mask.register("expr", gp.genHalfAndHalf, pset=self.pset_with_mask, min_=1, max_=1)
-        self.toolbox_with_mask.register("individual", tools.initIterate, creator.Subtree_withMask, self.toolbox_with_mask.expr)
-        self.toolbox_with_mask.register("population", tools.initRepeat, list, self.toolbox_with_mask.individual)
-        self.toolbox_with_mask.register("compile", gp.compile, pset=self.pset_with_mask)
+    def generate_population(self):
+        super().generate_population()
+        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input1 + self.input2)
 
-    def generate_toolbox_no_mask(self):
-        self.pset_no_mask = gp.PrimitiveSetTyped("MAIN_no_mask", [TypeB], TypeA)
+
+class SubtreeNoMask(SubtreeBase):
+    def __init__(self, input_data, population_size=10):
+        super().__init__(population_size)
+        self.input = input_data
+        self.OP_B2A_func_list = ['D_Minute_std', 'D_Minute_mean', 'D_Minute_trend']
+        self.OP_BB2A_func_list = ['D_Minute_corr', 'D_Minute_weight_mean']
+
+    def add_primitive(self):
+        self.pset = gp.PrimitiveSetTyped("MAIN_no_mask", [TypeB]*len(self.input), TypeA)
 
         for func_name in self.OP_B2A_func_list:
             func = getattr(OP_B2A, func_name)
-            self.pset_no_mask.addPrimitive(func, [TypeB], TypeA, name=func_name)
+            self.pset.addPrimitive(func, [TypeB], TypeA, name=func_name)
 
         for func_name in self.OP_BB2A_func_list:
             func = getattr(OP_BB2A, func_name)
-            self.pset_no_mask.addPrimitive(func, [TypeB, TypeB], TypeA, name=func_name)
+            self.pset.addPrimitive(func, [TypeB, TypeB], TypeA, name=func_name)
 
-        creator.create("FitnessMax_no_mask", base.Fitness, weights=(1.0,))
-        creator.create("Subtree_noMask", gp.PrimitiveTree, fitness=creator.FitnessMax_no_mask, pset=self.pset_no_mask)
+        self.generate_toolbox("no_mask", self.pset)
 
-        self.toolbox_no_mask = base.Toolbox()
-        self.toolbox_no_mask.register("expr", gp.genHalfAndHalf, pset=self.pset_no_mask, min_=1, max_=1)
-        self.toolbox_no_mask.register("individual", tools.initIterate, creator.Subtree_noMask, self.toolbox_no_mask.expr)
-        self.toolbox_no_mask.register("population", tools.initRepeat, list, self.toolbox_no_mask.individual)
-        self.toolbox_no_mask.register("compile", gp.compile, pset=self.pset_no_mask)
+    def generate_population(self):
+        super().generate_population()
+        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
-    def generate_population_with_mask(self):
-        self.individuals_code_with_mask = self.toolbox_with_mask.population(n=self.population_size)
-        self.individuals_code_with_mask, self.individuals_str_with_mask = change_name(self.individuals_code_with_mask, self.input)
+if __name__ == "__main__":
+    input_data = ['open','high']
+    mask = ['low']
 
-    def generate_population_no_mask(self):
-        self.individuals_code_no_mask = self.toolbox_no_mask.population(n=self.population_size)
-        self.individuals_code_no_mask, self.individuals_str_no_mask = change_name(self.individuals_code_no_mask, self.input)
+    subtree_with_mask = SubtreeWithMask(input_data, mask, population_size=10)
+    subtree_with_mask.run()
+    print("With Mask:", subtree_with_mask.individuals_str)
+
+    subtree_no_mask = SubtreeNoMask(input_data, population_size=10)
+    subtree_no_mask.run()
+    print("No Mask:", subtree_no_mask.individuals_str)
