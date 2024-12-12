@@ -1,5 +1,5 @@
 import torch
-from deap import gp,base,creator,tools
+from deap import gp
 
 
 class CustomError(Exception):

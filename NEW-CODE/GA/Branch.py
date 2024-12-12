@@ -1,16 +1,13 @@
-import torch
-import pandas as pd
-import numpy as np
-from deap import gp, base, tools, creator
-
 import sys
 sys.path.append('..')
 
 from OP import *
-from Tools.GA_tools import *
-## 暂时解决root中没有日频的定义
-DP_Root = []
-DV_Root = []
+from GA.Root import *
+from ToolsGA.GA_tools import *
+import torch
+from deap import gp, base, tools, creator
+
+
 class Branch:
     def __init__(self, mp_root: MP_Root, population_size: int):
         self.population_size = population_size

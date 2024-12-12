@@ -1,10 +1,9 @@
 import sys
 sys.path.append('..')
 
-from Tools.GA_tools import *
+from ToolsGA.GA_tools import *
 from OP.ToA import *
 from OP.Others import *
-import numpy as np
 from deap import gp, base, tools, creator
 
 class SubtreeBase:

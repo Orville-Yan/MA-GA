@@ -5,13 +5,13 @@ Created on Thu Dec  5 00:01:40 2024
 @author: 朱培元
 """
 import sys
-
 sys.path.append('..')
 
-from Tools.GA_tools import *
+from ToolsGA.GA_tools import *
 from OP.ToB import *
 from OP.ToA import *
 from OP.Others import *
+from deap import gp, creator, base, tools
 
 class Trunk:
     def __init__(self, M_Root: list[str], industry_used, population_size=100):

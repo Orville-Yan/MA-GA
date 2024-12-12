@@ -1,10 +1,11 @@
 import sys
 sys.path.append('..')
 
-from Tools.GA_tools import *
+from ToolsGA.GA_tools import *
 from OP.ToA import *
 from OP.ToB import *
 from OP.Others import *
+from deap import gp, creator, base, tools
 
 class Seed:
     def __init__(self, input_data, population_size=10):
@@ -136,7 +137,7 @@ class MV_Seed(Seed):
 
 
 if __name__ == "__main__":
-    from Tools.DataReader import DataReader
+    from ToolsGA.DataReader import DataReader
     data_reader = DataReader()
     MO, MH, ML, MC, MV = data_reader.get_Minute_data([2016])
     print(MO.shape)

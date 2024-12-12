@@ -2,8 +2,7 @@ import sys
 sys.path.append('..')
 
 from deap import gp, creator, base, tools
-import numpy as np
-from Tools.GA_tools import *
+from ToolsGA.GA_tools import *
 from OP.ToA import *
 from OP.Others import *
 #from Subtree import Subtree

@@ -1,11 +1,11 @@
 import sys
-sys.path.append('..')
+sys.path.append("..")
 
-from Tools.DataReader import DataReader
-from Tools.BackTest import stratified
+from ToolsGA import *
 from OP import *
 from GA import *
 import torch
+from deap import gp, creator, base, tools
 
 class config:
     seed_size=10
