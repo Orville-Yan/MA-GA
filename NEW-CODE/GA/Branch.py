@@ -39,7 +39,7 @@ class M_Branch_MP2D(Branch):
         self.input = mp_root
 
     def add_primitive(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB], TypeD)
+        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input), TypeD)
         # 添加TypeB
         for root in self.input():
             self.pset.addTerminal(root,TypeB)      
@@ -71,7 +71,7 @@ class M_Branch_MPDP2D(Branch):
         self.input2 = dp_root
 
     def add_primitive(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB,TypeA], TypeD)
+        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input1)+[TypeA]*len(self.input2), TypeD)
         # 添加TypeB
         for root in self.input1():
             self.pset.addTerminal(root,TypeB)      
@@ -96,7 +96,7 @@ class M_Branch_MV2D(Branch):
         super().__init__(mv_root, population_size)
         self.input = mv_root
     def add_primitive(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB], TypeD)
+        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input), TypeD)
         # 添加TypeB
         for root in self.input():
             self.pset.addTerminal(root,TypeB)      
@@ -128,7 +128,7 @@ class M_Branch_MVDV2D(Branch):
         self.input2 = dv_root
 
     def add_primitive(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB,TypeA], TypeD)
+        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input1)+[TypeA]*len(self.input2), TypeD)
         # 添加TypeB
         for root in self.input1():
             self.pset.addTerminal(root,TypeB)      
