@@ -45,12 +45,12 @@ class RPN_Compiler:
         for i in range(len(name)):
             self.pset.renameArguments(**{f'ARG{i}': name[i]})
         
-        creator.create('Tree', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
+        creator.create('Tree_Parser', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
         self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
-        self.toolbox.register('Tree', tools.initIterate, getattr(creator, 'Tree'), self.toolbox.expr)
-        self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, 'Tree'))
+        self.toolbox.register('Tree_Parser', tools.initIterate, getattr(creator, 'Tree_Parser'), self.toolbox.expr)
+        self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, 'Tree_Parser'))
         self.toolbox.register("compile", gp.compile, pset=self.pset)
         
     def add_primitive(self):
@@ -62,5 +62,6 @@ class RPN_Compiler:
         for inidividual in deap_formula_code_list:
             compiled_func = self.toolbox.compile(expr=inidividual)
             individual_list.append(compiled_func(*self.data))
+        return individual_list
 
 
