@@ -7,7 +7,7 @@ from OP import *
 from GA import *
 import torch
 
-class GeneticAlgorithm:
+class RPN_Producer:
     def __init__(self, year_list: list[str], population_size=10):
         self.population_size = population_size
         self.year_list = year_list
@@ -29,3 +29,38 @@ class GeneticAlgorithm:
     
     def make_root(self):
         self.mp_root = MP_Root(self.mp_seed)
+
+
+
+class RPN_Compiler:
+    def __init__(self,M_OHLCV:[TypeB],D_OHLCV:[TypeA]):
+        self.input1=['M_O','M_H','M_L','M_C','M_V']
+        self.input2=['D_O','D_H','D_L','D_C','D_V']
+        self.data=M_OHLCV+D_OHLCV
+
+        
+    def generate_toolbox(self):
+        self.pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input1)+[TypeA] * len(self.input2), TypeA)
+        name=self.input1+self.input2
+        for i in range(len(name)):
+            self.pset.renameArguments(**{f'ARG{i}': name[i]})
+        
+        creator.create('Tree', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
+
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register('Tree', tools.initIterate, getattr(creator, 'Tree'), self.toolbox.expr)
+        self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, 'Tree'))
+        self.toolbox.register("compile", gp.compile, pset=self.pset)
+        
+    def add_primitive(self):
+        pass
+    
+    def compile(self,deap_formula_str_list):
+        individual_list=[]
+        deap_formula_code_list=[gp.PrimitiveTree.from_string(k, self.pset) for k in deap_formula_str_list]
+        for inidividual in deap_formula_code_list:
+            compiled_func = self.toolbox.compile(expr=inidividual)
+            individual_list.append(compiled_func(*self.data))
+
+
