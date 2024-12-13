@@ -257,24 +257,6 @@ class MinuteDataReader:
         return [self.read_data_by_col(col, year_lst) for col in self.cols]
 
 
-class CustomClass:
-    def __init__(self):
-        self.factor_list = []
-
-    def get_from_list(self, df_list):
-        self.factor_list += [
-            'feature_{}'.format(i) for i in range(1, len(df_list) + 1)
-        ]
-        for i in range(1, len(df_list) + 1):
-            setattr(self, 'feature_{}'.format(i), df_list[i - 1])
-
-    def extend(self, factor_class):
-        ini_length = len(self.factor_list)
-        for i, factor_name in enumerate(factor_class.factor_list):
-            factor=getattr(factor_class, factor_name)
-            self.factor_list.append(factor_name)
-            setattr(self, factor_name, factor)
-
 
 
 
