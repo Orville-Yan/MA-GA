@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Dec  5 00:01:40 2024
 
-@author: 朱培元
-"""
 import sys
-sys.path.append(r'C:\Users\朱培元\Desktop\MA-GA\NEW-CODE')
+sys.path.append('..')
 
 from ToolsGA.GA_tools import *
 from OP.ToB import *
