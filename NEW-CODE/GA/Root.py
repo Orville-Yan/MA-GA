@@ -2,7 +2,8 @@ import sys
 sys.path.append('..')
 
 from ToolsGA.GA_tools import *
-from OP.ToB import OP_B2B, OP_BB2B
+from OP.ToB import *
+from OP.ToA import *
 from OP import *
 from deap import gp, creator, base, tools
 
