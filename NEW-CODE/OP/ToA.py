@@ -1,4 +1,8 @@
 import sys
+import os
+
+# 更改当前工作目录到当前文件所在目录
+os.chdir(os.path.dirname(__file__))
 sys.path.append('..')
 
 from OP.Others import OP_Basic
@@ -62,7 +66,7 @@ class OP_A2A:
 
     @staticmethod
     def D_cs_winsor(x, limit=[0.05, 0.95]):  # 尾部磨平，将分位数小于0.05或大于0.95的部分全部改为0.05和0.95处的值
-        rank = OP_A2A.cs_rank(x)
+        rank = OP_A2A.D_cs_rank(x)
         min_limit = torch.where(rank >= limit[0], rank, float('nan'))
         max_limit = torch.where(rank <= limit[1], rank, float('nan'))
         mask = (~torch.isnan(min_limit)) & (~torch.isnan(max_limit))
@@ -287,7 +291,7 @@ class OP_AF2A:
 
     @staticmethod
     def D_ts_pctchg(x, lookback):
-        s = (x - OP_AF2A.ts_delay(x, lookback)) / OP_AF2A.ts_delay(x, lookback)
+        s = (x - OP_AF2A.D_ts_delay(x, lookback)) / OP_AF2A.D_ts_delay(x, lookback)
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
@@ -380,7 +384,7 @@ class OP_AF2A:
         x = x.float()
         time_idx = torch.arange(x.shape[0], dtype=torch.float32).unsqueeze(-1)
         time_idx_expanded = time_idx.repeat(1, x.shape[1])
-        k, b, _ = OP_AAF2A.ts_regress(time_idx_expanded, x, lookback)
+        k, b, _ = OP_AAF2A.D_ts_regress(time_idx_expanded, x, lookback)
         trend = (k * time_idx_expanded) + b
         s = x - trend
         s[:lookback - 1, :] = float('nan')
@@ -415,7 +419,7 @@ class OP_AC2A:
         x_3d = x.unfold(0, mask.shape[2], 1)
         x_3d = torch.cat([nan_fill, x_3d], dim=0)
         x_3d = torch.where(mask, x_3d, float('nan'))
-        all_nan = torch.all(torch.isnan(x_3d), dim=(0, 1))
+        all_nan = torch.all(torch.isnan(x_3d), dim=2)
         s = torch.nansum(x_3d, dim=-1)
         s[all_nan] = float('nan')
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
@@ -426,7 +430,7 @@ class OP_AC2A:
         x_3d = x.unfold(0, mask.shape[2], 1)
         x_3d = torch.cat([nan_fill, x_3d], dim=0)
         x_3d = torch.where(mask, x_3d, float('nan'))
-        all_nan = torch.all(torch.isnan(x_3d), dim=(0, 1))
+        all_nan = torch.all(torch.isnan(x_3d), dim=2)
         x_3d = torch.where(torch.isnan(x_3d), torch.ones_like(x_3d), x_3d)
         s = torch.prod(x_3d, dim=-1)
         s[all_nan] = float('nan')
@@ -440,43 +444,43 @@ class OP_BD2A:
     def D_Minute_area_mean(x, mask):
         x = torch.where(mask, x, float('nan'))
         s = OP_Basic.nanmean(x)
-        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s).t()
 
     @staticmethod
     def D_Minute_area_std(x, mask):
         x = torch.where(mask, x, float('nan'))
         s = OP_Basic.nanstd(x)
-        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s).t()
 
     @staticmethod
     def D_Minute_area_sum(x, mask):
         x = torch.where(mask, x, float('nan'))
-        all_nan = torch.all(torch.isnan(x), dim=(0, 1))
+        all_nan = torch.all(torch.isnan(x), dim=2)
         s = torch.nansum(x, dim=-1)
         s[all_nan] = float('nan')
-        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s).t()
 
     @staticmethod
     def D_Minute_area_prod(x, mask):
         x = torch.where(mask, x, float('nan'))
-        all_nan = torch.all(torch.isnan(x), dim=(0, 1))
+        all_nan = torch.all(torch.isnan(x), dim=2)
         x = torch.where(torch.isnan(x), torch.ones_like(x), x)
         s = torch.prod(x, dim=-1)
         s[all_nan] = float('nan')
-        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s).t()
 
 class OP_B2A:
     def __init__(self):
-        self.fun_list=['D_Minute_std','D_Minute_mean','D_Minute_trend']
+        self.func_list=['D_Minute_std','D_Minute_mean','D_Minute_trend']
     @staticmethod
     def D_Minute_std(m_tensor):
         # 计算日内标准差。
-        return OP_Basic.nanstd(m_tensor, dim=-1)
+        return OP_Basic.nanstd(m_tensor, dim=-1).t()
 
     @staticmethod
     def D_Minute_mean(m_tensor):
         # 计算日内均值。
-        return OP_Basic.nanmean(m_tensor, dim=-1)
+        return OP_Basic.nanmean(m_tensor, dim=-1).t()
 
     @staticmethod
     def D_Minute_trend(m_tensor):
@@ -484,7 +488,7 @@ class OP_B2A:
         time_index = torch.arange(m_tensor.shape[-1], dtype=torch.float32)
         time_index = time_index.unsqueeze(0).expand_as(m_tensor)
         slopes, _, _ = OP_Basic.regress(m_tensor, time_index, dim=-1)
-        return slopes.squeeze(-1)
+        return slopes.squeeze(-1).t()
 
 class OP_BBD2A:
     def __init__(self):
@@ -496,36 +500,36 @@ class OP_BBD2A:
         x = torch.where(mask, x, float('nan'))
         x_ = x * weight
         s = OP_Basic.nanmean(x_)
-        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s).t()
 
     @staticmethod
     def D_Minute_area_corr(x, y, mask):
         x = torch.where(mask, x, float('nan'))
         corr = OP_Basic.corrwith(x, y)
-        return torch.where((corr == torch.inf) | (corr == -torch.inf), float('nan'), corr)
+        return torch.where((corr == torch.inf) | (corr == -torch.inf), float('nan'), corr).t()
 
     @staticmethod
     def D_Minute_area_rankcorr(x, y, mask):
         x = torch.where(mask, x, float('nan'))
         corr = OP_Basic.rank_corrwith(x, y, )
-        return torch.where((corr == torch.inf) | (corr == -torch.inf), float('nan'), corr)
+        return torch.where((corr == torch.inf) | (corr == -torch.inf), float('nan'), corr).t()
 
     @staticmethod
     def D_Minute_area_bifurcate_mean(m_tensor_x, m_tensor_y, mask):
-        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
+        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1, 242)  # (day_len, num_stock, minute_len)
         day_expanded = day_expanded.permute(1, 0, 2)
         maskplus = day_expanded < m_tensor_y
         masksub = day_expanded > m_tensor_y
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_mean(m_tensor_x,masksub))
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_mean(m_tensor_x,masksub)).t()
     
 
     @staticmethod
     def D_Minute_area_bifurcate_std(m_tensor_x, m_tensor_y, mask):
-        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1, 240)  # (day_len, num_stock, minute_len)
+        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1, 242)  # (day_len, num_stock, minute_len)
         day_expanded = day_expanded.permute(1, 0, 2)
         maskplus = day_expanded < m_tensor_y
         masksub = day_expanded > m_tensor_y
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_std(m_tensor_x,masksub))
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_std(m_tensor_x,masksub)).t()
 
 class OP_BB2A:
     def __init__(self):
@@ -534,13 +538,13 @@ class OP_BB2A:
     @staticmethod
     def D_Minute_corr(x,y):
         corr = OP_Basic.corrwith(x, y)
-        return torch.where((corr==torch.inf)|(corr==-torch.inf),float('nan'),corr)
+        return torch.where((corr==torch.inf)|(corr==-torch.inf),float('nan'),corr).t()
 
     @staticmethod
     def D_Minute_weight_mean(x,weight=1):
         x_ = x * weight
         s = OP_Basic.nanmean(x_)
-        return torch.where((s==torch.inf)|(s==-torch.inf),float('nan'),s)
+        return torch.where((s==torch.inf)|(s==-torch.inf),float('nan'),s).t()
 
 
 class OP_D2A:
@@ -550,4 +554,83 @@ class OP_D2A:
     @staticmethod
     def D_Minute_abnormal_point_count(mask):
         s = torch.nansum(mask, dim=-1)
-        return torch.where((s==torch.inf)|(s==-torch.inf),float('nan'),s)
+        return torch.where((s==torch.inf)|(s==-torch.inf),float('nan'),s).t()
+
+
+if __name__ == '__main__':
+    import time
+
+
+    # 假设的形状
+    day_len = 244
+    num_stock = 5519
+    minute_len = 242
+
+    # 创建随机数据
+    A = torch.randn(day_len, num_stock)
+    A2 = torch.randn(day_len, num_stock)
+    C = torch.randint(0,2,(day_len, num_stock, 20)).bool()
+    B = torch.randn(num_stock, day_len, minute_len)
+    B2 = torch.randn(num_stock, day_len, minute_len)
+    D = torch.randint(0,2,(num_stock, day_len, minute_len)).bool()
+    F = 5
+    G = 0.5
+    E = torch.randint(0, 2, (day_len, num_stock, 10))  # 假设有10个行业
+    mask = torch.randint(0, 2, (num_stock, day_len, minute_len)).bool()  # 随机生成mask
+
+    # 测试函数
+    def test_functions(class_instance, data, *args):
+        results = {}
+        for func_name in class_instance.func_list:
+            func = getattr(class_instance, func_name)
+            start_time = time.time()
+            try:
+                result = func(*data, *args)
+                results[func_name] = time.time() - start_time
+            except Exception as e:
+                results[func_name] = str(e)
+        return results
+
+    # 测试每个类
+    def test_class(class_type, *args):
+        instance = class_type()
+        if class_type in [OP_A2A]:
+            return test_functions(instance, (A,))
+        elif class_type in [OP_AE2A]:
+            return test_functions(instance, (A, E, ))
+        elif class_type in [OP_AA2A]:
+            return test_functions(instance, (A, A, ))
+        elif class_type in [OP_AF2A]:
+            return test_functions(instance, (A, F, ))
+        elif class_type in [OP_AG2A]:
+            return test_functions(instance, (A, G, ))
+        elif class_type in [OP_AAF2A]:
+            return test_functions(instance, (A, A, F, ))
+        elif class_type in [OP_AC2A]:
+            return test_functions(instance, (A, C, ))
+        elif class_type in [OP_BD2A]:
+            return test_functions(instance, (B, D, ))
+        elif class_type in [OP_BBD2A]:
+            return test_functions(instance, (B, B, D ))
+        elif class_type in [OP_BB2A]:
+            return test_functions(instance, (B, B, ))
+        elif class_type in [OP_B2A]:
+            return test_functions(instance, (B,))
+        elif class_type in [OP_D2A]:
+            return test_functions(instance, (D,))
+
+    # 打印结果
+    def print_results(results, class_name):
+        print(f"Results for {class_name}:")
+        for func_name, duration in results.items():
+            if isinstance(duration, float):
+                print(f"  {func_name}: {duration:.6f} seconds")
+            else:
+                print(f"  {func_name}: {duration}")
+
+    # 运行测试
+    classes = [OP_A2A, OP_AE2A, OP_AA2A, OP_AG2A, OP_AAF2A, OP_AF2A, OP_AC2A, OP_BD2A, OP_B2A, OP_BBD2A, OP_BB2A, OP_D2A]
+    classes = [OP_B2A]
+    for class_type in classes:
+        results = test_class(class_type)
+        print_results(results, class_type.__name__)
