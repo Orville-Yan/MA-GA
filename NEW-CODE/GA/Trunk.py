@@ -7,11 +7,11 @@ from OP.ToA import *
 from OP.Others import *
 from deap import gp, creator, base, tools
 class Trunk:
-    def __init__(self, input1: list[str], input2, input3,input4,population_size=100):
-        self.input1 = input1
-        self.input2 = input2
-        self.input3 = input3
-        self.input4 = input4
+    def __init__(self, M_Root: list[str], D_Root, Branch, ind_str,population_size=100):
+        self.input1 = M_Root
+        self.input2 = D_Root
+        self.input3 = Branch
+        self.input4 = ind_str
         self.population_size = population_size
         #self.industry=industry_used
         self.OP_BB2B_func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod',
