@@ -40,11 +40,6 @@ class SubtreeBase:
         self.add_primitive()
         self.generate_population()
 
-    # TODO
-    def compile(self):
-        return
-
-
 class SubtreeWithMask(SubtreeBase):
     def __init__(self, input1, input2, population_size=10):
         super().__init__(population_size)
