@@ -516,7 +516,7 @@ class OP_BBD2A:
         day_expanded = day_expanded.permute(1, 0, 2)
         maskplus = day_expanded < m_tensor_y
         masksub = day_expanded > m_tensor_y
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_mean(m_tensor_x,masksub)).t()
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_mean(m_tensor_x,masksub))
     
 
     @staticmethod
@@ -525,7 +525,7 @@ class OP_BBD2A:
         day_expanded = day_expanded.permute(1, 0, 2)
         maskplus = day_expanded < m_tensor_y
         masksub = day_expanded > m_tensor_y
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_std(m_tensor_x,masksub)).t()
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, maskplus),OP_BD2A.D_Minute_area_std(m_tensor_x,masksub))
 
 class OP_BB2A:
     def __init__(self):
