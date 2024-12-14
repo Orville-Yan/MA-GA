@@ -79,31 +79,47 @@ class OP_Basic:
     @staticmethod
     def multi_regress(y, x_s, dim=-1):
         down_epsilon = 1e-10
-        up_epsilon = 1e20
+        B, N, D = x_s.shape
+        M = y.shape[-1]
 
-        mask_x = torch.sum(torch.isnan(x_s), dim=dim) > 0
-        mask_y = torch.isnan(y)
-        mask = ~(mask_x | mask_y)
-        y = torch.where(mask.unsqueeze(-1), y.unsqueeze(-1), 0)
-        const = torch.ones(x_s.shape[:dim] + (x_s.shape[dim], 1)).to(x_s.device)
+        mask_x = ~torch.isnan(x_s).any(dim=-1)
+        mask_y = ~torch.isnan(y).any(dim=-1)
+        mask = mask_x & mask_y
+
+        y_valid = torch.where(mask.unsqueeze(-1), y, torch.tensor(0.0, device=y.device))
+
+
+        const = torch.ones(B, N, 1, device=x_s.device)
         x_const = torch.cat([x_s, const], dim=-1)
-        x_const = torch.where(mask.unsqueeze(-1).expand_as(x_const), x_const, 0)
 
-        x_T = x_const.permute(*range(len(x_const.shape) - 2), -1, -2)
-        w = torch.matmul(x_T, x_const)
-        det = torch.det(w)
+        x_const = torch.where(mask.unsqueeze(-1), x_const, torch.tensor(0.0, device=x_const.device))
 
-        singularity = ((det < down_epsilon) | (abs(det) >= up_epsilon)).unsqueeze(-1).unsqueeze(-1).expand_as(w)
-        theta = torch.matmul(torch.inverse(torch.where(singularity, float('nan'), w)), torch.matmul(x_T, y))
-        k = theta[:, :-1]
-        b = theta[:, -1]
-        predict = torch.sum(k.unsqueeze(dim) * x_s, dim=dim) + b.unsqueeze(-1)
-        res = torch.where(mask, y.squeeze(-1), float('nan')) - predict
-        k = torch.where(abs(k) < down_epsilon, 0, k)
-        b = torch.where(abs(b) < down_epsilon, 0, b)
-        res = torch.where(abs(res) < down_epsilon, 0, res)
+        X_T = x_const.transpose(-2, -1)
+        W = torch.matmul(X_T, x_const)
+        XTY = torch.matmul(X_T, y_valid)
+
+        W_pinv = torch.pinverse(W)
+        theta = torch.matmul(W_pinv, XTY)
+
+        k = theta[:, :-1, :]
+        b = theta[:, -1, :]
+
+        predict = torch.matmul(x_s, k) + b.unsqueeze(1)
+
+        res = torch.where(mask.unsqueeze(-1), y - predict, torch.tensor(float('nan'), device=y.device))
+
+        k = torch.where(torch.abs(k) < down_epsilon, torch.tensor(0.0, device=k.device), k)
+        b = torch.where(torch.abs(b) < down_epsilon, torch.tensor(0.0, device=b.device), b)
+        res = torch.where(torch.abs(res) < down_epsilon, torch.tensor(0.0, device=res.device), res)
+
         return k, b, res
 
     @staticmethod
     def regress(y, x_s, dim=-1):
-        return OP_Basic.multi_regress(y, x_s.unsqueeze(-1), dim=dim)
+        if y.dim() == x_s.dim():
+            return OP_Basic.multi_regress(y, x_s, dim=dim)
+        elif y.dim() == (x_s.dim() - 1):
+            y = y.unsqueeze(-1)
+            return OP_Basic.multi_regress(y, x_s, dim=dim)
+        else:
+            raise ValueError(f"Unsupported dimension mismatch: x_s.dim()={x_s.dim()}, y.dim()={y.dim()}")
