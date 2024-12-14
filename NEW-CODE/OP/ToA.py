@@ -1,8 +1,4 @@
 import sys
-import os
-
-# 更改当前工作目录到当前文件所在目录
-os.chdir(os.path.dirname(__file__))
 sys.path.append('..')
 
 from OP.Others import OP_Basic
