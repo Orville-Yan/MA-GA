@@ -38,7 +38,7 @@ class OP_Basic:
         centered_tensor = centered_tensor.masked_fill(torch.isnan(centered_tensor), 0)
         var = torch.nansum(centered_tensor.pow(2), dim=dim)
         n = torch.sum(~torch.isnan(x), dim=dim)
-        return torch.sqrt(var / (n - 1))
+        return torch.sqrt(var / n)
 
     @staticmethod
     def corrwith(tensor1, tensor2, dim=-1):
