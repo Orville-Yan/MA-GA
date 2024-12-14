@@ -17,46 +17,28 @@ class MP_Root:
         self.population_size = population_size
         self.OP_B2B_func_list = ['M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_ts_pctchg']
         self.OP_BB2B_func_list = ['M_at_div']
-
     def generate_toolbox(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
+        self.pset= gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
 
-        # 创建必要的DEAP类
-        if not hasattr(creator, "FitnessMax"):
-            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        if not hasattr(creator, "MP_Root"):
-            creator.create("MP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
-
-        # 添加原语
         for func_name in self.OP_B2B_func_list:
             func = getattr(OP_B2B, func_name, None)
-            if func:
-                self.pset.addPrimitive(func, [TypeB], TypeB, name=func_name)
-            else:
-                print(f"Warning: Function {func_name} not found in OP_B2B.")
+            self.pset.addPrimitive(func, [TypeB], TypeB, name=func_name)
 
         for func_name in self.OP_BB2B_func_list:
             func = getattr(OP_BB2B, func_name, None)
-            if func:
-                self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
-            else:
-                print(f"Warning: Function {func_name} not found in OP_BB2B.")
+            self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
 
-        # 检查是否至少有一个原语或终端为TypeB
-        if not self.pset.primitives.get(TypeB):
-            print("Error: No primitives available for TypeB.")
-            return  # 这里可以根据需要抛出异常或返回
+
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("MP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=2)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)  # 树的深度按需求改
         self.toolbox.register("MP_Root", tools.initIterate, creator.MP_Root, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.MP_Root)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
 
     def generate_MP_Root(self):
-        if not hasattr(self, 'toolbox'):
-            print("Error: Toolbox is not initialized.")
-            return
         self.individuals_code = self.toolbox.population(n=self.population_size)
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
