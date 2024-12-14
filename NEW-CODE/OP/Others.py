@@ -48,8 +48,8 @@ class OP_Basic:
 
         tensor1_mean = OP_Basic.nanmean(tensor1, dim=dim)
         tensor2_mean = OP_Basic.nanmean(tensor2, dim=dim)
-        tensor1_std = OP_Basic.nanstd(tensor1, dim=dim, unbiased=False)
-        tensor2_std = OP_Basic.nanstd(tensor2, dim=dim, unbiased=False)
+        tensor1_std = OP_Basic.nanstd(tensor1, dim=dim)
+        tensor2_std = OP_Basic.nanstd(tensor2, dim=dim)
         centered_tensor1 = tensor1 - tensor1_mean.unsqueeze(dim)
         centered_tensor2 = tensor2 - tensor2_mean.unsqueeze(dim)
         covariance = OP_Basic.nanmean(centered_tensor1 * centered_tensor2, dim=dim)
@@ -68,8 +68,8 @@ class OP_Basic:
 
         tensor1_mean = OP_Basic.nanmean(tensor1, dim=dim)
         tensor2_mean = OP_Basic.nanmean(tensor2, dim=dim)
-        tensor1_std = OP_Basic.nanstd(tensor1, dim=dim, unbiased=False)
-        tensor2_std = OP_Basic.nanstd(tensor2, dim=dim, unbiased=False)
+        tensor1_std = OP_Basic.nanstd(tensor1, dim=dim)
+        tensor2_std = OP_Basic.nanstd(tensor2, dim=dim)
         centered_tensor1 = tensor1 - tensor1_mean.unsqueeze(dim)
         centered_tensor2 = tensor2 - tensor2_mean.unsqueeze(dim)
         covariance = OP_Basic.nanmean(centered_tensor1 * centered_tensor2, dim=dim)
