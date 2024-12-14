@@ -46,7 +46,6 @@ class DP_Seed(Seed):
         for constant_value in [2, 3, 5,  10, 20]:
             self.pset.addTerminal(constant_value, TypeF)
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeA], TypeA, name='id_tensor')
 
         super().generate_toolbox()
 
@@ -78,7 +77,6 @@ class DV_Seed(Seed):
             self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
 
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeB], TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
@@ -103,7 +101,6 @@ class MP_Seed(Seed):
             func = getattr(OP_BF2B, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeB], TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
@@ -128,7 +125,6 @@ class MV_Seed(Seed):
             func = getattr(OP_BF2B, func_name)
             self.pset.addPrimitive(func, [TypeB, TypeF], TypeB, name=func_name)
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_tensor, [TypeB], TypeB, name='id_tensor')
         super().generate_toolbox()
 
     def run(self):
