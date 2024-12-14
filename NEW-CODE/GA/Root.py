@@ -3,6 +3,7 @@ sys.path.append('..')
 
 from ToolsGA.GA_tools import *
 from OP.ToB import OP_B2B, OP_BB2B
+from OP import *
 from deap import gp, creator, base, tools
 
 
@@ -69,13 +70,114 @@ class MV_Root:
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 class DP_Root:
-    pass
+    def __init__(self, DP_Seed: list[str], population_size=10):
+        self.input = DP_Seed
+        self.population_size = population_size
+        self.OP_A2A_func_list = ['D_cs_rank', 'D_cs_scale', 'D_cs_zscore', 'M_ts_pctchg']
+        self.OP_AA2A_func_list = ['D_at_div', 'D_at_prod', 'D_cs_cut']
+        self.OP_AAF2A_func_list = ['D_ts_corr','D_ts_rankcorr']
+        self.OP_AF2A_func_list = ['D_ts_pctchg','D_ts_norm']
+        self.OP_BBD2A_func_list = ['D_Minute_area_corr', 'D_Minute_area_rankcorr']
+        self.OP_D2A_func_list = ['D_Minute_abnormal_point_count']
+
+    def generate_toolbox(self):
+        self.pset= gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input) + [TypeA] * len(self.input) + [TypeD] * len(self.input), TypeB)
+
+        for func_name in self.OP_A2A_func_list:
+            func = getattr(OP_A2A, func_name, None)
+            self.pset.addPrimitive(func, TypeA, TypeA, name=func_name)
+        
+        for func_name in self.OP_AA2A_func_list:
+            func = getattr(OP_AA2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
+
+        for func_name in self.OP_AAF2A_func_list:
+            func = getattr(OP_AAF2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeA, TypeA, TypeF], TypeA, name=func_name)
+
+        for func_name in self.OP_AF2A_func_list:
+            func = getattr(OP_AF2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
+
+        for func_name in self.OP_BBD2A_func_list:
+            func = getattr(OP_BBD2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
+
+        for func_name in self.OP_D2A_func_list:
+            func = getattr(OP_D2A, func_name, None)
+            self.pset.addPrimitive(func, TypeD, TypeA, name=func_name)
+
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("DP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
+
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register("DP_Root", tools.initIterate, creator.DP_Root, self.toolbox.expr)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.DP_Root)
+        self.toolbox.register("compile", gp.compile, pset=self.pset)
+
+    def generate_DP_Root(self):
+        self.individuals_code = self.toolbox.population(n=self.population_size)
+        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 class DV_Root:
-    pass
+    def __init__(self, DV_Seed: list[str], population_size=10):
+        self.input = DV_Seed
+        self.population_size = population_size
+        self.OP_A2A_func_list = ['D_cs_rank', 'D_cs_scale', 'D_cs_zscore', 'M_ts_pctchg']
+        self.OP_AA2A_func_list = ['D_at_div', 'D_at_prod', 'D_cs_cut']
+        self.OP_AAF2A_func_list = ['D_ts_corr','D_ts_rankcorr']
+        self.OP_AF2A_func_list = ['D_ts_pctchg','D_ts_norm']
+        self.OP_BBD2A_func_list = ['D_Minute_area_corr', 'D_Minute_area_rankcorr']
+        self.OP_D2A_func_list = ['D_Minute_abnormal_point_count']
+
+    def generate_toolbox(self):
+        self.pset= gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input) + [TypeA] * len(self.input) + [TypeD] * len(self.input), TypeB)
+
+        for func_name in self.OP_A2A_func_list:
+            func = getattr(OP_A2A, func_name, None)
+            self.pset.addPrimitive(func, TypeA, TypeA, name=func_name)
+        
+        for func_name in self.OP_AA2A_func_list:
+            func = getattr(OP_AA2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
+
+        for func_name in self.OP_AAF2A_func_list:
+            func = getattr(OP_AAF2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeA, TypeA, TypeF], TypeA, name=func_name)
+
+        for func_name in self.OP_AF2A_func_list:
+            func = getattr(OP_AF2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
+
+        for func_name in self.OP_BBD2A_func_list:
+            func = getattr(OP_BBD2A, func_name, None)
+            self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
+
+        for func_name in self.OP_D2A_func_list:
+            func = getattr(OP_D2A, func_name, None)
+            self.pset.addPrimitive(func, TypeD, TypeA, name=func_name)
+
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("DV_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
+
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register("DV_Root", tools.initIterate, creator.DV_Root, self.toolbox.expr)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.DV_Root)
+        self.toolbox.register("compile", gp.compile, pset=self.pset)
+
+    def generate_DV_Root(self):
+        self.individuals_code = self.toolbox.population(n=self.population_size)
+        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 if __name__ == "__main__":
     MP_Seed = ['M_ts_mean_left_neighbor(M_O, 5, -1)', 'M_ts_mean_right_neighbor(M_C, 10, 1)']
     mp_root = MP_Root(MP_Seed)
     mp_root.generate_toolbox()
     mp_root.generate_MP_Root()
+
+    DP_Seed = ['D_ts_mean(D_O, 5)', 'D_ts_mean(D_C, 10)']
+    dp_root = DP_Root(DP_Seed)
+    dp_root.generate_toolbox()
+    dp_root.generate_DP_Root()
