@@ -73,39 +73,23 @@ class DP_Root:
     def __init__(self, DP_Seed: list[str], population_size=10):
         self.input = DP_Seed
         self.population_size = population_size
-        self.OP_A2A_func_list = ['D_cs_rank', 'D_cs_scale', 'D_cs_zscore', 'M_ts_pctchg']
-        self.OP_AA2A_func_list = ['D_at_div', 'D_at_prod', 'D_cs_cut']
-        self.OP_AAF2A_func_list = ['D_ts_corr','D_ts_rankcorr']
+        self.OP_AA2A_func_list = ['D_at_div']
         self.OP_AF2A_func_list = ['D_ts_pctchg','D_ts_norm']
-        self.OP_BBD2A_func_list = ['D_Minute_area_corr', 'D_Minute_area_rankcorr']
-        self.OP_D2A_func_list = ['D_Minute_abnormal_point_count']
 
     def generate_toolbox(self):
         self.pset= gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input) + [TypeA] * len(self.input) + [TypeD] * len(self.input), TypeB)
-
-        for func_name in self.OP_A2A_func_list:
-            func = getattr(OP_A2A, func_name, None)
-            self.pset.addPrimitive(func, TypeA, TypeA, name=func_name)
         
         for func_name in self.OP_AA2A_func_list:
             func = getattr(OP_AA2A, func_name, None)
             self.pset.addPrimitive(func, [TypeA, TypeA], TypeA, name=func_name)
 
-        for func_name in self.OP_AAF2A_func_list:
-            func = getattr(OP_AAF2A, func_name, None)
-            self.pset.addPrimitive(func, [TypeA, TypeA, TypeF], TypeA, name=func_name)
-
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name, None)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
 
-        for func_name in self.OP_BBD2A_func_list:
-            func = getattr(OP_BBD2A, func_name, None)
-            self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
-
-        for func_name in self.OP_D2A_func_list:
-            func = getattr(OP_D2A, func_name, None)
-            self.pset.addPrimitive(func, TypeD, TypeA, name=func_name)
+        for constant_value in [2,3,5,10,20]:
+            self.pset.addTerminal(constant_value,TypeF)
+        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("DP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
@@ -140,6 +124,7 @@ class DV_Root:
         
         for constant_value in [2,3,5,10,20]:
             self.pset.addTerminal(constant_value,TypeF)
+        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("DV_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
