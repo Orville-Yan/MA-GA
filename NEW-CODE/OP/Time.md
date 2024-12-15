@@ -90,15 +90,25 @@ Results for OP_AF2A:
   D_ts_std: 0.049832 seconds
   
   D_ts_to_max: 0.008907 seconds
+  
   D_ts_to_min: 0.005069 seconds
+  
   D_ts_to_mean: 0.016655 seconds
+  
   D_ts_max_to_min: 0.000000 seconds
+  
   D_ts_maxmin_norm: 0.017697 seconds
+  
   D_ts_norm: 0.069013 seconds
+  
   D_ts_detrend: 0.157330 seconds
+  
 Results for OP_AC2A:
+
   D_ts_mask_mean: 0.086442 seconds
+  
   D_ts_mask_std: 0.269205 seconds
+
   D_ts_mask_sum: The shape of the mask [20] at index 0 does not match the shape of the indexed tensor [244, 5601] at index 0
   D_ts_mask_prod: The shape of the mask [20] at index 0 does not match the shape of the indexed tensor [244, 5601] at index 0
 Results for OP_AAF2A:
