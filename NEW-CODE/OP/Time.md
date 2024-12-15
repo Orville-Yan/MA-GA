@@ -37,6 +37,7 @@ Results for OP_A2A:
   
   D_cs_winsor: 0.042805 seconds
 }
+
 {
 Results for OP_AA2A:
 
@@ -56,11 +57,13 @@ Results for OP_AA2A:
   
   D_at_mean: 0.000000 seconds
  }
+ 
  {
 Results for OP_AG2A:
 
   D_cs_edge_flip: 0.044341 seconds
   }
+  
   {
 Results for OP_AAF2A:
 
@@ -74,6 +77,7 @@ Results for OP_AAF2A:
   
   D_ts_regress: 0.146107 seconds
   }
+  
   {
 Results for OP_AF2A:
 
@@ -107,6 +111,7 @@ Results for OP_AF2A:
   
   D_ts_detrend: 0.157330 seconds
   }
+  
   {
 Results for OP_AC2A:
 
@@ -118,6 +123,7 @@ Results for OP_AC2A:
   
   D_ts_mask_prod: The shape of the mask [20] at index 0 does not match the shape of the indexed tensor [244, 5601] at index 0
   }
+  
   {
 Results for OP_AAF2A:
 
@@ -131,6 +137,7 @@ Results for OP_AAF2A:
   
   D_ts_regress: 0.159823 seconds
   }
+  
   {
 Results for OP_AC2A:
 
@@ -142,6 +149,7 @@ Results for OP_AC2A:
   
   D_ts_mask_prod: The shape of the mask [20] at index 0 does not match the shape of the indexed tensor [244, 5601] at index 0
   }
+  
   {
 Results for OP_BD2A:
 
@@ -154,6 +162,7 @@ Results for OP_BD2A:
   D_Minute_area_prod: The shape of the mask [242] at index 0 does not match the shape of the indexed tensor [5528, 244] at index 0
 
   }
+  
   {
 Results for OP_B2A:
 
@@ -163,6 +172,7 @@ Results for OP_B2A:
   
   D_Minute_trend: Tensors must have same number of dimensions: got 4 and 5
   }
+  
   {
 Results for OP_BBD2A:
 
@@ -176,6 +186,7 @@ Results for OP_BBD2A:
   
   D_Minute_area_bifurcate_std: The size of tensor a (240) must match the size of tensor b (242) at non-singleton dimension 2
   }
+  
   {
 Results for OP_BB2A:
 
@@ -183,6 +194,7 @@ Results for OP_BB2A:
 
   D_Minute_weight_mean: 1.122144 seconds
   }
+  
   {
 Results for OP_D2A:
 
