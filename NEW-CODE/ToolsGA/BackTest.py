@@ -472,45 +472,34 @@ class backtest:
         self.IC_series = None
 
     def get_stratified_return(self):
-        T, N = self.factor.shape
         tensor = self.factor
         target = self.factor_target
+        bins_num = self.bins_num
 
-        quantiles = torch.linspace(0, 1, self.bins_num + 1)
-        boundaries_list = []
-        for i in range(T):
-            fac_t = tensor[i]
-            valid = ~torch.isnan(fac_t)
-            if valid.sum() == 0:
-                boundaries_list.append(torch.tensor([float('nan')] * (self.bins_num - 1)))
-            else:
-                qs = []
-                for q in quantiles[1:-1]:
-                    qs.append(torch.nanquantile(fac_t, q.item()))
-                boundaries_list.append(torch.tensor(qs))
+        quantiles = torch.linspace(0, 1, bins_num + 1, device=tensor.device)
+        q = quantiles[1:-1]
 
-        boundaries = torch.stack(boundaries_list)
+        boundaries = torch.nanquantile(tensor, q, dim=1).T
+        boundaries_all_nan = torch.isnan(boundaries).all(dim=1)
 
-        # 分桶
-        bins = torch.full((T, N), float('nan'))
-        for i in range(T):
-            fac_t = tensor[i]
-            mask = torch.isnan(fac_t)
-            if torch.isnan(boundaries[i]).all():
-                continue
-            bins[i] = torch.bucketize(fac_t, boundaries[i], right=True)
-            bins[i][mask] = float('nan')
+        comparison = tensor.unsqueeze(-1) > boundaries.unsqueeze(1)
+        bins = comparison.sum(dim=-1).float()
+        bins[boundaries_all_nan, :] = float('nan')
+        mask = torch.isnan(tensor)
+        bins[mask] = float('nan')
 
-        # 计算每组平均收益
-        bins_return = []
-        for b in range(self.bins_num):
-            group_mask = (bins == b)
-            group_ret = OP_Basic.nanmean(torch.where(group_mask, target, torch.tensor(float('nan'))), dim=1)
-            bins_return.append(group_ret)
-        all_mean_ret = OP_Basic.nanmean(target, dim=1)
-        bins_return.append(all_mean_ret)
+        # 计算每个桶的平均收益
+        bin_indices = torch.arange(bins_num, device=tensor.device).view(1, 1, bins_num).float()
+        mask_b = (bins.unsqueeze(-1) == bin_indices)
 
-        bins_return = torch.stack(bins_return, dim=1)
+        masked_target = torch.where(
+            mask_b,
+            target.unsqueeze(-1),
+            torch.full_like(target.unsqueeze(-1), float('nan'))
+        )
+        group_ret = torch.nanmean(masked_target, dim=1)
+        all_mean_ret = torch.nanmean(target, dim=1, keepdim=True)
+        bins_return = torch.cat([group_ret, all_mean_ret], dim=1)
         self.every_interval_rate = torch.nan_to_num(bins_return, nan=0.0)
         self.bins_record = bins
 
@@ -553,17 +542,20 @@ class backtest:
         return long_mean_sharp.item(), mean_sharp.item()
 
     def get_rank_ICIR(self):
-        IC_list = []
         T, N = self.factor.shape
-        for i in range(T):
-            f_t = self.factor[i]
-            r_t = self.factor_target[i]
-            mask = (~torch.isnan(f_t)) & (~torch.isnan(r_t))
-            if mask.sum() < 5:
-                IC_list.append(float('nan'))
-            else:
-                ic = OP_Basic.rank_corrwith(f_t[mask], r_t[mask])
-                IC_list.append(ic.item())
+        mask = (~torch.isnan(self.factor)) & (~torch.isnan(self.factor_target))
+        valid_counts = mask.sum(dim=1)
+        IC_list = torch.full((T,), float('nan'), dtype=torch.float)
+        valid_indices = valid_counts >= 5
+        if valid_indices.any():
+            valid_factors = self.factor[valid_indices]
+            valid_targets = self.factor_target[valid_indices]
+            valid_mask = mask[valid_indices]
+            IC_values = torch.tensor([
+                OP_Basic.rank_corrwith(f[valid], r[valid]).item()
+                for f, r, valid in zip(valid_factors, valid_targets, valid_mask)
+            ])
+            IC_list[valid_indices] = IC_values
 
         IC_series = pd.Series(IC_list)
         self.IC_series = IC_series
@@ -574,29 +566,22 @@ class backtest:
 
     def get_turnover(self):
         if self.bins_record is None:
-            raise ValueError("Please run get_stratified_return first!")
+            raise ValueError("Please run get_stratified_return first")
 
         bins = self.bins_record
-        T, N = bins.shape
-        # 只看最高组(组别=0)的换手率作为示例，与stratified一致
-        # a: 当期在最高组的股票
-        # b: 上期在最高组的股票
-        a_list = []
-        a2_list = []
-        for i in range(1, T):
-            curr_top = (bins[i] == 0)
-            prev_top = (bins[i - 1] == 0)
-            a1 = (curr_top & prev_top).sum().item()
-            a2 = prev_top.sum().item()
-            if a2 > 0:
-                a_list.append(a1)
-                a2_list.append(a2)
+        curr_top = bins[1:] == 0
+        prev_top = bins[:-1] == 0
+        a1_tensor = (curr_top & prev_top).sum(dim=1)
+        a2_tensor = prev_top.sum(dim=1)
+
+        valid_indices = a2_tensor > 0
+        a_list = a1_tensor[valid_indices].tolist()
+        a2_list = a2_tensor[valid_indices].tolist()
 
         if len(a2_list) == 0:
             turnover = float('nan')
         else:
             turnover = np.nanmean(np.array(a_list) / np.array(a2_list))
-
         self.long_turn_over = turnover
         return turnover
 
