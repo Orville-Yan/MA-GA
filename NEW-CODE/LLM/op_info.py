@@ -11,6 +11,9 @@
 #         'D_cs_rank是A目同频A属：即使用TypeA生成TypeA，只使用日频',
 #         'M_toD_standard是B目混频BA属：使用TypeB和TypeA生成TypeB' }
 # }
+VariableType_info={
+    'TypeA':'shape=()的三维tensor'
+}
 
 Interface_Protocol_Group = {
     '原则':'将算子按照输入和输出的变量类型以及混频同频等格式作区分，总共有五个层级，分别是纲目科属种。纲有两类，表示.....；目有四类，表示算子的输出类型；.....这种分类是一种无交叉的分类，每个算子只可能属于一个类别',
