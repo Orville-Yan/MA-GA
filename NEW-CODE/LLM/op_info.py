@@ -32,7 +32,7 @@ Interface_Protocol_Group = {
 }
     
 
-classfication2_rule={
+Abstraction_Action_Group={
     'name':{'action;抽象动作分类:根据算子是否改变算子特定维度中的rank进行分类'
             },
     'rule':{
