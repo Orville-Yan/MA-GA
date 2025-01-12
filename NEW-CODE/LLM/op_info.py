@@ -1,16 +1,36 @@
-classfication1_rule={
-    'name':{'interface;接口协议分类'
-            },
-    'rule':{
-    '纲:通用纲(Others),专用纲(ToA/ToB/ToC/ToD)',
-    '目:根据算子生成的变量类型进行分类，分为ABCD四个目',
-    '科:根据是否同时使用了日频和分钟频数据分为同频（只使用一种频率）/混频',
-    '属:根据起点的变量组合进行分类，比如BBD2A类中的算子就是BBD属'
-    '种:单个算子'},
-    'example':{
-        'D_cs_rank是A目同频A属：即使用TypeA生成TypeA，只使用日频',
-        'M_toD_standard是B目混频BA属：使用TypeB和TypeA生成TypeB' }
+# classfication1_rule={
+#     'name':{'interface;接口协议分类'
+#             },
+#     'rule':{
+#     '纲:通用纲(Others),专用纲(ToA/ToB/ToC/ToD)',
+#     '目:根据算子生成的变量类型进行分类，分为ABCD四个目',
+#     '科:根据是否同时使用了日频和分钟频数据分为同频（只使用一种频率）/混频',
+#     '属:根据起点的变量组合进行分类，比如BBD2A类中的算子就是BBD属'
+#     '种:单个算子'},
+#     'example':{
+#         'D_cs_rank是A目同频A属：即使用TypeA生成TypeA，只使用日频',
+#         'M_toD_standard是B目混频BA属：使用TypeB和TypeA生成TypeB' }
+# }
+
+Interface_Protocol_Group = {
+    '原则':'将算子按照输入和输出的变量类型以及混频同频等格式作区分，总共有五个层级，分别是纲目科属种。纲有两类，表示.....；目有四类，表示算子的输出类型；.....这种分类是一种无交叉的分类，每个算子只可能属于一个类别',
+    '具体划分':{
+    '纲':{
+        '通用纲':'',
+        '专用纲':'',
+        },
+    '目':{
+        'A目':'输出类型为TypeA',
+        },
+    '科':{
+        '同频科'：'输入的 变量类型组合和输出的变量类型 全部都属于同一个频度'
+        },
+    '属':{
+        'BBD属':'输入的变量有三个，分别是TypeB,TypeB 和 TypeD'
+    },
+    },
 }
+    
 
 classfication2_rule={
     'name':{'action;抽象动作分类:根据算子是否改变算子特定维度中的rank进行分类'
