@@ -144,7 +144,7 @@ class OP_AA2A:
 
     @staticmethod
     def D_at_prod(x,y):#乘法
-        return torch.prod(x, y)
+        return torch.multiply(x, y)
 
     @staticmethod
     def D_at_mean(x, y):#均值
