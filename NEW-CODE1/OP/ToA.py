@@ -132,7 +132,7 @@ class OP_AA2A:
         return torch.add(x, y)
 
     @staticmethod
-    def D_at_div(x, y):  # 乘，有0的替换为nan
+    def D_at_div(x, y):  # 除法
         zero_mask = y == 0
         result = torch.div(x, y)
         result[zero_mask] = torch.nan
@@ -143,12 +143,8 @@ class OP_AA2A:
         return torch.sub(x, y)
 
     @staticmethod
-    def D_at_prod(d_tensor_x, d_tensor_y):#除
-        mask = ~((d_tensor_y == 0) | torch.isnan(d_tensor_y))
-        result = torch.full_like(d_tensor_x, float('nan'))
-        result[mask] = torch.div(d_tensor_x[mask], d_tensor_y[mask])
-
-        return result
+    def D_at_prod(x,y):#乘法
+        return torch.prod(x, y)
 
     @staticmethod
     def D_at_mean(x, y):#均值
