@@ -246,7 +246,7 @@ op_info = {
         }
     },
     'D_at_prod': {
-        'description': '对 x 和 y 进行逐元素相除，y 为 0 或 NaN 时返回 NaN',
+        'description': '对 x 和 y 进行逐元素相乘',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -486,7 +486,7 @@ op_info = {
         }
     },
     'D_ts_mask_sum': {
-        'description': '对 mask 为 True 的部分计算 x 的和',
+        'description': '对日频时序数据中 mask 为 True 的部分计算 x 的和',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -496,7 +496,7 @@ op_info = {
         }
     },
     'D_ts_mask_prod': {
-        'description': '对 mask 为 True 的部分计算 x 的乘积',
+        'description': '对日频时序数据中 mask 为 True 的部分计算 x 的乘积',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -506,7 +506,7 @@ op_info = {
         }
     },
     'D_Minute_area_mean': {
-        'description': '对 mask 为 True 的部分计算 x 的均值',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 的均值',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -516,7 +516,7 @@ op_info = {
         }
     },
     'D_Minute_area_std': {
-        'description': '对 mask 为 True 的部分计算 x 的标准差',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 的标准差',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -526,7 +526,7 @@ op_info = {
         }
     },
     'D_Minute_area_sum': {
-        'description': '对 mask 为 True 的部分计算 x 的和',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 的和',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -536,7 +536,7 @@ op_info = {
         }
     },
     'D_Minute_area_prod': {
-        'description': '对 mask 为 True 的部分计算 x 的乘积',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 的乘积',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -550,7 +550,7 @@ op_info = {
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '混频科',
+                '科': '同频科',
                 '属': 'B属'
             }
         }
@@ -560,7 +560,7 @@ op_info = {
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '混频科',
+                '科': '同频科',
                 '属': 'B属'
             }
         }
@@ -570,13 +570,13 @@ op_info = {
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '混频科',
+                '科': '同频科',
                 '属': 'B属'
             }
         }
     },
     'D_Minute_area_weight_mean': {
-        'description': '对 mask 为 True 的部分，以 weight 为权重计算 x 的加权均值',
+        'description': '对 日内数据 mask 为 True 的部分，以 weight 为权重计算 x 的加权均值',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -586,7 +586,7 @@ op_info = {
         }
     },
     'D_Minute_area_corr': {
-        'description': '对 mask 为 True 的部分计算 x 和 y 的相关性',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 和 y 的相关性',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -596,7 +596,7 @@ op_info = {
         }
     },
     'D_Minute_area_rankcorr': {
-        'description': '对 mask 为 True 的部分计算 x 和 y 的秩相关性',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 和 y 的秩相关性',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -630,7 +630,7 @@ op_info = {
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '混频科',
+                '科': '同频科',
                 '属': 'BB属'
             }
         }
@@ -640,7 +640,7 @@ op_info = {
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '混频科',
+                '科': '同频科',
                 '属': 'BB属'
             }
         }
@@ -650,7 +650,7 @@ op_info = {
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '混频科',
+                '科': '同频科',
                 '属': 'D属'
             }
         }
@@ -858,7 +858,7 @@ op_info = {
         }
     },
     'M_ts_mean_left_neighbor': {
-        'description': '计算 m_tensor 左侧邻居的均值',
+        'description': ' 计算输入张量在时间维度上向左移动 neighbor_range 步后的均值',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -868,7 +868,7 @@ op_info = {
         }
     },
     'M_ts_mean_mid_neighbor': {
-        'description': '计算 m_tensor 中间邻居的均值',
+        'description': '计算输入张量在时间维度上每个时间点的邻域均值，保留中间部分，两端填充 NaN',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -878,7 +878,7 @@ op_info = {
         }
     },
     'M_ts_mean_right_neighbor': {
-        'description': '计算 m_tensor 右侧邻居的均值',
+        'description': ' 计算输入张量在时间维度上向右移动 neighbor_range 步后的均值',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -888,7 +888,7 @@ op_info = {
         }
     },
     'M_ts_std_left_neighbor': {
-        'description': '计算 m_tensor 左侧邻居的标准差',
+        'description': ' 计算输入张量在时间维度上向左移动 neighbor_range 步后的标准差',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -898,7 +898,7 @@ op_info = {
         }
     },
     'M_ts_std_mid_neighbor': {
-        'description': '计算 m_tensor 中间邻居的标准差',
+        'description': '计算输入张量在时间维度上每个时间点的邻域标准差，保留中间部分，两端填充 NaN',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -908,7 +908,7 @@ op_info = {
         }
     },
     'M_ts_std_right_neighbor': {
-        'description': '计算 m_tensor 右侧邻居的标准差',
+        'description': '计算输入张量在时间维度上向右移动 neighbor_range 步后的标准差',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -918,7 +918,7 @@ op_info = {
         }
     },
     'M_ts_product_left_neighbor': {
-        'description': '计算 m_tensor 左侧邻居的乘积',
+        'description': '计算输入张量在时间维度上向左移动 neighbor_range 步后的乘积',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -928,7 +928,7 @@ op_info = {
         }
     },
     'M_ts_product_mid_neighbor': {
-        'description': '计算 m_tensor 中间邻居的乘积',
+        'description': '计算输入张量在时间维度上每个时间点的邻域乘积，保留中间部分，两端填充 NaN积',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -938,7 +938,7 @@ op_info = {
         }
     },
     'M_ts_product_right_neighbor': {
-        'description': '计算 m_tensor 右侧邻居的乘积',
+        'description': '计算输入张量在时间维度上向右移动 neighbor_range 步后的乘积',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -1151,7 +1151,7 @@ op_info = {
         }
     },
     "Mmask_and": {
-        "description": "对两个掩码张量进行逻辑与运算",
+        "description": "minute_mask内部的并运算",
         "classification": {
             "interface": {
                 "目": "D目",
@@ -1161,7 +1161,7 @@ op_info = {
         }
     },
     "Mmask_or": {
-        "description": "对两个掩码张量进行逻辑或运算",
+        "description": "minute_mask内部的和运算",
         "classification": {
             "interface": {
                 "目": "D目",
