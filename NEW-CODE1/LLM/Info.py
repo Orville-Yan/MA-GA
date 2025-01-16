@@ -41,35 +41,35 @@ data_info={
     },
 }
 
-VariableType_info={
-    'TypeA':{'shape':'(day_len, num_stock)的二维tensor',
-             'name':'day_OHLCV',
-             '性质':'日频的K线数据'
-             },
-    'TypeB':{'shape':'(num_stock, day_len, minute_len=240)的三维tensor',
-             'name':'minute_OHLCV',
-             '性质':'分钟频的K线数据'
-             },
-    'TypeC':{'shape':'(day_len, num_stock, rolling_day)的三维tensor',
-             'name':'day_mask',
-             '性质':'日频掩码'
-             },
-    'TypeD':{'shape':'(num_stock, day_len, minute_len=240)的三维tensor',
-             'name':'minute_mask',
-             '性质':'分钟频掩码'
-             },
-    'TypeE':{'shape':'(day_len, num_stock, industry_num=31)的三维tensor',
-             'name':'industry',
-             '性质':'按行业划分的日频数据'
-             },
-    'TypeF':{'shape':'一维tensor',
-             'name':'time_int',
-             '性质':'时间戳'
-             },
-    'TypeG':{'shape':'float变量',
-             'name':'threshold',
-             '性质':'反转阈值'
-             }
+VariableType_info = {
+    'TypeA': {'shape': '(day_len, num_stock)的二维tensor',
+              'name': 'day_OHLCV',
+              '数据': '日频的高开低收和成交量数据，即D_O,D_H,D_L,D_C,D_V'
+              },
+    'TypeB': {'shape': '(num_stock, day_len, minute_len=240)的三维tensor',
+              'name': 'minute_OHLCV',
+              '数据': '分钟频的高开低收和成交量数据，即M_O,M_H,M_L,M_C,M_V'
+              },
+    'TypeC': {'shape': '(day_len, num_stock, rolling_day)的三维tensor',
+              'name': 'day_mask',
+              '数据': 'TypeA的掩码'
+              },
+    'TypeD': {'shape': '(num_stock, day_len, minute_len=240)的三维tensor',
+              'name': 'minute_mask',
+              '数据': 'TypeB的掩码'
+              },
+    'TypeE': {'shape': '(day_len, num_stock, industry_num=31)的三维tensor',
+              'name': 'industry',
+              '数据': '01的哑变量矩阵，表示是否属于该行业'
+              },
+    'TypeF': {'shape': '一维tensor',
+              'name': 'time_int',
+              '数据': '1，2，3，5，10，20，30，60'
+              },
+    'TypeG': {'shape': 'float变量',
+              'name': 'threshold',
+              '数据': '0.05，0.1'
+              }
 }
 
 Interface_Protocol_Group = {
