@@ -193,6 +193,46 @@ class RPN_Parser(RPN_Compiler):
         self.deap_code=gp.PrimitiveTree.from_string(RPN, self.pset)
         self.tree_structure = None
 
+    def get_abbrnsub(self, ac_tree, substr, flag=0, count=0):
+        flag = max(flag-1,0)
+        abbr = ac_tree.root_node.name + '('
+        sub = []
+        for i,node in enumerate(ac_tree.nodes):
+            if i > 0:
+                abbr += ', '
+            if isinstance(node, Acyclic_Tree):
+                if flag == 0:
+                    abbr += f'{substr}_ARG{count}'
+                    count += 1
+                    sub.append(node)
+                else:
+                    sub_abbr,sub_sub,count = self.get_abbrnsub(node,substr,flag,count)
+                    abbr += sub_abbr
+                    sub.extend(sub_sub)
+
+            elif isinstance(node, gp.Terminal):
+                abbr += str(node.value)
+            else:
+                raise ValueError('instance error')
+        return abbr+')',sub,count
+        
+    def get_tree_depth(self,tree):
+        if not isinstance(tree, Acyclic_Tree):
+            raise ValueError("instance error")
+        max_depth = 0
+        for node in tree.nodes:
+            if isinstance(node, Acyclic_Tree):
+                node_depth = self.get_tree_depth(node)
+            else:
+                node_depth = 0
+            max_depth = max(max_depth, node_depth)
+        return max_depth + 1
+    
+    def tree2str(self, tree):
+        depth = self.get_tree_depth(tree)
+        abbr, _, _ = self.get_abbrnsub(tree, '', depth)
+        return abbr
+
     def get_tree_structure(self):
         self.tree_structure = Acyclic_Tree(self.rpn, self.pset)
         return self.tree_structure
@@ -224,46 +264,8 @@ class RPN_Parser(RPN_Compiler):
     def parse_from_the_inside_out(self):
         pass
 
-    def tree2str(self):
-        pass
-        
     def parse_tree(self):
-        def get_abbrnsub(ac_tree, substr, flag=0, count=0):
-            flag = max(flag-1,0)
-            abbr = ac_tree.root_node.name + '('
-            sub = []
-            for i,node in enumerate(ac_tree.nodes):
-                if i > 0:
-                    abbr += ', '
-                if isinstance(node, Acyclic_Tree):
-                    if flag == 0:
-                        abbr += f'{substr}_ARG{count}'
-                        count += 1
-                        sub.append(node)
-                    else:
-                        sub_abbr,sub_sub,count = get_abbrnsub(node,substr,flag,count)
-                        abbr += sub_abbr
-                        sub.extend(sub_sub)
-
-                elif isinstance(node, gp.Terminal):
-                    abbr += str(node.value)
-                else:
-                    raise ValueError('instance error')
-            return abbr+')',sub,count
-        
-        def get_tree_depth(tree):
-            if not isinstance(tree, Acyclic_Tree):
-                raise ValueError("instance error")
-            max_depth = 0
-            for node in tree.nodes:
-                if isinstance(node, Acyclic_Tree):
-                    node_depth = get_tree_depth(node)
-                else:
-                    node_depth = 0
-                max_depth = max(max_depth, node_depth)
-            return max_depth + 1
-        
-        abbr_tree,sub_tree,_ = get_abbrnsub(self.tree_structure,'Subtree')
+        abbr_tree,sub_tree,_ = self.get_abbrnsub(self.tree_structure,'Subtree')
         self.tree={
             'abbreviation': abbr_tree,
             'tree_mode':self.tree_structure,
@@ -302,8 +304,8 @@ class RPN_Parser(RPN_Compiler):
 
         abbr_branch = []
         for branch in branch_lst:
-            branch_depth = get_tree_depth(branch)
-            abbr,_,_ = get_abbrnsub(branch,'',branch_depth)
+            branch_depth = self.get_tree_depth(branch)
+            abbr,_,_ = self.get_abbrnsub(branch,'',branch_depth)
             abbr_branch.append(abbr)
 
         self.branch={
@@ -315,8 +317,8 @@ class RPN_Parser(RPN_Compiler):
         sub_trunk = []
         count = 0
         for trunk in trunk_lst:
-            trunk_depth = get_tree_depth(trunk)-2
-            abbr,sub,count = get_abbrnsub(trunk,'Root',trunk_depth,count)
+            trunk_depth = self.get_tree_depth(trunk)-2
+            abbr,sub,count = self.get_abbrnsub(trunk,'Root',trunk_depth,count)
             abbr_trunk.append(abbr)
             sub_trunk.extend(sub)
         
@@ -329,17 +331,20 @@ class RPN_Parser(RPN_Compiler):
         sub_root = []
         count = 0
         for root in sub_trunk:
-            abbr,sub,count = get_abbrnsub(root,'Seed',0,count)
+            abbr,sub,count = self.get_abbrnsub(root,'Seed',0,count)
             abbr_root.append(abbr)
             sub_root.extend(sub)
 
         self.root = {
             'abbreviation':abbr_root,
-            'tree_mode':sub_root,
+            'tree_mode':sub_trunk,
         }
 
 
-        self.seed = [seed.abbreviation for seed in sub_root]
+        self.seed = {
+            'abbreviation':[seed.abbreviation for seed in sub_root],
+            'tree_mode':sub_root,
+        }
 
 
 
@@ -490,3 +495,4 @@ if __name__ == "__main__":
     print(parser.trunk)
     print(parser.root)
     print(parser.seed)
+    print(parser.tree2str(parser.tree['tree_mode']))
