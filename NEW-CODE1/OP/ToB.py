@@ -1,16 +1,18 @@
-
 import sys
+
 sys.path.append('..')
 
 from OP.Others import OP_Basic
 import torch
 
-OPclass_name_2B=['OP_B2B','OP_BB2B','OP_BA2B','OP_BG2B',
-                 'OP_BF2B']
+OPclass_name_2B = ['OP_B2B', 'OP_BB2B', 'OP_BA2B', 'OP_BG2B',
+                   'OP_BF2B']
+
 
 class OP_B2B:
     def __init__(self):
-        self.func_list = ['M_ignore_wobble', 'M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_at_abs', 'M_cs_demean', 'M_cs_winsor',
+        self.func_list = ['M_ignore_wobble', 'M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_at_abs', 'M_cs_demean',
+                          'M_cs_winsor',
                           ]
 
     @staticmethod
@@ -40,7 +42,6 @@ class OP_B2B:
 
     @staticmethod
     def M_cs_zscore(M_tensor):
-        num_stock, day_len, minute_len = M_tensor.shape
         # 计算每个股票每天的均值和标准差
         mean = torch.mean(M_tensor, dim=2, keepdim=True)
         std = torch.std(M_tensor, dim=2, keepdim=True)
@@ -65,16 +66,8 @@ class OP_B2B:
         torch.Tensor: 排名标准化后的张量。
         """
         # 计算每个元素在每个交易日中的排名
-        sorted_indices = torch.argsort(torch.argsort(M_tensor, dim=-1), dim=-1)
-        ranks = torch.arange(M_tensor.shape[-1], device=M_tensor.device)[None, None, :]
-        ranks = ranks.expand_as(sorted_indices)
-
-        # 使用排名索引来获取每个元素的排名
-        rank_tensor = ranks.gather(-1, sorted_indices)
-
-        # 将排名标准化到[0, 1]区间
-        rank_tensor = (rank_tensor - 1) / (M_tensor.shape[-1] - 1)
-
+        rank_tensor = M_tensor.argsort(dim=-1).argsort(dim=-1).float()
+        rank_tensor = rank_tensor / (M_tensor.shape[-1] - 1)
         return rank_tensor
 
     @staticmethod
@@ -88,25 +81,17 @@ class OP_B2B:
         返回:
         torch.Tensor: 最大值最小值标准化后的张量。
         """
-        num_stock, day_len, minute_len = M_tensor.shape
+        max_values = torch.max(M_tensor, dim=2, keepdim=True)[0]
+        min_values = torch.min(M_tensor, dim=2, keepdim=True)[0]
 
-        # 初始化最大值最小值标准化后的张量
-        scaled_tensor = torch.zeros_like(M_tensor)
-
-        # 计算每个股票每天的最大值和最小值
-        max_values = torch.max(M_tensor, dim=2)[0].unsqueeze(2)  # shape: (num_stock, day_len, 1)
-        min_values = torch.min(M_tensor, dim=2)[0].unsqueeze(2)  # shape: (num_stock, day_len, 1)
-
-        # 计算缩放因子
+        # Range
         range_values = max_values - min_values
+        range_values[range_values == 0] = 1.0
 
-        # 避免除以零的情况
-        range_values[range_values == 0] = 1
-
-        # 进行最大值最小值标准化
+        # Scale
         scaled_tensor = (M_tensor - min_values) / range_values
-
         return scaled_tensor
+
 
     @staticmethod
     def M_cs_demean(M_tensor):
@@ -149,13 +134,13 @@ class OP_B2B:
 
     @staticmethod
     def M_at_abs(M_tensor):
-
         return torch.abs(M_tensor)
 
 
 class OP_BB2B:
     def __init__(self):
-        self.func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod', 'M_cs_norm_spread']
+        self.func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod',
+                          'M_cs_norm_spread']
 
     @staticmethod
     def M_at_add(x, y):
@@ -167,7 +152,7 @@ class OP_BB2B:
 
     @staticmethod
     def M_at_div(x, y):
-        zero_mask = y == 0
+        zero_mask = (y == 0)
         result = torch.div(x, y)
         result[zero_mask] = torch.nan
         return result
@@ -175,14 +160,15 @@ class OP_BB2B:
     @staticmethod
     def M_at_sign(x):
         mask = ~torch.isnan(x)
-        x_no_nan = torch.where(mask, x, 0)
+        x_no_nan = torch.where(mask, x, torch.tensor(0.0, device=x.device))
         sign = torch.sign(x_no_nan)
-        return torch.where(mask, sign, float('nan'))
+        return torch.where(mask, sign, torch.tensor(float('nan'), device=x.device))
 
     @staticmethod
     def M_cs_cut(x, y):
-        sign = OP_BB2B.at_sign(x - OP_Basic.nanmean(x, dim=1).unsqueeze(1))
-        return sign * y
+        x_mean = torch.nanmean(x, dim=1, keepdim=True)
+        sign_x = OP_BB2B.M_at_sign(x - x_mean)
+        return sign_x * y
 
     @staticmethod
     def M_cs_umr(x, y):
@@ -200,7 +186,8 @@ class OP_BB2B:
     @staticmethod
     def M_cs_norm_spread(x, y):
         s = (x - y) / (torch.abs(x) + torch.abs(y))
-        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
+        inf_mask = torch.isinf(s)
+        return torch.where(inf_mask, torch.tensor(float('nan'), device=s.device), s)
 
 
 class OP_BA2B:  # B*A-B
@@ -242,15 +229,16 @@ class OP_BF2B:  # B*F-B
 
     @staticmethod
     def M_ts_delay(x, d):
+        L = x.shape[-1]
+        new_tensor = torch.full(x.shape, float('nan'), device=x.device)
         if d > 0:
-            new_tensor = torch.full(x.shape, float('nan'), device=x.device)
-            new_tensor[d:, :] = x[:-d, :]
+            new_tensor[..., d:] = x[..., :-d]
             return new_tensor
         elif d == 0:
             return x
         else:
-            new_tensor = torch.full(x.shape, float('nan'), device=x.device)
-            new_tensor[:d, :] = x[-d:, :]
+            d_abs = abs(d)
+            new_tensor[..., :L - d_abs] = x[..., d_abs:]
             return new_tensor
 
     @staticmethod
@@ -264,60 +252,87 @@ class OP_BF2B:  # B*F-B
 
     @staticmethod
     def M_ts_mean_left_neighbor(m_tensor, neighbor_range):
-        rolled = m_tensor.roll(-1 * neighbor_range, dims=-1)
-        return rolled.mean(dim=-1)
+        window_size = neighbor_range + 1
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_mean = unfolded.mean(dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        result_tensor[..., neighbor_range:] = window_mean
+        return result_tensor
 
     @staticmethod
     def M_ts_mean_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range * 2 + 1
-        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)  
-        window_mean = unfolded.mean(dim=-1)  
+        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)
+        window_mean = unfolded.mean(dim=-1)
         result_tensor = torch.full_like(m_tensor, float('nan'))
         result_tensor[:, :, neighbor_range:-neighbor_range] = window_mean
         return result_tensor
-    
 
     @staticmethod
     def M_ts_mean_right_neighbor(m_tensor, neighbor_range):
-        rolled = m_tensor.roll(neighbor_range, dims=-1)
-        return rolled.mean(dim=-1)
+        window_size = neighbor_range + 1
+        rolled = m_tensor.roll(-neighbor_range, dims=-1)
+        unfolded = rolled.unfold(dimension=-1, size=window_size, step=1)
+        window_mean = unfolded.mean(dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        T = m_tensor.shape[-1]
+        result_tensor[..., : T - neighbor_range] = window_mean
+        return result_tensor
 
     @staticmethod
     def M_ts_std_left_neighbor(m_tensor, neighbor_range):
-        rolled = m_tensor.roll(-1 * neighbor_range, dims=-1)
-        return rolled.std(dim=-1)
+        window_size = neighbor_range + 1
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_std = unfolded.std(dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        result_tensor[..., neighbor_range:] = window_std
+        return result_tensor
 
     @staticmethod
     def M_ts_std_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range * 2 + 1
-        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)  
-        window_std = unfolded.std(dim=-1)  
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_std = unfolded.std(dim=-1)
         result_tensor = torch.full_like(m_tensor, float('nan'))
         result_tensor[:, :, neighbor_range:-neighbor_range] = window_std
         return result_tensor
-    
+
     @staticmethod
     def M_ts_std_right_neighbor(m_tensor, neighbor_range):
-        rolled = m_tensor.roll(neighbor_range, dims=-1)
-        return rolled.std(dim=-1)
+        window_size = neighbor_range + 1
+        rolled = m_tensor.roll(-neighbor_range, dims=-1)
+        unfolded = rolled.unfold(dimension=-1, size=window_size, step=1)
+        window_std = unfolded.std(dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        T = m_tensor.shape[-1]
+        result_tensor[..., : T - neighbor_range] = window_std
+        return result_tensor
 
     @staticmethod
     def M_ts_product_left_neighbor(m_tensor, neighbor_range):
-        rolled = m_tensor.roll(-1 * neighbor_range, dims=-1)
-        return torch.prod(rolled, dim=-1)
+        window_size = neighbor_range + 1
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_prod = unfolded.prod(dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        result_tensor[..., neighbor_range:] = window_prod
+        return result_tensor
 
     @staticmethod
     def M_ts_product_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range * 2 + 1
-        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)  
-        window_prod= unfolded.prod(dim=-1)  
+        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)
+        window_prod = unfolded.prod(dim=-1)
         result_tensor = torch.full_like(m_tensor, float('nan'))
         result_tensor[:, :, neighbor_range:-neighbor_range] = window_prod
         return result_tensor
 
-
-
     @staticmethod
     def M_ts_product_right_neighbor(m_tensor, neighbor_range):
-        rolled = m_tensor.roll(neighbor_range, dims=-1)
-        return torch.prod(rolled, dim=-1)
+        window_size = neighbor_range + 1
+        rolled = m_tensor.roll(-neighbor_range, dims=-1)
+        unfolded = rolled.unfold(dimension=-1, size=window_size, step=1)
+        window_prod = unfolded.prod(dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        T = m_tensor.shape[-1]
+        result_tensor[..., : T - neighbor_range] = window_prod
+        return result_tensor
