@@ -224,6 +224,9 @@ class RPN_Parser(RPN_Compiler):
     def parse_from_the_inside_out(self):
         pass
 
+    def tree2str(self):
+        pass
+        
     def parse_tree(self):
         def get_abbrnsub(ac_tree, substr, flag=0, count=0):
             flag = max(flag-1,0)
