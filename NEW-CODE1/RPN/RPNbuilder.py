@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..")
+sys.path.append('..')
 
 from ToolsGA import *
 from OP import *
@@ -191,12 +191,32 @@ class RPN_Parser(RPN_Compiler):
         super().__init__()
         self.rpn=RPN
         self.deap_code=gp.PrimitiveTree.from_string(RPN, self.pset)
+        self.tree_structure = None
 
     def get_tree_structure(self):
-        pass
+        self.tree_structure = Acyclic_Tree(self.rpn, self.pset)
+        return self.tree_structure
 
-    def plot_tree(self):
-        pass
+    def plot_tree(self, node=None, level=0):
+        if self.tree_structure is None:
+            self.get_tree_structure()
+        
+        if node is None:
+            node = self.tree_structure
+
+        # 打印当前节点
+        indent = "    " * level
+        node_label = node.root_node.name if isinstance(node.root_node, gp.Primitive) else node.root_node.value
+        print(f"{indent}{node_label}")
+
+        # 递归打印子节点
+        for child in node.nodes:
+            if isinstance(child, Acyclic_Tree):
+                self.plot_tree(child, level + 1)
+            else:
+                print(f"    " * (level + 1)+ str(child.value))
+
+
 
     def parse_from_the_outside_in(self):
         pass
@@ -205,23 +225,119 @@ class RPN_Parser(RPN_Compiler):
         pass
 
     def parse_tree(self):
-        self.tree_A=None
-        self.tree_B=None
+        def get_abbrnsub(ac_tree, substr, flag=0, count=0):
+            flag = max(flag-1,0)
+            abbr = ac_tree.root_node.name + '('
+            sub = []
+            for i,node in enumerate(ac_tree.nodes):
+                if i > 0:
+                    abbr += ', '
+                if isinstance(node, Acyclic_Tree):
+                    if flag == 0:
+                        abbr += f'{substr}_ARG{count}'
+                        count += 1
+                        sub.append(node)
+                    else:
+                        sub_abbr,sub_sub,count = get_abbrnsub(node,substr,flag,count)
+                        abbr += sub_abbr
+                        sub.extend(sub_sub)
 
-        self.subtree_A=None
-        self.subtree_B=None
+                elif isinstance(node, gp.Terminal):
+                    abbr += str(node.value)
+                else:
+                    raise ValueError('instance error')
+            return abbr+')',sub,count
+        
+        def get_tree_depth(tree):
+            if not isinstance(tree, Acyclic_Tree):
+                raise ValueError("instance error")
+            max_depth = 0
+            for node in tree.nodes:
+                if isinstance(node, Acyclic_Tree):
+                    node_depth = get_tree_depth(node)
+                else:
+                    node_depth = 0
+                max_depth = max(max_depth, node_depth)
+            return max_depth + 1
+        
+        abbr_tree,sub_tree,_ = get_abbrnsub(self.tree_structure,'Subtree')
+        self.tree={
+            'abbreviation': abbr_tree,
+            'tree_mode':self.tree_structure,
+        }
 
-        self.trunk_A = None
-        self.trunk_B = None
+        abbr_subtree = ''
+        branch_lst = []
+        trunk_lst = []
+        for tree in sub_tree:
+            count_branch = 0
+            count_trunk = 0
+            abbr_subtree += tree.root_node.name + '('
+            for i,node in enumerate(tree.nodes):
+                if i > 0:
+                    abbr_subtree += ', '
+                if isinstance(node, Acyclic_Tree):
+                    if i < len(tree.nodes)-1 or 'TypeD' not in [t.__name__ for t in tree.root_node.args]:
+                        abbr_subtree += f'Trunk_ARG{count_trunk}'
+                        count_trunk += 1
+                        trunk_lst.append(node)
+                    else:
+                        abbr_subtree += f'Branch_ARG{count_branch}'
+                        count_branch += 1
+                        branch_lst.append(node)
 
-        self.branch_A = []
-        self.branch_B = []
+                elif isinstance(node, gp.Terminal):
+                    abbr_subtree += str(node.value)
+                else:
+                    raise ValueError('instance error')
+            abbr_subtree += ')'
+            
+        self.subtree={
+            'abbreviation': abbr_subtree,
+            'tree_mode':sub_tree[0],
+        }
 
-        self.root_A = []
-        self.root_B = []
+        abbr_branch = []
+        for branch in branch_lst:
+            branch_depth = get_tree_depth(branch)
+            abbr,_,_ = get_abbrnsub(branch,'',branch_depth)
+            abbr_branch.append(abbr)
 
-        self.seed_A = []
-        self.seed_B = []
+        self.branch={
+            'abbreviation': abbr_branch,
+            'tree_mode': branch_lst,
+        }
+
+        abbr_trunk = []
+        sub_trunk = []
+        count = 0
+        for trunk in trunk_lst:
+            trunk_depth = get_tree_depth(trunk)-2
+            abbr,sub,count = get_abbrnsub(trunk,'Root',trunk_depth,count)
+            abbr_trunk.append(abbr)
+            sub_trunk.extend(sub)
+        
+        self.trunk = {
+            'abbreviation':abbr_trunk,
+            'tree_mode':trunk_lst,
+        }
+
+        abbr_root = []
+        sub_root = []
+        count = 0
+        for root in sub_trunk:
+            abbr,sub,count = get_abbrnsub(root,'Seed',0,count)
+            abbr_root.append(abbr)
+            sub_root.extend(sub)
+
+        self.root = {
+            'abbreviation':abbr_root,
+            'tree_mode':sub_root,
+        }
+
+
+        self.seed = [seed.abbreviation for seed in sub_root]
+
 
 
 class RPN_Pruner(RPN_Parser):
@@ -237,3 +353,137 @@ class RPN_Pruner(RPN_Parser):
 
     def prune(self):
         pass
+
+class Acyclic_Tree:
+    def __init__(self, deap_str, pset):
+        self.tree = deap_str
+        self.root_node = None  # gp.Primitive or gp.Terminal
+        self.nodes = []  # List[Union[Leaf, Acyclic_Tree]]
+        self.abbreviation = ''
+        self.pset = pset
+
+        # 解析DEAP字符串并构建树结构
+        self.parse_deap_str(deap_str, pset)
+
+    def parse_deap_str(self, deap_str, pset):
+        # 将DEAP字符串转换为PrimitiveTree
+        primitive_tree = gp.PrimitiveTree.from_string(deap_str, pset)
+        # 递归构建树结构
+        self.root_node, self.nodes = self.build_tree(primitive_tree)
+        self.abbreviation += self.root_node.name if isinstance(self.root_node, gp.Primitive) else str(self.root_node.value)
+        self.abbreviation += '('
+        counter = 0
+        for i,node in enumerate(self.nodes):
+            if i > 0:
+                self.abbreviation += ', '
+            if isinstance(node, Acyclic_Tree):
+                self.abbreviation += f"ARG{counter}" 
+                counter += 1
+            else:
+                self.abbreviation += str(node.value)   
+        self.abbreviation += ')'         
+
+    def build_tree(self, primitive_tree):
+        root = primitive_tree[0]  # 根节点
+        nodes = []
+        deap_code = self.extract_string(self.tree)
+        if isinstance(root, gp.Primitive):
+            # 如果根节点是操作（primitive），递归构建子树
+            for i in range(root.arity):
+                if '(' in deap_code[i]:
+                    child_tree = Acyclic_Tree(deap_code[i], self.pset)
+                    nodes.append(child_tree)
+                else:
+                    nodes.append(gp.PrimitiveTree.from_string(deap_code[i], self.pset)[0])
+        else:
+            # 如果根节点是终端（terminal），直接返回
+            return root, []
+
+        return root, nodes
+    
+
+    def extract_string(self,s):
+    # 检查字符串是否包含括号
+        if '(' not in s:
+            return None
+
+        # 初始化计数器和临时字符串
+        count = 0
+        temp_str = ''
+        result_list = []
+        
+        # 遍历字符串中的每个字符
+        for char in s:
+            if char == '(':
+                count += 1
+                # 如果是第一个左括号，跳过它
+                if count == 1:
+                    continue
+            elif char == ')':
+                count -= 1
+                # 如果是与第一个左括号匹配的右括号，处理临时字符串并停止遍历
+                if count == 0:
+                    # 分割临时字符串并添加到结果列表
+                    # 只有在所有左括号都匹配的情况下才进行分割
+                    if temp_str:
+                        result_list.append(temp_str.strip())
+                    break
+            # 如果在最外层括号内，处理字符
+            if count > 0:
+                if char == ',' and count == 1:
+                    # 如果遇到逗号且所有左括号都已匹配，添加之前的临时字符串到结果列表
+                    if temp_str:
+                        result_list.append(temp_str.strip())
+                        temp_str = ''
+                elif char != ' ' or temp_str:
+                    temp_str += char
+        
+        
+        return result_list
+
+    
+    
+
+if __name__ == "__main__":
+    # 测试RPN_Producer类
+    producer = RPN_Producer()
+    producer.run()
+    print("生成的树：", producer.tree[0])
+    #print(producer.subtree[0])
+
+    # 测试RPN_Compiler类
+    parser = RPN_Parser(producer.tree[0])
+    #compiler.prepare_data([2020])  # 假设准备2020年的数据
+    #compiled_func = compiler.compile(producer.tree[0])  # 编译生成的树中的第一个RPN表达式
+    #print("编译结果：", compiled_func)
+    #print(compiler.rpn)
+    #print(compiler.deap_code)
+    #isinstance('x',gp.Primitive)
+    def print_primitives(pset):
+        for output_type, primitives in pset.primitives.items():
+            print(f"Output Type: {output_type.__name__}")
+            for primitive in primitives:
+                print(f"  Name: {primitive.name}, Input Types: {[t.__name__ for t in primitive.args]}")
+                print('#####')
+                print(primitive.args)
+    def print_terminals(pset):
+        for output_type, terminals in pset.terminals.items():
+            print(f"Output Type: {output_type.__name__}")
+            for terminal in terminals:
+                print(f"  Terminal: {terminal}")
+    #print_primitives(parser.pset)
+    #print_terminals(parser.pset)
+    #print('####',type(parser.deap_code))
+    tree_structure = parser.get_tree_structure()
+    
+    # 输出树结构
+    #print("Root Node:", tree_structure.root_node.name)
+    #print("Nodes:", [node if isinstance(node, Acyclic_Tree) else node for node in tree_structure.nodes])
+    parser.plot_tree()
+    parser.parse_tree()
+    print(parser.tree)
+    print(parser.subtree)
+    print(parser.branch)
+    print(parser.trunk)
+    print(parser.root)
+    print(parser.seed)
