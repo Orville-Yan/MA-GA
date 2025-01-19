@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 import torch
 
-from RPN.RPNbuilder import RPN_Compiler
 
 class GroupTest(RPN_Compiler):
     def __init__(self,factor_list:[str]):
