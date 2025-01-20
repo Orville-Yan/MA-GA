@@ -11,7 +11,7 @@ class Branch:
         self.population_size = population_size
         self.pset = None
         self.toolbox = None
-        self.int_values = [torch.tensor(i, dtype=torch.int) for i in [2, 3, 5, 8, 10, 30]]
+        self.int_values = [2,3,5,10,20]
 
     def generate_toolbox(self):
         if not hasattr(creator, "FitnessMax"):
