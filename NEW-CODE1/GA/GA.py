@@ -1,5 +1,7 @@
 from OPT import *
 from FIS import *
+from RPN.RPNbuilder import RPN_Compiler
+
 class config:
     warm_start_time=[2016,2017]
 
@@ -10,6 +12,23 @@ class config:
     bins_num=5
 
     freque=5
+
+class GroupTest(RPN_Compiler):
+    def __init__(self,factor_list:[str]):
+        super().__init__()
+        self.factors=factor_list
+        self.in_sample_time=range(2010,2020)
+        self.out_sample_time=range(2019,2022)
+
+    def in_sample_response_rate(self):
+        ft = FactorTest(factor_tensor, factor_target, self.in_sample_time, bins_num=5, factor_name='factor')
+        ft.plot(output_pdf='in_sample_output.pdf')
+        
+    def out_sample_response_rate(self):
+        ft = FactorTest(factor_tensor, factor_target, self.out_sample_time, bins_num=5, factor_name='factor')
+        ft.plot(output_pdf='out_sample_output.pdf')
+
+
 
 class GA:
     def __init__(self):
