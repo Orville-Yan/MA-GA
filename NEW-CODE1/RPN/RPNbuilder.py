@@ -346,6 +346,36 @@ class RPN_Parser(RPN_Compiler):
             'tree_mode':sub_root,
         }
 
+    def argnorm(self, seed_str):
+        map = {
+            'ARG0': 'D_O',
+            'ARG1': 'D_C',
+            'ARG2': 'D_H',
+            'ARG3': 'D_L',
+            'ARG4': 'D_V',
+            'ARG5': 'M_O',
+            'ARG6': 'M_C',
+            'ARG7': 'M_H',
+            'ARG8': 'M_L',
+            'ARG9': 'M_V'
+        }
+        for key, value in map.items():
+            seed_str = seed_str.replace(value, key)
+        return seed_str
+    
+    def tree2dict(self):
+        if not self.tree:
+            self.parse_tree()
+        self.tree_dict = {
+            'tree':[self.tree['abbreviation']],
+            'subtree':[self.subtree['abbreviation']],
+            'branch':[self.argnorm(branch) for branch in self.branch['abbreviation']],
+            'trunk':self.trunk['abbreviation'],
+            'root':self.root['abbreviation'],
+            'seed':[self.argnorm(seed) for seed in self.seed['abbreviation']]
+        }
+        return self.tree_dict
+
 
 
 class RPN_Pruner(RPN_Parser):
