@@ -284,11 +284,11 @@ class RPN_Parser(RPN_Compiler):
                     abbr_subtree += ', '
                 if isinstance(node, Acyclic_Tree):
                     if i < len(tree.nodes)-1 or 'TypeD' not in [t.__name__ for t in tree.root_node.args]:
-                        abbr_subtree += f'Trunk_ARG{count_trunk}'
+                        abbr_subtree += f'trunk_ARG{count_trunk}'
                         count_trunk += 1
                         trunk_lst.append(node)
                     else:
-                        abbr_subtree += f'Branch_ARG{count_branch}'
+                        abbr_subtree += f'branch_ARG{count_branch}'
                         count_branch += 1
                         branch_lst.append(node)
 
@@ -309,7 +309,7 @@ class RPN_Parser(RPN_Compiler):
         count = 0
         for trunk in trunk_lst:
             trunk_depth = self.get_tree_depth(trunk)-2
-            abbr,sub,count = self.get_abbrnsub(trunk,'Root',trunk_depth,count)
+            abbr,sub,count = self.get_abbrnsub(trunk,'root',trunk_depth,count)
             abbr_trunk.append(abbr)
             sub_trunk.extend(sub)
         
@@ -321,14 +321,14 @@ class RPN_Parser(RPN_Compiler):
         abbr_root = []
         sub_root = []
         for root in sub_trunk:
-            abbr,sub,count = self.get_abbrnsub(root,'Seed',0,count)
+            abbr,sub,count = self.get_abbrnsub(root,'seed',0,count)
             abbr_root.append(abbr)
             sub_root.extend(sub)
 
         abbr_branch = []
         for branch in branch_lst:
             branch_depth = self.get_tree_depth(branch)-1
-            abbr,sub,count = self.get_abbrnsub(branch,'Seed',branch_depth,count)
+            abbr,sub,count = self.get_abbrnsub(branch,'seed',branch_depth,count)
             abbr_branch.append(abbr)
             sub_root.extend(sub)
 
