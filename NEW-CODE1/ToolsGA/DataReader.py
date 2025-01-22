@@ -71,8 +71,6 @@ class ParquetReader:
 
 class MmapReader:
     def __init__(self):
-        self.origin_daily='../../Data/DailyData'
-        self.origin_minute='../../Data/MinuteData'
         self.years=range(2017,2018)#设定将哪些年的数据修改为mmap格式，最好不要很多年一起修改
         self.output_daily='..'#mmap文件存放的路径
         self.output_minute='..'
