@@ -266,7 +266,7 @@ class RPN_Parser(RPN_Compiler):
         pass
 
     def parse_tree(self):
-        abbr_tree,sub_tree,_ = self.get_abbrnsub(self.tree_structure,'Subtree')
+        abbr_tree,sub_tree,_ = self.get_abbrnsub(self.tree_structure,'subtree')
         self.tree={
             'abbreviation': abbr_tree,
             'tree_mode':self.tree_structure,
