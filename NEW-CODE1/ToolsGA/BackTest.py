@@ -268,7 +268,8 @@ class FactorTest:
         return annual_data
 
     def plot(self,output_path=None):
-        # 存图路径
+        # ----------------- 存储路径 -----------------
+        # 输入的output_path指向结果文件夹
         if output_path is None:
             output_path=f'Backtest over Factor {self.factor_name}.png'
         else:
@@ -288,7 +289,7 @@ class FactorTest:
             wspace=0
         )
 
-        # ----------------- 图表区域（保持内容不变）-----------------
+        # ----------------- 图表区域-----------------
         ax1 = fig.add_subplot(gs[0, 0])
         self.plot_stratified_rtn(self.every_interval_rate, self.factor_name, ax=ax1)
 
@@ -420,33 +421,23 @@ class FactorTest:
         print(f"results saved：{output_path}")
 if __name__ == '__main__':
     yearlist=[i for i in range(2010,2021,1)]
+    
     DO, DH, DL, DC, DV = DataReader.ParquetReader().get_Day_data(yearlist)
     returns = torch.full_like(DC, 0, dtype=torch.float32)
     returns[1:] = (DC[1:] - DC[:-1]) / DC[:-1]
     def compute_factor(return_tensor):
         days, stocks = return_tensor.shape
         factor = torch.zeros_like(return_tensor)
-
-        # Define start indices for 20-day windows
-        start_indices = list(range(20, days + 1, 20))  # Starts from day 20 to days in steps of 20
-
-        # Loop through start indices and compute cumulative returns
+        start_indices = list(range(20, days + 1, 20))
         for start_idx in start_indices:
-            # Define the window for the last 20 days before the start index
             window = return_tensor[start_idx - 20:start_idx, :]
-
-            # Compute the cumulative returns for this window
             cum_returns = torch.prod(1 + window, dim=0) - 1
-
-            # Determine where to fill based on the window length
             fill_end = min(start_idx + 20, days)
-
-            # Fill the computed factor values for the next 20 days or up to the last day
             factor[start_idx:fill_end, :] = cum_returns.unsqueeze(0).expand(fill_end - start_idx, -1)
-
         return factor
 
-    # Example
+    # invoke example
     factor = compute_factor(returns)
     ft = FactorTest(factor, yearlist,bins_num=5, factor_name='ret20')
+    # saved under folder res
     ft.plot('res')
