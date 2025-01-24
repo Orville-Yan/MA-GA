@@ -1,5 +1,6 @@
 import os.path
 import sys
+
 sys.path.append('..')
 import DataReader
 
@@ -11,14 +12,14 @@ import torch
 
 
 class FactorTest:
-    def __init__(self, factor,yearlist, bins_num, period_num=252, factor_name='ret20'):
-        self.data_reader=DataReader.ParquetReader()
-        DO, DH, DL, DC, DV =self.data_reader.get_Day_data(yearlist)
+    def __init__(self, factor, yearlist, bins_num, period_num=252, factor_name='ret20'):
+        self.data_reader = DataReader.ParquetReader()
+        DO, DH, DL, DC, DV = self.data_reader.get_Day_data(yearlist)
         returns = torch.full_like(DC, 0, dtype=torch.float32)
         returns[1:] = (DC[1:] - DC[:-1]) / DC[:-1]
-        self.factor =factor
+        self.factor = factor
         self.factor_target = returns
-        self.yearlist=yearlist
+        self.yearlist = yearlist
         self.bins_num = bins_num
         self.factor_name = factor_name
         self.period_num = period_num
@@ -61,7 +62,7 @@ class FactorTest:
         self.bins_record = bins
         return
 
-    def factor_stratified_return(self,factor):
+    def factor_stratified_return(self, factor):
         tensor = factor
         target = self.factor_target
         bins_num = self.bins_num
@@ -111,7 +112,7 @@ class FactorTest:
         return long_mean_sharp
 
     def get_long_short_sharpe(self):
-        mean_ret = self.every_interval_rate[:, 0]-self.every_interval_rate[:, -2]
+        mean_ret = self.every_interval_rate[:, 0] - self.every_interval_rate[:, -2]
         mean_sharp = mean_ret.mean() / (mean_ret.std() + 1e-12) * np.sqrt(self.period_num)
         return mean_sharp
 
@@ -136,7 +137,7 @@ class FactorTest:
         return IC_series
 
     def get_rank_ICIR(self):
-        IC_series= self.get_rank_IC().dropna()
+        IC_series = self.get_rank_IC().dropna()
         IC_mean = IC_series.mean()
         IC_std = IC_series.std()
         ICIR = IC_mean / (IC_std + 1e-12) * np.sqrt(self.period_num)
@@ -153,17 +154,17 @@ class FactorTest:
         state_change[valid_mask] = (curr_state[valid_mask] != prev_state[valid_mask]).to(torch.int)
 
         a1_tensor = state_change.sum(axis=1)
-        a2_tensor = np.full_like(a1_tensor,bins.shape[1])
+        a2_tensor = np.full_like(a1_tensor, bins.shape[1])
 
         a_list = a1_tensor.tolist()
         a2_list = a2_tensor.tolist()
 
         turnover = np.array(a_list) / np.array(a2_list)
-        adjusted_turnover = np.zeros_like(bins[:,0])
+        adjusted_turnover = np.zeros_like(bins[:, 0])
         adjusted_turnover[1:] = turnover
         return adjusted_turnover
 
-    def get_long_equity(self,bins_num=0)->pd.DataFrame:
+    def get_long_equity(self, bins_num=0) -> pd.DataFrame:
         if self.every_interval_rate is None:
             self.get_stratified_return()
         bins = self.bins_record
@@ -183,31 +184,31 @@ class FactorTest:
     def get_turnover_punishment(self):
         turnover = self.get_turnover()
         turnover_penalty = turnover * 0.003
-        adjusted_returns = self.every_interval_rate[:,0]-self.every_interval_rate[:,-2] - turnover_penalty
+        adjusted_returns = self.every_interval_rate[:, 0] - self.every_interval_rate[:, -2] - turnover_penalty
         penalized_sharpe = adjusted_returns.mean() / (adjusted_returns.std() + 1e-12) * np.sqrt(self.period_num)
         return penalized_sharpe
 
     def get_short_addition(self):
-        adjusted_returns = (self.every_interval_rate[:, -1] - self.every_interval_rate[:, -2])*1.3
+        adjusted_returns = (self.every_interval_rate[:, -1] - self.every_interval_rate[:, -2]) * 1.3
         sharpe = adjusted_returns.mean() / (adjusted_returns.std() + 1e-12) * np.sqrt(self.period_num)
         return sharpe
 
     def pv_neutra(self):
         index = self.data_reader.DailyDataReader.get_index(yearlist)
-        pv=self.data_reader.DailyDataReader.get_pv().iloc[index]
+        pv = self.data_reader.DailyDataReader.get_pv().iloc[index]
         pv_tensor = torch.tensor(pv.values, dtype=torch.float32)
-        k,b,res=OP_Basic.regress(self.factor, pv_tensor)
+        k, b, res = OP_Basic.regress(self.factor, pv_tensor)
         return res
 
     def industry_neutra(self):
-        industries = self.data_reader.get_barra(self.yearlist)[...,10:]
+        industries = self.data_reader.get_barra(self.yearlist)[..., 10:]
         k, b, res = OP_Basic.regress(self.factor, industries)
         return res
 
     def barra_test(self):
-        barra_data = self.data_reader.get_barra(self.yearlist)[...,:10]
+        barra_data = self.data_reader.get_barra(self.yearlist)[..., :10]
         k, b, res = OP_Basic.regress(self.factor, barra_data)
-        return k,res
+        return k, res
 
     def plot_stratified_rtn(self, every_interval_rate, factor_name, ax=None):
         if ax is None:
@@ -215,7 +216,7 @@ class FactorTest:
         bins_num = self.bins_num
         for i in range(bins_num):
             cumulative_rtn = np.cumprod(every_interval_rate[:, i] + 1)
-            ax.plot(cumulative_rtn,label=f'Group {i + 1}')
+            ax.plot(cumulative_rtn, label=f'Group {i + 1}')
 
         long_short = np.cumprod(
             (every_interval_rate[:, 0] - every_interval_rate[:, -2]) + 1
@@ -245,7 +246,7 @@ class FactorTest:
             annual_spread = torch.prod((long_ret - short_ret) + 1) - 1
 
             spread_returns = long_ret - short_ret
-            sharpe = spread_returns.mean() / (spread_returns.std() + 1e-12)*np.sqrt(len(spread_returns))
+            sharpe = spread_returns.mean() / (spread_returns.std() + 1e-12) * np.sqrt(len(spread_returns))
 
             mean_short_returns = (-short_ret + mean_ret) + 1
             annual_mean_short = torch.prod(mean_short_returns) - 1
@@ -253,7 +254,7 @@ class FactorTest:
             year_ic = self.get_rank_IC()[year_mask]
             valid_ic = year_ic.dropna()
             ic_mean = valid_ic.mean()
-            ic_ir = ic_mean / valid_ic.std()*np.sqrt(len(spread_returns))
+            ic_ir = ic_mean / valid_ic.std() * np.sqrt(len(spread_returns))
 
             annual_data.append([
                 str(year),
@@ -267,16 +268,15 @@ class FactorTest:
             ])
         return annual_data
 
-    def plot(self,output_path=None):
+    def plot(self, output_path=None):
         # ----------------- 存储路径 -----------------
         # 输入的output_path指向结果文件夹
         if output_path is None:
-            output_path=f'Backtest over Factor {self.factor_name}.png'
+            output_path = f'Backtest over Factor {self.factor_name}.png'
         else:
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
-            output_path=os.path.join(output_path, f'Backtest over Factor {self.factor_name}.png')
-
+            output_path = os.path.join(output_path, f'Backtest over Factor {self.factor_name}.png')
 
         self.get_stratified_return()
 
@@ -284,7 +284,7 @@ class FactorTest:
         fig = plt.figure(figsize=(10, 16), constrained_layout=True)
         gs = fig.add_gridspec(
             6, 2,
-            height_ratios=[2.8, 2.8, 2.8,2.8, 0.5, 2.8],
+            height_ratios=[2.8, 2.8, 2.8, 2.8, 0.5, 2.8],
             hspace=0.05,
             wspace=0
         )
@@ -297,20 +297,20 @@ class FactorTest:
         long_rtn = np.cumprod(self.every_interval_rate[:, 0] + 1)
         short_rtn = np.cumprod(self.every_interval_rate[:, -1] + 1)
         spread = np.cumprod((self.every_interval_rate[:, 0] - self.every_interval_rate[:, -2]) + 1)
-        ax2.plot(long_rtn, color='red',label='Long Group')
-        ax2.plot(short_rtn, color='green',label='Short Group')
+        ax2.plot(long_rtn, color='red', label='Long Group')
+        ax2.plot(short_rtn, color='green', label='Short Group')
         ax2.plot(spread, color='black', linewidth=2, label='Long-Short')
         ax2.set_title('Long/Short Performance Comparison', fontsize=12)
         ax2.legend()
 
         ax3 = fig.add_subplot(gs[1, 0], sharex=ax1)
         ax3.plot(np.cumsum(self.get_rank_IC()), label='Cumulative Rank IC')
-        ax3.axhline(self.get_rank_ICIR(), color='red', linestyle='--',label=f'Rank ICIR: {self.get_rank_ICIR():.2f}')
+        ax3.axhline(self.get_rank_ICIR(), color='red', linestyle='--', label=f'Rank ICIR: {self.get_rank_ICIR():.2f}')
         ax3.legend()
         ax3.set_title('Rank IC Trend Analysis', fontsize=12)
 
         k, barrra_factor = self.barra_test()
-        every_interval_rate=self.factor_stratified_return(barrra_factor)
+        every_interval_rate = self.factor_stratified_return(barrra_factor)
         ax4 = fig.add_subplot(gs[1, 1], sharex=ax1)
         long_rtn = np.cumprod(every_interval_rate[:, 0] + 1)
         short_rtn = np.cumprod(every_interval_rate[:, -1] + 1)
@@ -324,7 +324,7 @@ class FactorTest:
         ax5 = fig.add_subplot(gs[2, 0])
         barra_labels = ['Size', 'Beta', 'Momentum', 'Vol', 'NonLinSize',
                         'Value', 'Liquidity', 'Earnings', 'Growth', 'Leverage']
-        ax5.barh(barra_labels, k.mean(axis=0),color='steelblue')
+        ax5.barh(barra_labels, k.mean(axis=0), color='steelblue')
         ax5.set_title('Average Barra Factor Exposure', fontsize=12)
 
         ax6 = fig.add_subplot(gs[2, 1], sharex=ax1)
@@ -333,7 +333,6 @@ class FactorTest:
         ax6.axhline(np.mean(turnover), color='red', linestyle='--', label=f'Mean: {np.mean(turnover):.2f}')
         ax6.legend()
         ax6.set_title('Turnover Analysis', fontsize=12)
-
 
         ax7 = fig.add_subplot(gs[3, 0])
         sharpe_values = [
@@ -419,12 +418,15 @@ class FactorTest:
         plt.show()
         plt.close()
         print(f"results saved：{output_path}")
+
+
 if __name__ == '__main__':
-    yearlist=[i for i in range(2010,2021,1)]
-    
+    yearlist = [i for i in range(2010, 2021, 1)]
+
     DO, DH, DL, DC, DV = DataReader.ParquetReader().get_Day_data(yearlist)
     returns = torch.full_like(DC, 0, dtype=torch.float32)
     returns[1:] = (DC[1:] - DC[:-1]) / DC[:-1]
+
     def compute_factor(return_tensor):
         days, stocks = return_tensor.shape
         factor = torch.zeros_like(return_tensor)
@@ -438,6 +440,13 @@ if __name__ == '__main__':
 
     # invoke example
     factor = compute_factor(returns)
-    ft = FactorTest(factor, yearlist,bins_num=5, factor_name='ret20')
+    ft = FactorTest(factor, yearlist, bins_num=5, factor_name='ret20')
     # saved under folder res
     ft.plot('res')
+
+    #中性化后的因子值 e.g.pv
+    # pv_factor=ft.pv_neutra()
+    # every_interval_rate=ft.factor_stratified_return(pv_factor)
+    # fig,ax = plt.subplots(figsize=(8, 6))
+    # ft.plot_stratified_rtn(every_interval_rate,'factor_name',ax=ax)
+    # plt.show()
