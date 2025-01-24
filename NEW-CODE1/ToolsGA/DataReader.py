@@ -1,169 +1,274 @@
 import sys
 sys.path.append('..')
-
 from OP import *
-from ToolsGA.Data_tools import DailyDataReader, MinuteDataReader
+
 import pandas as pd
+import numpy as np
+from scipy.io import loadmat
+import os
+from datetime import datetime
 import torch
 
-class ParquetReader:
-    def __init__(
-        self, 
-        DailyDataPath: str = "C:/个股日频数据 20240329",
-        MinuteDataPath: str = "D:/MA-GA-Data/Minute_Data",
-        BarraPath: str = "C:/Users/74989/Desktop/GP/GP/barra.pt",
-        DictPath: str = "C:/Users/74989/Desktop/GP/GP/dict.pt",
-        device: str = 'cpu'
-    ):
-        self.DailyDataReader = DailyDataReader(DailyDataPath)
-        self.MinuteDataReader = MinuteDataReader(MinuteDataPath, device)
-        self.BarraPath = BarraPath
-        self.DictPath = DictPath
+class DailyDataReader:
+    def __init__(self, daily_data_path: str="../../Data/DailyData"):
+        self.daily_data_path = daily_data_path
+        self.MutualStockCodes = pd.read_parquet("../../Data/MutualStockCodes.parquet")["Mutual"].values
+
+        self.ListedDate = self._ListedDate()
+        self.TradingDate = self._TradingDate()
+        self.StockCodes = self._StockCodes()
+        self.Status = self._Status()
+        self.ST = self._ST()
+
+    def _ListedDate(self) -> np.ndarray:
+        """
+        截至昨日收盘的上市交易日数
+        """
+        return loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyListedDate.mat')
+        )['AllStock_DailyListedDate'][:, self.MutualStockCodes]
+
+    def _TradingDate(self) -> pd.Series:
+        """
+        交易日
+        """
+        TradingDate = loadmat(
+            os.path.join(self.daily_data_path, 'TradingDate_Daily.mat')
+        )['TradingDate_Daily']
+
+        date = []
+        for i in range(len(TradingDate)):
+            # date.append(pd.to_datetime(TradingDate[i][0],format='%Y%m%d'))
+            # print(TradingDate[i][0])
+            time =  datetime.strptime(str(TradingDate[i][0]), '%Y%m%d')
+            date.append(time)
+            # print(TradingDate[i][0])
+        # print(date)
+        # print(pd.Series(date))
+        return pd.Series(date)
+
+    def _StockCodes(self) -> pd.Series:
+        """
+        股票代码
+        """
+        code = loadmat(
+            os.path.join(self.daily_data_path, 'AllStockCode.mat')
+        )['AllStockCode']
+        code1 = []
+        for i in range(len(code[0])):
+            code1.append(code[0][i].tolist()[0])
+        return pd.Series(code1).loc[self.MutualStockCodes].reset_index(drop=True)
+
+    def _Status(self) -> np.ndarray:
+        """
+        交易状态, 已经把文本处理成数字, 1 代表正常交易, 0 不是
+        """
+        return loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyStatus.mat')
+        )['AllStock_DailyStatus_use'][:, self.MutualStockCodes]
+
+    def _ST(self) -> np.ndarray:
+        """
+        1 代表是 st, 0 代表不是
+        """
+        return loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyST.mat')
+        )['AllStock_DailyST'][:, self.MutualStockCodes]
+    
+    def _clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        status20 = (
+            pd.DataFrame(
+                (1 - self.ST) * (self.Status), 
+                index=self.TradingDate, 
+                columns=self.StockCodes
+            ).rolling(20).sum() >= 10
+        ).astype(int).replace(0, np.nan)
+
+        listed = pd.DataFrame(
+            (self.ListedDate >= 60).astype(int), index=self.TradingDate, columns=self.StockCodes
+        )
+        good_bad = listed * status20
+        df1 = df[good_bad.replace(0, np.nan).notna()]
+        return df1
+    
+    def _get_open(self) -> np.ndarray:
+        return loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyOpen_dividend.mat')
+        )['AllStock_DailyOpen_dividend'][:, self.MutualStockCodes]
+    
+    def _get_close(self) -> np.ndarray:
+        return loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyClose_dividend.mat')
+        )['AllStock_DailyClose_dividend'][:, self.MutualStockCodes]
+    
+    def _get_high(self) -> np.ndarray:
+        return loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyHigh_dividend.mat')
+        )['AllStock_DailyHigh_dividend'][:, self.MutualStockCodes]
+    
+    def _get_low(self) -> np.ndarray:
+        return loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyLow_dividend.mat')
+        )['AllStock_DailyLow_dividend'][:, self.MutualStockCodes]
+    
+    def GetOHLC(self) -> list[np.ndarray]:
+        """
+        OHLC 数据
+        """
+        return [self._get_open(), self._get_high(), self._get_low(), self._get_close()]
+    
+    def GetVolume(self) -> pd.DataFrame:
+        volume = loadmat(
+            os.path.join(self.daily_data_path, 'AllStock_DailyVolume.mat')
+        )['AllStock_DailyVolume'][:, self.MutualStockCodes]
+        volume = pd.DataFrame(
+            volume, index=self.TradingDate, columns=self.StockCodes
+        ).replace(0, np.nan)
+        return self._clean_data(volume)
+
+    def get_df_ohlcv(
+            self, 
+            open: np.ndarray, high: np.ndarray, 
+            low: np.ndarray, close: np.ndarray
+    ) -> list[pd.DataFrame]:
+
+        def to_df(data: np.ndarray):
+            return pd.DataFrame(data, index=self.TradingDate, columns=self.StockCodes).replace(0, np.nan)
+        return [to_df(open), to_df(high), to_df(low), to_df(close), self.GetVolume()]
+
+    def get_pv(self) -> pd.DataFrame:
+        s1 = loadmat(
+            self.daily_data_path + '/AllStock_DailyAShareNum.mat'
+        )['AllStock_DailyAShareNum'][:, self.MutualStockCodes]
+        s2 = loadmat(
+            self.daily_data_path + '/AllStock_DailyClose.mat'
+        )['AllStock_DailyClose'][:, self.MutualStockCodes]
+        pv = pd.DataFrame(s1*s2, index=self.TradingDate, columns=self.StockCodes)
+        return pv
+
+    def get_TR(self) -> pd.DataFrame:
+        TR = loadmat(
+            self.daily_data_path + '/AllStock_DailyTR.mat'
+        )['AllStock_DailyTR'][:, self.MutualStockCodes]
+        TR = pd.DataFrame(TR, index=self.TradingDate, columns=self.StockCodes).replace(0, np.nan)
+        return self._clean_data(TR)
+
+    def get_index(self, year_lst: list[int]):
+        index=[]
+        for year in year_lst:
+            index.extend(self.TradingDate.index[self.TradingDate.dt.year == year])
+        return index
+
+    def get_clean(self) -> torch.Tensor:
+        status20 = OP_AF2A.D_ts_mean(torch.from_numpy((1 - self.ST) * (self.Status)), 20) > 0.5
+        listed = torch.from_numpy(self.ListedDate >= 60)
+        clean = ~(listed * status20)
+        return clean
+
+    def get_pct_change(self, close: np.ndarray):
+        p = pd.DataFrame(close, index=self.TradingDate, columns=self.StockCodes)
+        pct_change = p / p.shift(1)
+        return self._clean_data(pct_change)
+
+
+class MinuteDataReader:
+    def __init__(self, minute_data_path: str="../../Data/MinuteData", device: str='cpu'):
+        self.data_path = minute_data_path  # M_tensor's Path
         self.device = device
+        self.cols = ["open", "high", "low", "close", "volume"]  # "amount"
+        self.MutualStockCodes = pd.read_parquet("../../Data/MutualStockCodes.parquet")
+        self.MutualStockCodes = list(self.MutualStockCodes["StockCodes"].loc[self.MutualStockCodes["Mutual"]].values)
+
+    def dataframe_to_tensor(self, df: pd.DataFrame, minute_len=242):
+        """
+        Convert the DataFrame (one year's data) to a tensor
+        """
+        df = df.astype(np.float32)
+
+        # DateTimeIndex
+        df.index = pd.to_datetime(df.index)
+        # Sort by date and stock code
+        df = df.sort_index(axis=0).sort_index(axis=1)
+
+        # Group by date
+        grouped = df.groupby(df.index.date)
+        day_data = []
+        for _, group in grouped:
+            # Fill the missing minutes of a day with NaN
+            if len(group) != minute_len:
+                day_data = fill_full_day(group)
+
+            day_data.append(group.values)
+
+        # exchange dimensions to (num_stock, day_len, minute_len), from (day_len, minute_len, num_stock)
+        tensor_data = torch.tensor(np.array(day_data, dtype=np.float32), dtype=torch.float32, device=self.device).permute(2, 0, 1)
+        return tensor_data
+
+    def read_data_by_col(self, col: str, year_lst: list[int]) -> torch.Tensor:
+        """
+        load data by column and year list with mmap
+        """
+        data = []
+        for year in year_lst:
+            file_path = f"{self.data_path}/{col}_{year}.parquet"
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
+            # load data with mmap
+            data.append(self.dataframe_to_tensor(pd.read_parquet(file_path, columns=self.MutualStockCodes)))
+        # concatenate date in the day dimension
+        return torch.cat(data, dim=1).permute(1,0,2)
 
     def get_Minute_data(self, year_lst: list[int]) -> list[torch.Tensor]:
         """
         Read all columns data by year list
         """
-        return self.MinuteDataReader.get_Minute_data(year_lst)
-
-    def get_Day_data(self,year_lst: list[int])-> list[torch.Tensor]:
-        index = self.DailyDataReader.get_index(year_lst)
-        clean = self.DailyDataReader.get_clean()[index]
-        
-        D_O, D_H, D_L, D_C = self.DailyDataReader.GetOHLC()
-        D_V = self.DailyDataReader.GetVolume().values
-
-        def adjust(tensor):
-            tensor=torch.tensor(tensor, dtype=torch.float32,device=self.device)[index]
-            tensor = torch.where(clean | (tensor < 1e-5), float('nan'), tensor)
-            return tensor
-
-        return [adjust(D_O), adjust(D_H), adjust(D_L), adjust(D_C), adjust(D_V)]
-
-    def get_barra(self, year_lst: list[int]) -> torch.Tensor:
-        barra = torch.load(self.BarraPath, weights_only=True)
-        dict = torch.load(self.DictPath, weights_only=False)
-        s = []
-        for year in year_lst:
-            mask = pd.to_datetime(dict['index']).year == year
-            s.append(mask)
-
-        w = s[0]
-        for t in s:
-            w = w | t
-
-        return barra[w][:, self.DailyDataReader.MutualStockCodes]
-
-    def get_labels(self, year_lst: list[int], freq: int=5) -> torch.Tensor:
-        index = self.DailyDataReader.get_index(year_lst)
-        clean = self.DailyDataReader.get_clean()[index]
-        D_O = torch.tensor(self.DailyDataReader._get_open(), dtype=torch.float32, device=self.device)[index]
-        D_C = torch.tensor(self.DailyDataReader._get_close(), dtype=torch.float32, device=self.device)[index]
-        D_O, D_C=[
-            torch.where(clean | (tensor < 1e-5), float('nan'), tensor) for tensor in [D_O, D_C]
-        ]
-        
-        open = OP_AF2A.D_ts_delay(D_O, -1)
-        close = OP_AF2A.D_ts_delay(D_C, -freq)
-        interval_return = close / open - 1
-        return interval_return
-
-class MmapReader:
-    def __init__(self):
-        self.years=range(2017,2018)#设定将哪些年的数据修改为mmap格式，最好不要很多年一起修改
-        self.output_daily='..'#mmap文件存放的路径
-        self.output_minute='..'
-
-    def save_daily_to_mmap(self,data, dtype=np.float32):
-        num_rows, num_cols = data.shape
-        with open(self.origin_daily, 'w+b') as f:
-            mmap = np.memmap(f, dtype=dtype, mode='w+', shape=(num_rows, num_cols))
-            mmap[:] = data
-
-    def save_minute_to_mmap(self,data, dtype=np.float32):
-        num_rows, num_cols , num_days= data.shape
-        with open(self.origin_minute, 'w+b') as f:
-            mmap = np.memmap(f, dtype=dtype, mode='w+', shape=(num_rows, num_cols,num_days))
-            mmap[:] = data
-
-    def save_daily(self):
-        data_reader = ParquetReader()
-        years = self.years
-        os.makedirs(self.output_daily, exist_ok=True)
-
-    # 定义数据的名称和对应的索引
-        data_names = ['DO', 'DH', 'DL', 'DC', 'DV']
-
-        for year in years:
-            data = data_reader.get_Day_data([year])
-            for i, name in enumerate(data_names):
-                tensor = data[i]  # 获取当前Tensor
-                file_path = os.path.join(self.output_daily, f'{name}{year}.mmap')  # 构造文件路径
-                self.save_daily_to_mmap(file_path, tensor)  # 保存为Memory Map文件
-                print(f"Saved {name} data for year {year} to {file_path}")
-
-    def save_minute(self):
-        data_reader = ParquetReader()
-        years = self.years
-        os.makedirs(self.output_minute, exist_ok=True)
-        data_names = ['MO', 'MH', 'ML', 'MC', 'MV']
-
-        for year in years:
-            data = data_reader.get_Minute_data([year])
-            for i, name in enumerate(data_names):
-                tensor = data[i]  
-                file_path = os.path.join(self.output_minute, f'{name}{year}.mmap')  
-                self.save_minute_to_mmap(file_path, tensor)  
-                print(f"Saved {name} data for year {year} to {file_path}")
-    
-    def mmap_readDaily(self,file_path):
-        # 定义数据的形状和数据类型
-        num_rows = 244
-        num_cols = 5601
-        dtype = np.float32
-
-        # 读取Memory Map文件
-        mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols))
-
-        tensor_read = torch.from_numpy(mmap_read)
-        print(f"Tensor的形状: {tensor_read.shape}")
-        return tensor_read
-
-    def mmap_readMinute(self,file_path):
-        num_rows = 5528
-        num_cols = 244
-        num_days=242
-        dtype = np.float32
-        mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols,num_days))
-        tensor_read = torch.from_numpy(mmap_read)
-        return tensor_read
+        return [self.read_data_by_col(col, year_lst) for col in self.cols]
 
 
-if __name__ == "__main__":
-    # bgn_time = time.time()
-    # data_path = "./processed_data"
-    # data_reader = DataReader(data_path)
-    # open_data = data_reader.read_data_by_col("open", [2016, 2017])
-    # print("Open [2016, 2017] shape: ", open_data.shape)
-    # print("Time cost: ", time.strftime("%H:%M:%S", time.gmtime(time.time() - bgn_time)))
-    #
-    # bgn_time = time.time()
-    # open_data, high_data, low_data, close_data, volume_data = data_reader.read_data([2016, 2017])
-    # print("Open, High, Low, Close, Volume [2016, 2017] shape: ", open_data.shape, high_data.shape, low_data.shape,
-    #       close_data.shape, volume_data.shape)
-    # print("Time cost: ", time.strftime("%H:%M:%S", time.gmtime(time.time() - bgn_time)))
+class MacroDataReader:
+    pass
 
-    data_reader = ParquetReader()
 
-    DO, DH, DL, DC, DV = data_reader.get_Day_data([2016, 2017])
-    print(DO.shape, DH.shape, DL.shape, DC.shape, DV.shape)
+def get_first_day(df: pd.DataFrame) -> pd.DatetimeIndex:
+    p = df.resample('ME').last().index
+    groups = df.groupby(df.index.map(lambda x: sum(x > p)))
+    a = groups.apply(lambda x: pd.concat([x.iloc[0], pd.Series(x.iloc[0].name)]))
+    a = a.set_index(a.columns[-1])
+    return a.index
 
-    MO, MH, ML, MC, MV = data_reader.get_Minute_data([2016, 2017])
-    print(MO.shape, MH.shape, ML.shape, MC.shape, MV.shape)
+def get_last_day(df: pd.DataFrame) -> pd.DatetimeIndex:
+    p = df.resample('ME').last().index
+    groups = df.groupby(df.index.map(lambda x: sum(x > p)))
+    a = groups.apply(lambda x: pd.concat([x.iloc[-1], pd.Series(x.iloc[-1].name)]))
+    a = a.set_index(a.columns[-1])
+    return a.index
 
-    barra = data_reader.get_barra([2016, 2017])
-    print(barra.shape)
+def generate_trading_time(date: str) -> pd.DatetimeIndex:
+    """
+    The minutes trading time of a day
+    """
+    date = pd.to_datetime(date)
+    morning_times = pd.date_range(date + pd.Timedelta("09:30:00"), date + pd.Timedelta("11:30:00"), freq="T")
+    afternoon_times = pd.date_range(date + pd.Timedelta("13:00:00"), date + pd.Timedelta("15:00:00"), freq="T")
+    return morning_times.union(afternoon_times).sort_values()
 
-    interval_rtn = data_reader.get_labels([2016, 2017])
-    print(interval_rtn.shape)
+def fill_full_day(day_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Fill the missing minutes of a day with NaN
+    """
+    date = day_data.index[0].date()
+    trading_time = generate_trading_time(date)
+    day_data = day_data.reindex(trading_time)
+    return day_data
+
+def get_factor_target(buydays,selldays)->torch.Tensor:
+    datareader=DailyDataReader()
+    data=datareader.GetOHLC()
+    data=datareader.get_df_ohlcv(*data)
+    buy_price=data[0].loc[buydays]
+    sell_price=data[-1].loc[selldays]
+    buy_price.index=sell_price.index
+    target=sell_price/buy_price
+    return torch.from_numpy(target.value)
+
+
