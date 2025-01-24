@@ -12,7 +12,7 @@ import torch
 class DailyDataReader:
     def __init__(self, daily_data_path: str="../../Data/DailyData"):
         self.daily_data_path = daily_data_path
-        self.MutualStockCodes = pd.read_parquet("D:\MA-GA-Data\MutualStockCodes.parquet")["Mutual"].values
+        self.MutualStockCodes = pd.read_parquet("../../Data/MutualStockCodes.parquet")["Mutual"].values
 
         self.ListedDate = self._ListedDate()
         self.TradingDate = self._TradingDate()
@@ -176,7 +176,7 @@ class MinuteDataReader:
         self.data_path = minute_data_path  # M_tensor's Path
         self.device = device
         self.cols = ["open", "high", "low", "close", "volume"]  # "amount"
-        self.MutualStockCodes = pd.read_parquet("D:/MA-GA-Data/MutualStockCodes.parquet")
+        self.MutualStockCodes = pd.read_parquet("../../Data/MutualStockCodes.parquet")
         self.MutualStockCodes = list(self.MutualStockCodes["StockCodes"].loc[self.MutualStockCodes["Mutual"]].values)
 
     def dataframe_to_tensor(self, df: pd.DataFrame, minute_len=242):
