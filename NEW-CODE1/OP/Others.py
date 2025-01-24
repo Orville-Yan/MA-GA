@@ -76,7 +76,6 @@ class OP_Basic:
         correlation = covariance / (tensor1_std * tensor2_std)
         return correlation
 
-    import torch
 
     def multi_regress(y, x_s, dim=-1):
         down_epsilon = 1e-10
