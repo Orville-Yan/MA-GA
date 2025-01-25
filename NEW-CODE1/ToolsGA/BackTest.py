@@ -6,6 +6,7 @@ import DataReader
 
 from OP import *
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import pandas as pd
 import numpy as np
 import torch
@@ -17,6 +18,8 @@ class FactorTest:
         DO, DH, DL, DC, DV = self.data_reader.get_Day_data(yearlist)
         returns = torch.full_like(DC, 0, dtype=torch.float32)
         returns[1:] = (DC[1:] - DC[:-1]) / DC[:-1]
+        index = self.data_reader.DailyDataReader.get_index(yearlist)
+        self.trading_dates = pd.to_datetime(self.data_reader.DailyDataReader._TradingDate()[index]).tolist()
         self.factor = factor
         self.factor_target = returns
         self.yearlist = yearlist
@@ -147,6 +150,7 @@ class FactorTest:
         if self.every_interval_rate is None:
             self.get_stratified_return()
         bins = self.bins_record
+        non_nan_mask = ~torch.isnan(bins)
         prev_state = bins[:-1]
         curr_state = bins[1:]
         valid_mask = ~(torch.isnan(curr_state) | torch.isnan(prev_state))
@@ -154,7 +158,7 @@ class FactorTest:
         state_change[valid_mask] = (curr_state[valid_mask] != prev_state[valid_mask]).to(torch.int)
 
         a1_tensor = state_change.sum(axis=1)
-        a2_tensor = np.full_like(a1_tensor, bins.shape[1])
+        a2_tensor = non_nan_mask.sum(dim=1)[1:]
 
         a_list = a1_tensor.tolist()
         a2_list = a2_tensor.tolist()
@@ -216,19 +220,47 @@ class FactorTest:
         bins_num = self.bins_num
         for i in range(bins_num):
             cumulative_rtn = np.cumprod(every_interval_rate[:, i] + 1)
-            ax.plot(cumulative_rtn, label=f'Group {i + 1}')
-
+            ax.plot(self.trading_dates,cumulative_rtn, label=f'Group {i + 1}')
+        ret=every_interval_rate[:, 0] - every_interval_rate[:, -2]
         long_short = np.cumprod(
             (every_interval_rate[:, 0] - every_interval_rate[:, -2]) + 1
         )
-        ax.plot(long_short,
+        sharp = ret.mean() / (ret.std() + 1e-12) * np.sqrt(self.period_num)
+        ax.plot(self.trading_dates,long_short,
                 color='black',
                 linewidth=2,
-                label='Long-Short')
+                label=f'Long-Short, Sharp: {sharp:.2f}')
 
         ax.set_title(f'Stratified Returns: {factor_name}', fontsize=12)
         ax.set_ylabel('Cumulative Return', fontsize=10)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.tick_params(axis='x', labelrotation=45)
         ax.legend(fontsize=6)
+        return ax
+
+    def plot_long_short(self, every_interval_rate, factor_name, ax=None):
+        if ax is None:
+            ax = plt.gca()
+        long_mean=every_interval_rate[:, 0] - every_interval_rate[:, -1]
+        mean_short=every_interval_rate[:, -1] - every_interval_rate[:, -2]
+        long_short=every_interval_rate[:, 0] - every_interval_rate[:, -2]
+        long_rtn = np.cumprod(every_interval_rate[:, 0] - every_interval_rate[:, -1] + 1)
+        short_rtn = np.cumprod(every_interval_rate[:, -1] - every_interval_rate[:, -2] + 1)
+        spread = np.cumprod((every_interval_rate[:, 0] - every_interval_rate[:, -2]) + 1)
+
+        long_short_sharp = long_short.mean() / (long_short.std() + 1e-12) * np.sqrt(self.period_num)
+        mean_short_sharp = mean_short.mean() / (mean_short.std() + 1e-12) * np.sqrt(self.period_num)
+        long_mean_sharp = long_mean.mean() / (long_mean.std() + 1e-12) * np.sqrt(self.period_num)
+
+        ax.plot(self.trading_dates,long_rtn, color='red', label=f'Long-Mean, Sharp: {long_mean_sharp:.2f}')
+        ax.plot(self.trading_dates,short_rtn, color='green', label=f'Mean-Short, Sharp: {mean_short_sharp:.2f}')
+        ax.plot(self.trading_dates,spread, color='black', linewidth=2, label=f'Long-Short, Sharp: {long_short_sharp:.2f}')
+        ax.set_title(f'Long/Short Performance Comparison: {factor_name}', fontsize=12)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.tick_params(axis='x', labelrotation=45)
+        ax.legend()
         return ax
 
     def get_annual_metrics(self):
@@ -279,6 +311,9 @@ class FactorTest:
             output_path = os.path.join(output_path, f'Backtest over Factor {self.factor_name}.png')
 
         self.get_stratified_return()
+        long_short_sharp = self.get_long_short_sharpe()
+        mean_short_sharp = self.get_mean_over_short_sharpe()
+        long_mean_sharp = self.get_long_over_mean_sharpe()
 
         # ----------------- 布局参数 -----------------
         fig = plt.figure(figsize=(10, 16), constrained_layout=True)
@@ -294,31 +329,21 @@ class FactorTest:
         self.plot_stratified_rtn(self.every_interval_rate, self.factor_name, ax=ax1)
 
         ax2 = fig.add_subplot(gs[0, 1], sharex=ax1)
-        long_rtn = np.cumprod(self.every_interval_rate[:, 0] + 1)
-        short_rtn = np.cumprod(self.every_interval_rate[:, -1] + 1)
-        spread = np.cumprod((self.every_interval_rate[:, 0] - self.every_interval_rate[:, -2]) + 1)
-        ax2.plot(long_rtn, color='red', label='Long Group')
-        ax2.plot(short_rtn, color='green', label='Short Group')
-        ax2.plot(spread, color='black', linewidth=2, label='Long-Short')
-        ax2.set_title('Long/Short Performance Comparison', fontsize=12)
-        ax2.legend()
+        self.plot_long_short(self.every_interval_rate, self.factor_name, ax=ax2)
 
         ax3 = fig.add_subplot(gs[1, 0], sharex=ax1)
-        ax3.plot(np.cumsum(self.get_rank_IC()), label='Cumulative Rank IC')
-        ax3.axhline(self.get_rank_ICIR(), color='red', linestyle='--', label=f'Rank ICIR: {self.get_rank_ICIR():.2f}')
+        ax3.plot(self.trading_dates,np.cumsum(self.get_rank_IC()), label=f'Cumulative Rank IC, Mean: {self.get_rank_IC().mean():.2f}')
+        ax3.plot([],[],label=f'Rank ICIR: {self.get_rank_ICIR():.2f}')
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax3.xaxis.set_major_locator(mdates.YearLocator())
+        ax3.tick_params(axis='x', labelrotation=45)
         ax3.legend()
         ax3.set_title('Rank IC Trend Analysis', fontsize=12)
 
         k, barrra_factor = self.barra_test()
         every_interval_rate = self.factor_stratified_return(barrra_factor)
         ax4 = fig.add_subplot(gs[1, 1], sharex=ax1)
-        long_rtn = np.cumprod(every_interval_rate[:, 0] + 1)
-        short_rtn = np.cumprod(every_interval_rate[:, -1] + 1)
-        spread = np.cumprod((every_interval_rate[:, 0] - self.every_interval_rate[:, -2]) + 1)
-        ax4.plot(long_rtn, color='red', label='Long Group')
-        ax4.plot(short_rtn, color='green', label='Short Group')
-        ax4.plot(spread, color='black', linewidth=2, label='Long-Short')
-        ax4.set_title('Long/Short Performance Comparison after Neutralization', fontsize=12)
+        self.plot_long_short(every_interval_rate, 'Barra Neutralization', ax=ax4)
         ax4.legend()
 
         ax5 = fig.add_subplot(gs[2, 0])
@@ -329,8 +354,11 @@ class FactorTest:
 
         ax6 = fig.add_subplot(gs[2, 1], sharex=ax1)
         turnover = self.get_turnover()
-        ax6.plot(turnover, label='Daily Turnover')
+        ax6.plot(self.trading_dates,turnover, label='Daily Turnover')
         ax6.axhline(np.mean(turnover), color='red', linestyle='--', label=f'Mean: {np.mean(turnover):.2f}')
+        ax6.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax6.xaxis.set_major_locator(mdates.YearLocator())
+        ax6.tick_params(axis='x', labelrotation=45)
         ax6.legend()
         ax6.set_title('Turnover Analysis', fontsize=12)
 
@@ -345,7 +373,7 @@ class FactorTest:
         for bar in bars:
             yval = bar.get_height()
             ax7.text(bar.get_x() + bar.get_width() / 2,
-                     yval + 0.01 * max(sharpe_values),
+                     yval,
                      f'{yval:.2f}',
                      ha='center', va='bottom',
                      fontsize=9)
@@ -380,12 +408,13 @@ class FactorTest:
         monthly_returns_std = monthly_returns.std()
         annualized_volatility = monthly_returns_std * np.sqrt(self.period_num)
 
+
         metrics = [
             ["Annualized Return", f"{annualized_return:.2%}"],
             ["Annualized Volatility", f"{annualized_volatility:.2%}"],
-            ["Long-Short Sharpe", f"{self.get_long_short_sharpe():.2f}"],
-            ["Long Sharpe", f"{self.get_long_over_mean_sharpe():.2f}"],
-            ["Short Sharpe", f"{self.get_mean_over_short_sharpe():.2f}"],
+            ["Long-Short Sharpe", f"{long_short_sharp:.2f}"],
+            ["Long-Mean Sharpe", f"{long_mean_sharp:.2f}"],
+            ["Mean-Short Sharpe", f"{mean_short_sharp:.2f}"],
             ["Rank IC", f"{np.mean(self.get_rank_IC()):.2f}"],
             ["ICIR", f"{np.mean(self.get_rank_ICIR()):.2f}"],
             ["Turnover", f"{np.mean(self.get_turnover()):.2f}"]
