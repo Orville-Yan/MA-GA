@@ -273,15 +273,14 @@ class FactorTest:
             mean_ret = self.every_interval_rate[year_mask, -1]
             short_ret = self.every_interval_rate[year_mask, -2]
 
-            annual_long = torch.prod(long_ret + 1) - 1
-            annual_short = torch.prod(short_ret + 1) - 1
+            annual_long = torch.prod(long_ret-mean_ret + 1) - 1
+            annual_short = torch.prod(-short_ret+mean_ret + 1) - 1
             annual_spread = torch.prod((long_ret - short_ret) + 1) - 1
 
-            spread_returns = long_ret - short_ret
+            spread_returns = (long_ret - short_ret)
             sharpe = spread_returns.mean() / (spread_returns.std() + 1e-12) * np.sqrt(len(spread_returns))
-
-            mean_short_returns = (-short_ret + mean_ret) + 1
-            annual_mean_short = torch.prod(mean_short_returns) - 1
+            long_mean_sharp=(long_ret - mean_ret).mean() / ((long_ret - mean_ret).std() + 1e-12) * np.sqrt(len(spread_returns))
+            mean_short_sharp=(mean_ret - short_ret).mean() / ((mean_ret - short_ret).std() + 1e-12) * np.sqrt(len(spread_returns))
 
             year_ic = self.get_rank_IC()[year_mask]
             valid_ic = year_ic.dropna()
@@ -293,7 +292,8 @@ class FactorTest:
                 f"{annual_long.item():.2%}",  # 多头组收益
                 f"{annual_short.item():.2%}",  # 空头组收益
                 f"{annual_spread.item():.2%}",  # 多空价差收益
-                f"{annual_mean_short.item():.2%}",  # 空均收益
+                f"{long_mean_sharp.item():.2f}",  # 多空夏普
+                f"{mean_short_sharp.item():.2f}",  # 多空夏普
                 f"{sharpe.item():.2f}",  # 多空夏普
                 f"{ic_mean:.2f}",  # Rank IC均值
                 f"{ic_ir:.2f}"
@@ -385,8 +385,8 @@ class FactorTest:
         ax_table1 = fig.add_subplot(gs[4, :])
         ax_table1.axis('off')
         annual_data = self.get_annual_metrics()
-        annual_headers = ["Year", "Long Return", "Short Return", "Long-Short",
-                          "Mean-Short", "Sharpe", "Rank IC", "ICIR"]
+        annual_headers = ["Year", "Long-Mean", "Mean-Short", "Long-Short",
+                           "Long-Mean Sharpe","Mean-Short", "Long-Short","Rank IC", "ICIR"]
         annual_table = ax_table1.table(
             cellText=annual_data,
             colLabels=annual_headers,
@@ -427,7 +427,7 @@ class FactorTest:
             colColours=['#f0f0f0', '#f8f8f8']
         )
         summary_table.auto_set_font_size(False)
-        summary_table.set_fontsize(12)
+        summary_table.set_fontsize(10)
         summary_table.scale(1, 2)
 
         # 表格样式
