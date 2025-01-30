@@ -5,15 +5,16 @@ from OP import *
 from ToolsGA.Data_tools import DailyDataReader, MinuteDataReader
 import pandas as pd
 import torch
+import numpy as np
 
 class ParquetReader:
     def __init__(
-        self, 
-        DailyDataPath: str = "C:/个股日频数据 20240329",
-        MinuteDataPath: str = "D:/MA-GA-Data/Minute_Data",
-        BarraPath: str = "C:/Users/74989/Desktop/GP/GP/barra.pt",
-        DictPath: str = "C:/Users/74989/Desktop/GP/GP/dict.pt",
-        device: str = 'cpu'
+        self,
+            DailyDataPath: str = "../../Data/DailyData",
+            MinuteDataPath: str = "../../Data/MinuteData",
+            BarraPath: str = "../../Data/barra.pt",
+            DictPath: str = "../../Data/dict.pt",
+            device: str = 'cpu'
     ):
         self.DailyDataReader = DailyDataReader(DailyDataPath)
         self.MinuteDataReader = MinuteDataReader(MinuteDataPath, device)
@@ -70,7 +71,75 @@ class ParquetReader:
         return interval_return
 
 class MmapReader:
-    pass
+    def __init__(self):
+        self.years=range(2017,2018)#设定将哪些年的数据修改为mmap格式，最好不要很多年一起修改
+        self.output_daily='..'#mmap文件存放的路径
+        self.output_minute='..'
+
+    def save_daily_to_mmap(self,data, dtype=np.float32):
+        num_rows, num_cols = data.shape
+        with open(self.origin_daily, 'w+b') as f:
+            mmap = np.memmap(f, dtype=dtype, mode='w+', shape=(num_rows, num_cols))
+            mmap[:] = data
+
+    def save_minute_to_mmap(self,data, dtype=np.float32):
+        num_rows, num_cols , num_days= data.shape
+        with open(self.origin_minute, 'w+b') as f:
+            mmap = np.memmap(f, dtype=dtype, mode='w+', shape=(num_rows, num_cols,num_days))
+            mmap[:] = data
+
+    def save_daily(self):
+        data_reader = ParquetReader()
+        years = self.years
+        os.makedirs(self.output_daily, exist_ok=True)
+
+    # 定义数据的名称和对应的索引
+        data_names = ['DO', 'DH', 'DL', 'DC', 'DV']
+
+        for year in years:
+            data = data_reader.get_Day_data([year])
+            for i, name in enumerate(data_names):
+                tensor = data[i]  # 获取当前Tensor
+                file_path = os.path.join(self.output_daily, f'{name}{year}.mmap')  # 构造文件路径
+                self.save_daily_to_mmap(file_path, tensor)  # 保存为Memory Map文件
+                print(f"Saved {name} data for year {year} to {file_path}")
+
+    def save_minute(self):
+        data_reader = ParquetReader()
+        years = self.years
+        os.makedirs(self.output_minute, exist_ok=True)
+        data_names = ['MO', 'MH', 'ML', 'MC', 'MV']
+
+        for year in years:
+            data = data_reader.get_Minute_data([year])
+            for i, name in enumerate(data_names):
+                tensor = data[i]  
+                file_path = os.path.join(self.output_minute, f'{name}{year}.mmap')  
+                self.save_minute_to_mmap(file_path, tensor)  
+                print(f"Saved {name} data for year {year} to {file_path}")
+    
+    def mmap_readDaily(self,file_path):
+        # 定义数据的形状和数据类型
+        num_rows = 244
+        num_cols = 5601
+        dtype = np.float32
+
+        # 读取Memory Map文件
+        mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols))
+
+        tensor_read = torch.from_numpy(mmap_read)
+        print(f"Tensor的形状: {tensor_read.shape}")
+        return tensor_read
+
+    def mmap_readMinute(self,file_path):
+        num_rows = 5528
+        num_cols = 244
+        num_days=242
+        dtype = np.float32
+        mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols,num_days))
+        tensor_read = torch.from_numpy(mmap_read)
+        return tensor_read
+
 
 if __name__ == "__main__":
     # bgn_time = time.time()

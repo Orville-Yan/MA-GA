@@ -76,50 +76,49 @@ class OP_Basic:
         correlation = covariance / (tensor1_std * tensor2_std)
         return correlation
 
-    @staticmethod
+
     def multi_regress(y, x_s, dim=-1):
         down_epsilon = 1e-10
         B, N, D = x_s.shape
         M = y.shape[-1]
+        if y.dim() == 2:
+            y = y.unsqueeze(-1)
 
-        mask_x = ~torch.isnan(x_s).any(dim=-1)
-        mask_y = ~torch.isnan(y).any(dim=-1)
-        mask = mask_x & mask_y
-
-        y_valid = torch.where(mask.unsqueeze(-1), y, torch.tensor(0.0, device=y.device))
-
-
+        mask_x = ~torch.isnan(x_s).any(dim=-1)  # (B, N)
+        mask_y = ~torch.isnan(y).any(dim=-1)  # (B, N)
+        mask = mask_x & mask_y  # (B, N)
+        y_valid = torch.where(mask.unsqueeze(-1), y, 0.0)  # (B, N, M)
+        x_valid = torch.where(mask.unsqueeze(-1), x_s, 0.0)  # (B, N, D)
         const = torch.ones(B, N, 1, device=x_s.device)
-        x_const = torch.cat([x_s, const], dim=-1)
-
-        x_const = torch.where(mask.unsqueeze(-1), x_const, torch.tensor(0.0, device=x_const.device))
-
-        X_T = x_const.transpose(-2, -1)
-        W = torch.matmul(X_T, x_const)
-        XTY = torch.matmul(X_T, y_valid)
-
+        x_const = torch.cat([x_valid, const], dim=-1)  # (B, N, D+1)
+        x_const = x_const * mask.unsqueeze(-1)
+        
+        X_T = x_const.transpose(-2, -1)  # (B, D+1, N)
+        W = torch.matmul(X_T, x_const)  # (B, D+1, D+1)
+        XTY = torch.matmul(X_T, y_valid)  # (B, D+1, M)
         W_pinv = torch.pinverse(W)
-        theta = torch.matmul(W_pinv, XTY)
+        theta = torch.matmul(W_pinv, XTY)  # (B, D+1, M)
 
-        k = theta[:, :-1, :]
-        b = theta[:, -1, :]
+        k = theta[:, :-1, :]  # (B, D, M)
+        b = theta[:, -1, :]  # (B, M)
 
         predict = torch.matmul(x_s, k) + b.unsqueeze(1)
+        mask_expanded = mask.unsqueeze(-1).expand_as(y)  # (B, N, M)
+        res = torch.where(mask_expanded, y - predict, torch.nan)
 
-        res = torch.where(mask.unsqueeze(-1), y - predict, torch.tensor(float('nan'), device=y.device))
-
-        k = torch.where(torch.abs(k) < down_epsilon, torch.tensor(0.0, device=k.device), k)
-        b = torch.where(torch.abs(b) < down_epsilon, torch.tensor(0.0, device=b.device), b)
-        res = torch.where(torch.abs(res) < down_epsilon, torch.tensor(0.0, device=res.device), res)
-
-        return k, b, res
+        k = torch.where(torch.abs(k) < down_epsilon, 0.0, k)
+        b = torch.where(torch.abs(b) < down_epsilon, 0.0, b)
+        res = torch.where(torch.abs(res) < down_epsilon, 0.0, res)
+        return k.squeeze(-1), b.squeeze(-1), res.squeeze(-1)
 
     @staticmethod
     def regress(y, x_s, dim=-1):
         if y.dim() == x_s.dim():
+            if y.dim() == 2:
+                return OP_Basic.multi_regress(y.unsqueeze(-1), x_s.unsqueeze(-1), dim=dim)
             return OP_Basic.multi_regress(y, x_s, dim=dim)
         elif y.dim() == (x_s.dim() - 1):
-            y = y.unsqueeze(-1)
+            y = y.unsqueeze(-1)  # Unsqueeze y to match dimensions with x_s
             return OP_Basic.multi_regress(y, x_s, dim=dim)
         else:
             raise ValueError(f"Unsupported dimension mismatch: x_s.dim()={x_s.dim()}, y.dim()={y.dim()}")

@@ -192,6 +192,7 @@ class RPN_Parser(RPN_Compiler):
         self.rpn=RPN
         self.deap_code=gp.PrimitiveTree.from_string(RPN, self.pset)
         self.tree_structure = None
+        self.tree = None
 
     def get_abbrnsub(self, ac_tree, substr, flag=0, count=0):
         flag = max(flag-1,0)
@@ -265,7 +266,7 @@ class RPN_Parser(RPN_Compiler):
         pass
 
     def parse_tree(self):
-        abbr_tree,sub_tree,_ = self.get_abbrnsub(self.tree_structure,'Subtree')
+        abbr_tree,sub_tree,_ = self.get_abbrnsub(self.tree_structure,'subtree')
         self.tree={
             'abbreviation': abbr_tree,
             'tree_mode':self.tree_structure,
@@ -283,11 +284,11 @@ class RPN_Parser(RPN_Compiler):
                     abbr_subtree += ', '
                 if isinstance(node, Acyclic_Tree):
                     if i < len(tree.nodes)-1 or 'TypeD' not in [t.__name__ for t in tree.root_node.args]:
-                        abbr_subtree += f'Trunk_ARG{count_trunk}'
+                        abbr_subtree += f'trunk_ARG{count_trunk}'
                         count_trunk += 1
                         trunk_lst.append(node)
                     else:
-                        abbr_subtree += f'Branch_ARG{count_branch}'
+                        abbr_subtree += f'branch_ARG{count_branch}'
                         count_branch += 1
                         branch_lst.append(node)
 
@@ -302,23 +303,13 @@ class RPN_Parser(RPN_Compiler):
             'tree_mode':sub_tree[0],
         }
 
-        abbr_branch = []
-        for branch in branch_lst:
-            branch_depth = self.get_tree_depth(branch)
-            abbr,_,_ = self.get_abbrnsub(branch,'',branch_depth)
-            abbr_branch.append(abbr)
-
-        self.branch={
-            'abbreviation': abbr_branch,
-            'tree_mode': branch_lst,
-        }
 
         abbr_trunk = []
         sub_trunk = []
         count = 0
         for trunk in trunk_lst:
             trunk_depth = self.get_tree_depth(trunk)-2
-            abbr,sub,count = self.get_abbrnsub(trunk,'Root',trunk_depth,count)
+            abbr,sub,count = self.get_abbrnsub(trunk,'root',trunk_depth,count)
             abbr_trunk.append(abbr)
             sub_trunk.extend(sub)
         
@@ -326,25 +317,65 @@ class RPN_Parser(RPN_Compiler):
             'abbreviation':abbr_trunk,
             'tree_mode':trunk_lst,
         }
-
+        count = 0
         abbr_root = []
         sub_root = []
-        count = 0
         for root in sub_trunk:
-            abbr,sub,count = self.get_abbrnsub(root,'Seed',0,count)
+            abbr,sub,count = self.get_abbrnsub(root,'seed',0,count)
             abbr_root.append(abbr)
             sub_root.extend(sub)
+
+        abbr_branch = []
+        for branch in branch_lst:
+            branch_depth = self.get_tree_depth(branch)-1
+            abbr,sub,count = self.get_abbrnsub(branch,'seed',branch_depth,count)
+            abbr_branch.append(abbr)
+            sub_root.extend(sub)
+
+        self.branch={
+            'abbreviation': abbr_branch,
+            'tree_mode': branch_lst,
+        }
 
         self.root = {
             'abbreviation':abbr_root,
             'tree_mode':sub_trunk,
         }
 
-
         self.seed = {
             'abbreviation':[seed.abbreviation for seed in sub_root],
             'tree_mode':sub_root,
         }
+
+    def argnorm(self, seed_str):
+        map = {
+            'ARG0': 'D_O',
+            'ARG1': 'D_C',
+            'ARG2': 'D_H',
+            'ARG3': 'D_L',
+            'ARG4': 'D_V',
+            'ARG5': 'M_O',
+            'ARG6': 'M_C',
+            'ARG7': 'M_H',
+            'ARG8': 'M_L',
+            'ARG9': 'M_V'
+        }
+        for key, value in map.items():
+            seed_str = seed_str.replace(value, key)
+        return seed_str
+    
+    def tree2dict(self):
+        if not self.tree:
+            self.parse_tree()
+        self.tree_dict = {
+            'tree':[self.tree['abbreviation']],
+            'subtree':[self.subtree['abbreviation']],
+            'branch':self.branch['abbreviation'],
+            'trunk':self.trunk['abbreviation'],
+            'root':self.root['abbreviation'],
+            'seed':[self.argnorm(seed) for seed in self.seed['abbreviation']]
+        }
+        return self.tree_dict
 
 
 

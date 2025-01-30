@@ -1,48 +1,28 @@
+import os.path
 import sys
-import os
-import tempfile
 
-from IPython.core.pylabtools import figsize
-from matplotlib.backends.backend_pdf import PdfPages
-from sympy import shape
-import pandas as pd
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from io import BytesIO
 sys.path.append('..')
 import DataReader
 
 from OP import *
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import pandas as pd
 import numpy as np
 import torch
 
-from RPN.RPNbuilder import RPN_Compiler
-
-class GroupTest(RPN_Compiler):
-    def __init__(self,factor_list:[str]):
-        super().__init__()
-        self.factors=factor_list
-        self.in_sample_time=range(2010,2020)
-        self.out_sample_time=range(2019,2022)
-
-    def in_sample_response_rate(self):
-        ft = FactorTest(factor_tensor, factor_target, self.in_sample_time, bins_num=5, factor_name='factor')
-        ft.plot(output_pdf='in_sample_output.pdf')
-        
-    def out_sample_response_rate(self):
-        ft = FactorTest(factor_tensor, factor_target, self.out_sample_time, bins_num=5, factor_name='factor')
-        ft.plot(output_pdf='out_sample_output.pdf')
-
 
 class FactorTest:
-    def __init__(self, factor_tensor, factor_target,yearlist, bins_num,period_num=12, factor_name='factor'):
-        self.data_reader = DataReader.DataReader()
-        self.factor = factor_tensor
-        self.factor_target = factor_target
-        self.yearlist=yearlist
+    def __init__(self, factor, yearlist, bins_num, period_num=252, factor_name='ret20'):
+        self.data_reader = DataReader.ParquetReader()
+        DO, DH, DL, DC, DV = self.data_reader.get_Day_data(yearlist)
+        returns = torch.full_like(DC, 0, dtype=torch.float32)
+        returns[1:] = (DC[1:] - DC[:-1]) / DC[:-1]
+        index = self.data_reader.DailyDataReader.get_index(yearlist)
+        self.trading_dates = pd.to_datetime(self.data_reader.DailyDataReader._TradingDate()[index]).tolist()
+        self.factor = factor
+        self.factor_target = returns
+        self.yearlist = yearlist
         self.bins_num = bins_num
         self.factor_name = factor_name
         self.period_num = period_num
@@ -51,9 +31,6 @@ class FactorTest:
         self.every_interval_rate = None
         self.long_turn_over = None
         self.IC_series = None
-        self.industry_factor=torch.empty_like(factor_tensor)
-        self.pv_factor=torch.empty_like(factor_tensor)
-        self.barra_factor=torch.empty_like(factor_tensor)
 
     def get_stratified_return(self):
         tensor = self.factor
@@ -86,31 +63,61 @@ class FactorTest:
         bins_return = torch.cat([group_ret, all_mean_ret], dim=1)
         self.every_interval_rate = torch.nan_to_num(bins_return, nan=0.0)
         self.bins_record = bins
+        return
 
-    def get_mean_over_short_sharpe(self,period_num):
-        nav = (self.every_interval_rate[:, :-1] - 1).mean(dim=0)
-        short_idx = torch.argmin(nav).item()
+    def factor_stratified_return(self, factor):
+        tensor = factor
+        target = self.factor_target
+        bins_num = self.bins_num
+
+        quantiles = torch.linspace(0, 1, bins_num + 1, device=tensor.device)
+        q = quantiles[1:-1]
+
+        boundaries = torch.nanquantile(tensor, q, dim=1).T
+        boundaries_all_nan = torch.isnan(boundaries).all(dim=1)
+
+        comparison = tensor.unsqueeze(-1) > boundaries.unsqueeze(1)
+        bins = comparison.sum(dim=-1).float()
+        bins[boundaries_all_nan, :] = float('nan')
+        mask = torch.isnan(tensor)
+        bins[mask] = float('nan')
+
+        # 计算每个桶的平均收益
+        bin_indices = torch.arange(bins_num, device=tensor.device).view(1, 1, bins_num).float()
+        mask_b = (bins.unsqueeze(-1) == bin_indices)
+
+        masked_target = torch.where(
+            mask_b,
+            target.unsqueeze(-1),
+            torch.full_like(target.unsqueeze(-1), float('nan'))
+        )
+        group_ret = torch.nanmean(masked_target, dim=1)
+        all_mean_ret = torch.nanmean(target, dim=1, keepdim=True)
+        bins_return = torch.cat([group_ret, all_mean_ret], dim=1)
+        return torch.nan_to_num(bins_return, nan=0.0)
+
+    def get_mean_over_short_sharpe(self):
         mean_ret = self.every_interval_rate[:, -1]
-        short_ret = self.every_interval_rate[:, short_idx]
-        # 空均
-        mean_short_ret = (-short_ret + mean_ret + 1)
+        short_ret = self.every_interval_rate[:, -2]
+        # 均空
+        mean_short_ret = -short_ret + mean_ret
         # Sharpe
-        mean_short_sharp = (mean_short_ret - 1).mean() / ((mean_short_ret - 1).std() + 1e-12) * np.sqrt(period_num)
-        return mean_short_sharp.item()
+        mean_short_sharp = mean_short_ret.mean() / (mean_short_ret.std() + 1e-12) * np.sqrt(self.period_num)
+        return mean_short_sharp
 
-    def get_long_over_mean_sharpe(self,period_num):
-        nav = (self.every_interval_rate[:, :-1] - 1).mean(dim=0)
-        long_idx = torch.argmax(nav).item()
+    def get_long_over_mean_sharpe(self):
         mean_ret = self.every_interval_rate[:, -1]
-        long_ret = self.every_interval_rate[:, long_idx]
+        long_ret = self.every_interval_rate[:, 0]
+        # 多均
+        long_mean_ret = (long_ret - mean_ret)
+        # Sharpe
+        long_mean_sharp = long_mean_ret.mean() / (long_mean_ret.std() + 1e-12) * np.sqrt(self.period_num)
+        return long_mean_sharp
 
-        long_mean_ret = (long_ret - mean_ret + 1)
-        long_mean_sharp = (long_mean_ret - 1).mean() / ((long_mean_ret - 1).std() + 1e-12) * np.sqrt(period_num)
-        return long_mean_sharp.item()
-    def get_mean_sharpe(self,period_num):
-        mean_ret = self.every_interval_rate[:, -1]
-        mean_sharp = (mean_ret - 1).mean() / ((mean_ret - 1).std() + 1e-12) * np.sqrt(period_num)
-        return mean_sharp.item()
+    def get_long_short_sharpe(self):
+        mean_ret = self.every_interval_rate[:, 0] - self.every_interval_rate[:, -2]
+        mean_sharp = mean_ret.mean() / (mean_ret.std() + 1e-12) * np.sqrt(self.period_num)
+        return mean_sharp
 
     def get_rank_IC(self):
         T, N = self.factor.shape
@@ -132,277 +139,343 @@ class FactorTest:
         self.IC_series = IC_series
         return IC_series
 
-
-    def get_rank_ICIR(self,period_num):
-        IC_series= self.get_rank_IC()
+    def get_rank_ICIR(self):
+        IC_series = self.get_rank_IC().dropna()
         IC_mean = IC_series.mean()
         IC_std = IC_series.std()
-        ICIR = IC_mean / (IC_std + 1e-12) * np.sqrt(period_num)
+        ICIR = IC_mean / (IC_std + 1e-12) * np.sqrt(self.period_num)
         return ICIR
 
     def get_turnover(self):
+        if self.every_interval_rate is None:
+            self.get_stratified_return()
         bins = self.bins_record
-        curr_top = bins[1:] == 0
-        prev_top = bins[:-1] == 0
-        a1_tensor = (curr_top & prev_top).sum(dim=1)
-        a2_tensor = prev_top.sum(dim=1)
+        non_nan_mask = ~torch.isnan(bins)
+        prev_state = bins[:-1]
+        curr_state = bins[1:]
+        valid_mask = ~(torch.isnan(curr_state) | torch.isnan(prev_state))
+        state_change = torch.zeros_like(curr_state, dtype=torch.int)
+        state_change[valid_mask] = (curr_state[valid_mask] != prev_state[valid_mask]).to(torch.int)
 
-        valid_indices = a2_tensor > 0
-        a_list = a1_tensor[valid_indices].tolist()
-        a2_list = a2_tensor[valid_indices].tolist()
+        a1_tensor = state_change.sum(axis=1)
+        a2_tensor = non_nan_mask.sum(dim=1)[1:]
 
-        if len(a2_list) == 0:
-            turnover = float('nan')
-        else:
-            turnover = np.nanmean(np.array(a_list) / np.array(a2_list))
-        self.long_turn_over = turnover
-        return turnover
+        a_list = a1_tensor.tolist()
+        a2_list = a2_tensor.tolist()
 
-    def get_long_equity(self):
-        nav = (self.every_interval_rate[:, :-1] - 1).mean(dim=0)
-        long_idx = torch.argmax(nav).item()
-        daily_ret = self.every_interval_rate[:, long_idx]
-        equity_curve = np.cumprod(daily_ret+1)
-        print(equity_curve)
-        return equity_curve
+        turnover = np.array(a_list) / np.array(a2_list)
+        adjusted_turnover = np.zeros_like(bins[:, 0])
+        adjusted_turnover[1:] = turnover
+        return adjusted_turnover
+
+    def get_long_equity(self, bins_num=0) -> pd.DataFrame:
+        if self.every_interval_rate is None:
+            self.get_stratified_return()
+        bins = self.bins_record
+        long_mask = bins == bins_num
+        stock_codes = self.data_reader.DailyDataReader._StockCodes().tolist()
+        index = self.data_reader.DailyDataReader.get_index(yearlist)
+        trading_dates = pd.to_datetime(self.data_reader.DailyDataReader._TradingDate()[index])
+
+        stock_array = np.tile(stock_codes, (len(trading_dates), 1))
+        result = np.where(long_mask, stock_array, None)
+        df = pd.DataFrame(data=result, index=trading_dates, columns=stock_codes)
+        return df
 
     def get_short_equity(self):
-        if self.bins_record is None or self.every_interval_rate is None:
-            raise ValueError("Please run get_stratified_return first.")
-        nav = (self.every_interval_rate[:, :-1] - 1).mean(dim=0)
-        short_idx = torch.argmin(nav).item()
-        daily_ret = self.every_interval_rate[:, short_idx]
-        equity_curve = np.cumprod(daily_ret+1)
-        print(equity_curve)
-        return equity_curve
+        return self.get_long_equity(-2)
 
     def get_turnover_punishment(self):
         turnover = self.get_turnover()
-        mean_sharp= self.get_mean_sharpe(self.period_num)
-        # 换手率惩罚千分之三
         turnover_penalty = turnover * 0.003
-        penalized_sharpe = mean_sharp - turnover_penalty
+        adjusted_returns = self.every_interval_rate[:, 0] - self.every_interval_rate[:, -2] - turnover_penalty
+        penalized_sharpe = adjusted_returns.mean() / (adjusted_returns.std() + 1e-12) * np.sqrt(self.period_num)
         return penalized_sharpe
 
     def get_short_addition(self):
-        long_curve = self.get_long_equity()
-        short_curve = self.get_short_equity()
-        long_daily = (long_curve / long_curve.roll(1, dims=0)) - 1.0
-        short_daily = (short_curve / short_curve.roll(1, dims=0)) - 1.0
+        adjusted_returns = (self.every_interval_rate[:, -1] - self.every_interval_rate[:, -2]) * 1.3
+        sharpe = adjusted_returns.mean() / (adjusted_returns.std() + 1e-12) * np.sqrt(self.period_num)
+        return sharpe
 
-        # 空头加成千分之二
-        short_daily_with_addition = short_daily + 0.002
-        combined_daily = 0.5 * long_daily + 0.5 * short_daily_with_addition
-        combined_equity = np.cumprod(combined_daily + 1.0)
-        return combined_equity
-
-    def pv_neutra(self, pv):
-        T, N = self.factor.shape
-        industries = self.data_reader.get_labels()
-        valid_mask = ~torch.isnan(self.factor)
-        valid_factors = self.factor[valid_mask]
-        valid_industries = industries[valid_mask]
-        unique_industries = torch.unique(valid_industries)
-        industry_means = torch.zeros_like(unique_industries, dtype=torch.float)
-
-        for i, ind in enumerate(unique_industries):
-            industry_means[i] = valid_factors[valid_industries == ind].mean()
-        industry_mean_map = industry_means[torch.searchsorted(unique_industries, valid_industries)]
-        self.pv_factor = self.factor - industry_mean_map.unsqueeze(0)
+    def pv_neutra(self):
+        index = self.data_reader.DailyDataReader.get_index(yearlist)
+        pv = self.data_reader.DailyDataReader.get_pv().iloc[index]
+        pv_tensor = torch.tensor(pv.values, dtype=torch.float32)
+        k, b, res = OP_Basic.regress(self.factor, pv_tensor)
+        return res
 
     def industry_neutra(self):
-        T, N = self.factor.shape
-        industries = self.data_reader.get_barra(self.yearlist)[10:]
-        valid_mask = ~torch.isnan(self.factor)
-        valid_factors = self.factor[valid_mask]
-        valid_industries = industries[valid_mask]
-        unique_industries = torch.unique(valid_industries)
-        industry_means = torch.zeros_like(unique_industries, dtype=torch.float)
-        for i, ind in enumerate(unique_industries):
-            industry_means[i] = valid_factors[valid_industries == ind].mean()
-        industry_mean_map = industry_means[torch.searchsorted(unique_industries, valid_industries)]
-        self.industry_factor = self.factor - industry_mean_map.unsqueeze(0)
+        industries = self.data_reader.get_barra(self.yearlist)[..., 10:]
+        k, b, res = OP_Basic.regress(self.factor, industries)
+        return res
 
     def barra_test(self):
-        F = 10
-        index = ['size', 'beta', 'momentum', 'volatility', 'nlsize', 'value',
-                 'liquidity', 'earnings_yield', 'growth', 'leverage']
-        barra_data = self.data_reader.get_barra(self.yearlist)[:10]
+        barra_data = self.data_reader.get_barra(self.yearlist)[..., :10]
+        k, b, res = OP_Basic.regress(self.factor, barra_data)
+        return k, res
 
-        results = []
-        for i in range(F):
-            factor = self.factor[:, i]
-            target = self.factor_target
-
-            X = barra_data[:, i].view(-1, 1)
-            Y = target.view(-1, 1)
-
-            X_transpose = X.T
-            beta = torch.linalg.inv(X_transpose @ X) @ (X_transpose @ Y)
-            results.append({
-                'Factor': index[i],
-                'Beta': beta.item(),
-                'R^2': self.calculate_r2(X, Y, beta)
-            })
-
-        results_df = pd.DataFrame(results)
-        return results_df
-    def calculate_r2(self, X, Y, beta):
-        Y_pred = X @ beta
-        ss_total = torch.sum((Y - torch.mean(Y)) ** 2)
-        ss_residual = torch.sum((Y - Y_pred) ** 2)
-        return 1 - ss_residual / ss_total
-
-
-    def plot(self, output_pdf='output.pdf'):
-        self.get_stratified_return()
-        monthly_returns = self.every_interval_rate[:, 4] - self.every_interval_rate[:, 0]
-        if isinstance(monthly_returns, torch.Tensor):
-            monthly_returns = monthly_returns.numpy()
-        mean_monthly_return = np.mean(monthly_returns)  # 计算月度收益率的平均值
-        annualized_return = (1 + mean_monthly_return) ** self.period_num - 1  # 计算年化收益率
-        monthly_returns_std = np.std(monthly_returns)  # 计算月度收益率的标准差
-        annualized_volatility = monthly_returns_std * np.sqrt(self.period_num)  # 计算年化波动率
-        print(annualized_return)
-        print(annualized_volatility)
-        mean_sharp=self.get_mean_sharpe(self.period_num)
-        long_mean_sharp = self.get_long_over_mean_sharpe(self.period_num)
-        mean_short_sharp=self.get_mean_over_short_sharpe(self.period_num)
-        rankic=self.get_rank_IC()
-        rank_icir = self.get_rank_ICIR(self.period_num)
-        turnover = self.get_turnover()
-        penalized_sharpe=self.get_turnover_punishment()
-
-        c = canvas.Canvas(output_pdf, pagesize=letter)
-
-        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-
+    def plot_stratified_rtn(self, every_interval_rate, factor_name, ax=None):
+        if ax is None:
+            ax = plt.gca()
         bins_num = self.bins_num
         for i in range(bins_num):
-            axs[0, 0].plot(np.cumprod(self.every_interval_rate[:, i] + 1), label=f'Group {i + 1}')
-        axs[0, 0].plot(np.cumprod(self.every_interval_rate[:, 4]-self.every_interval_rate[:, 0] + 1), color='black', label='5-1')
-        axs[0, 0].set_title('Stratified Return by Factor Bins', fontsize=14)
-        axs[0, 0].set_xlabel('Time', fontsize=12)
-        axs[0, 0].set_ylabel('Return', fontsize=12)
-        axs[0, 0].legend()
+            cumulative_rtn = np.cumprod(every_interval_rate[:, i] + 1)
+            ax.plot(self.trading_dates,cumulative_rtn, label=f'Group {i + 1}')
+        ret=every_interval_rate[:, 0] - every_interval_rate[:, -2]
+        long_short = np.cumprod(
+            (every_interval_rate[:, 0] - every_interval_rate[:, -2]) + 1
+        )
+        sharp = ret.mean() / (ret.std() + 1e-12) * np.sqrt(self.period_num)
+        ax.plot(self.trading_dates,long_short,
+                color='black',
+                linewidth=2,
+                label=f'Long-Short, Sharp: {sharp:.2f}')
 
-        if self.every_interval_rate is not None:
-            axs[0, 1].plot(self.get_long_equity(), label='Long Equity', color='red')
-            axs[0, 1].plot(self.get_short_equity(), label='Short Equity', color='green')
-            axs[0, 1].set_title(f'Long v.s. Short Equity')
-            axs[0, 1].set_ylabel('Return', fontsize=12)
-            axs[0, 1].legend()
+        ax.set_title(f'Stratified Returns: {factor_name}', fontsize=12)
+        ax.set_ylabel('Cumulative Return', fontsize=10)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.tick_params(axis='x', labelrotation=45)
+        ax.legend(fontsize=6)
+        return ax
 
-        if self.IC_series is not None:
-            axs[1, 0].plot(rankic, label='IC Series', color='blue')
-            axs[1, 0].axhline(rank_icir, color='red', linestyle='--', label=f'ICIR: {rank_icir:.2f}')
-            axs[1, 0].set_title('IC Series and ICIR')
-            axs[1, 0].set_xlabel('Time')
-            axs[1, 0].set_ylabel('Value')
-            axs[1, 0].legend()
+    def plot_long_short(self, every_interval_rate, factor_name, ax=None):
+        if ax is None:
+            ax = plt.gca()
+        long_mean=every_interval_rate[:, 0] - every_interval_rate[:, -1]
+        mean_short=every_interval_rate[:, -1] - every_interval_rate[:, -2]
+        long_short=every_interval_rate[:, 0] - every_interval_rate[:, -2]
+        long_rtn = np.cumprod(every_interval_rate[:, 0] - every_interval_rate[:, -1] + 1)
+        short_rtn = np.cumprod(every_interval_rate[:, -1] - every_interval_rate[:, -2] + 1)
+        spread = np.cumprod((every_interval_rate[:, 0] - every_interval_rate[:, -2]) + 1)
 
-        if self.every_interval_rate is not None:
-            axs[1, 1].plot(self.get_short_addition(), label='combined_equity', color='blue')
-            axs[1, 1].set_title('combined_equity')
-            axs[1, 1].set_xlabel('Time')
-            axs[1, 1].set_ylabel('Return')
-            axs[1, 1].legend()
+        long_short_sharp = long_short.mean() / (long_short.std() + 1e-12) * np.sqrt(self.period_num)
+        mean_short_sharp = mean_short.mean() / (mean_short.std() + 1e-12) * np.sqrt(self.period_num)
+        long_mean_sharp = long_mean.mean() / (long_mean.std() + 1e-12) * np.sqrt(self.period_num)
 
-        plt.tight_layout()
+        ax.plot(self.trading_dates,long_rtn, color='red', label=f'Long-Mean, Sharp: {long_mean_sharp:.2f}')
+        ax.plot(self.trading_dates,short_rtn, color='green', label=f'Mean-Short, Sharp: {mean_short_sharp:.2f}')
+        ax.plot(self.trading_dates,spread, color='black', linewidth=2, label=f'Long-Short, Sharp: {long_short_sharp:.2f}')
+        ax.set_title(f'Long/Short Performance Comparison: {factor_name}', fontsize=12)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.tick_params(axis='x', labelrotation=45)
+        ax.legend()
+        return ax
 
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
-            img_path = tmpfile.name
-            plt.savefig(img_path)
-            plt.close()
-            c.drawImage(img_path, 50, 400, width=500, height=400)
-            c.showPage()
+    def get_annual_metrics(self):
+        index = self.data_reader.DailyDataReader.get_index(yearlist)
+        dates = pd.to_datetime(self.data_reader.DailyDataReader._TradingDate()[index])
+        annual_data = []
+        for year in sorted(self.yearlist):
+            year_mask = (dates.dt.year == year).to_numpy()
+            long_ret = self.every_interval_rate[year_mask, 0]
+            mean_ret = self.every_interval_rate[year_mask, -1]
+            short_ret = self.every_interval_rate[year_mask, -2]
 
-        fig, axs = plt.subplots(1, 2, figsize=(12, 10))
-        pv_ft=FactorTest(self.pv_factor,self.factor_target,self.bins_num,self.period_num)
-        for i in range(bins_num):
-            axs[0, 0].plot(np.cumprod(pv_ft.every_interval_rate[:, i] + 1), label=f'Group {i + 1}')
-        axs[0, 0].plot(np.cumprod(pv_ft.every_interval_rate[:, 4]-pv_ft.every_interval_rate[:, 0] + 1), color='black', label='5-1')
-        axs[0, 0].set_title('Stratified Return by pv_factor Bins', fontsize=14)
-        axs[0, 0].set_xlabel('Time', fontsize=12)
-        axs[0, 0].set_ylabel('Return', fontsize=12)
-        axs[0, 0].legend()
+            annual_long = torch.prod(long_ret-mean_ret + 1) - 1
+            annual_short = torch.prod(-short_ret+mean_ret + 1) - 1
+            annual_spread = torch.prod((long_ret - short_ret) + 1) - 1
 
-        industry_ft=FactorTest(self.industry_factor,self.factor_target,self.bins_num,self.period_num)
-        for i in range(bins_num):
-            axs[0, 0].plot(np.cumprod(industry_ft.every_interval_rate[:, i] + 1), label=f'Group {i + 1}')
-        axs[0, 1].plot(np.cumprod(industry_ft.every_interval_rate[:, 4]-industry_ft.every_interval_rate[:, 0] + 1), color='black', label='5-1')
-        axs[0, 1].set_title('Stratified Return by pv_factor Bins', fontsize=14)
-        axs[0, 1].set_xlabel('Time', fontsize=12)
-        axs[0, 1].set_ylabel('Return', fontsize=12)
-        axs[0, 1].legend()
+            spread_returns = (long_ret - short_ret)
+            sharpe = spread_returns.mean() / (spread_returns.std() + 1e-12) * np.sqrt(len(spread_returns))
+            long_mean_sharp=(long_ret - mean_ret).mean() / ((long_ret - mean_ret).std() + 1e-12) * np.sqrt(len(spread_returns))
+            mean_short_sharp=(mean_ret - short_ret).mean() / ((mean_ret - short_ret).std() + 1e-12) * np.sqrt(len(spread_returns))
 
-        plt.tight_layout()
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
-            img_path = tmpfile.name
-            plt.savefig(img_path)
-            plt.close()
-            c.drawImage(img_path, 50, 400, width=500, height=400)
-            c.showPage()
+            year_ic = self.get_rank_IC()[year_mask]
+            valid_ic = year_ic.dropna()
+            ic_mean = valid_ic.mean()
+            ic_ir = ic_mean / valid_ic.std() * np.sqrt(len(spread_returns))
 
-        fig, ax = plt.subplots(1, 2, figsize=(14, 6))
-        results_df=self.barra_test()
-        ax[0].bar(results_df['Factor'], results_df['Beta'], color='skyblue')
-        ax[0].set_title('Barra Factor Betas', fontsize=14)
-        ax[0].set_xlabel('Factor', fontsize=12)
-        ax[0].set_ylabel('Beta', fontsize=12)
-        ax[1].bar(results_df['Factor'], results_df['R^2'], color='lightgreen')
-        ax[1].set_title('Barra R^2 Values', fontsize=14)
-        ax[1].set_xlabel('Factor', fontsize=12)
-        ax[1].set_ylabel('R^2', fontsize=12)
-        plt.tight_layout()
+            annual_data.append([
+                str(year),
+                f"{annual_long.item():.2%}",  # 多头组收益
+                f"{annual_short.item():.2%}",  # 空头组收益
+                f"{annual_spread.item():.2%}",  # 多空价差收益
+                f"{long_mean_sharp.item():.2f}",  # 多空夏普
+                f"{mean_short_sharp.item():.2f}",  # 多空夏普
+                f"{sharpe.item():.2f}",  # 多空夏普
+                f"{ic_mean:.2f}",  # Rank IC均值
+                f"{ic_ir:.2f}"
+            ])
+        return annual_data
+
+    def plot(self, output_path=None):
+        # ----------------- 存储路径 -----------------
+        # 输入的output_path指向结果文件夹
+        if output_path is None:
+            output_path = f'Backtest over Factor {self.factor_name}.png'
+        else:
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            output_path = os.path.join(output_path, f'Backtest over Factor {self.factor_name}.png')
+
+        self.get_stratified_return()
+        long_short_sharp = self.get_long_short_sharpe()
+        mean_short_sharp = self.get_mean_over_short_sharpe()
+        long_mean_sharp = self.get_long_over_mean_sharpe()
+
+        # ----------------- 布局参数 -----------------
+        fig = plt.figure(figsize=(10, 16), constrained_layout=True)
+        gs = fig.add_gridspec(
+            6, 2,
+            height_ratios=[2.8, 2.8, 2.8, 2.8, 0.5, 2.8],
+            hspace=0.05,
+            wspace=0
+        )
+
+        # ----------------- 图表区域-----------------
+        ax1 = fig.add_subplot(gs[0, 0])
+        self.plot_stratified_rtn(self.every_interval_rate, self.factor_name, ax=ax1)
+
+        ax2 = fig.add_subplot(gs[0, 1], sharex=ax1)
+        self.plot_long_short(self.every_interval_rate, self.factor_name, ax=ax2)
+
+        ax3 = fig.add_subplot(gs[1, 0], sharex=ax1)
+        ax3.plot(self.trading_dates,np.cumsum(self.get_rank_IC()), label=f'Cumulative Rank IC, Mean: {self.get_rank_IC().mean():.2f}')
+        ax3.plot([],[],label=f'Rank ICIR: {self.get_rank_ICIR():.2f}')
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax3.xaxis.set_major_locator(mdates.YearLocator())
+        ax3.tick_params(axis='x', labelrotation=45)
+        ax3.legend()
+        ax3.set_title('Rank IC Trend Analysis', fontsize=12)
+
+        k, barrra_factor = self.barra_test()
+        every_interval_rate = self.factor_stratified_return(barrra_factor)
+        ax4 = fig.add_subplot(gs[1, 1], sharex=ax1)
+        self.plot_long_short(every_interval_rate, 'Barra Neutralization', ax=ax4)
+        ax4.legend()
+
+        ax5 = fig.add_subplot(gs[2, 0])
+        barra_labels = ['Size', 'Beta', 'Momentum', 'Vol', 'NonLinSize',
+                        'Value', 'Liquidity', 'Earnings', 'Growth', 'Leverage']
+        ax5.barh(barra_labels, k.mean(axis=0), color='steelblue')
+        ax5.set_title('Average Barra Factor Exposure', fontsize=12)
+
+        ax6 = fig.add_subplot(gs[2, 1], sharex=ax1)
+        turnover = self.get_turnover()
+        ax6.plot(self.trading_dates,turnover, label='Daily Turnover')
+        ax6.axhline(np.mean(turnover), color='red', linestyle='--', label=f'Mean: {np.mean(turnover):.2f}')
+        ax6.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        ax6.xaxis.set_major_locator(mdates.YearLocator())
+        ax6.tick_params(axis='x', labelrotation=45)
+        ax6.legend()
+        ax6.set_title('Turnover Analysis', fontsize=12)
+
+        ax7 = fig.add_subplot(gs[3, 0])
+        sharpe_values = [
+            self.get_long_short_sharpe(),
+            self.get_short_addition(),
+            self.get_turnover_punishment()
+        ]
+        labels = ['Long-Short Sharpe', 'Short', 'Turnover']
+        bars = ax7.bar(labels, sharpe_values, color='skyblue')
+        for bar in bars:
+            yval = bar.get_height()
+            ax7.text(bar.get_x() + bar.get_width() / 2,
+                     yval,
+                     f'{yval:.2f}',
+                     ha='center', va='bottom',
+                     fontsize=9)
+
+        ax7.set_title('Sharpe Ratios', fontsize=10)
+        ax7.grid(axis='y', alpha=0.3)
+
+        # 分年度统计表
+        ax_table1 = fig.add_subplot(gs[4, :])
+        ax_table1.axis('off')
+        annual_data = self.get_annual_metrics()
+        annual_headers = ["Year", "Long-Mean", "Mean-Short", "Long-Short",
+                           "Long-Mean Sharpe","Mean-Short", "Long-Short","Rank IC", "ICIR"]
+        annual_table = ax_table1.table(
+            cellText=annual_data,
+            colLabels=annual_headers,
+            loc='center',
+            cellLoc='center',
+            colColours=['#f0f0f0'] * len(annual_headers)
+        )
+        annual_table.auto_set_font_size(False)
+        annual_table.set_fontsize(8)
+        annual_table.scale(1, 1.8)
+
+        # 汇总指标
+        ax_table2 = fig.add_subplot(gs[5, :])
+        ax_table2.axis('off')
+
+        monthly_returns = self.every_interval_rate[:, 0] - self.every_interval_rate[:, -2]
+        mean_monthly_return = monthly_returns.mean()
+        annualized_return = (1 + mean_monthly_return) ** self.period_num - 1
+        monthly_returns_std = monthly_returns.std()
+        annualized_volatility = monthly_returns_std * np.sqrt(self.period_num)
+
+
+        metrics = [
+            ["Annualized Return", f"{annualized_return:.2%}"],
+            ["Annualized Volatility", f"{annualized_volatility:.2%}"],
+            ["Long-Short Sharpe", f"{long_short_sharp:.2f}"],
+            ["Long-Mean Sharpe", f"{long_mean_sharp:.2f}"],
+            ["Mean-Short Sharpe", f"{mean_short_sharp:.2f}"],
+            ["Rank IC", f"{np.mean(self.get_rank_IC()):.2f}"],
+            ["ICIR", f"{np.mean(self.get_rank_ICIR()):.2f}"],
+            ["Turnover", f"{np.mean(self.get_turnover()):.2f}"]
+        ]
+        summary_table = ax_table2.table(
+            cellText=metrics,
+            colLabels=["Metric", "Value"],
+            loc='center',
+            cellLoc='center',
+            colColours=['#f0f0f0', '#f8f8f8']
+        )
+        summary_table.auto_set_font_size(False)
+        summary_table.set_fontsize(10)
+        summary_table.scale(1, 2)
+
+        # 表格样式
+        for table in [annual_table, summary_table]:
+            for (i, j), cell in table.get_celld().items():
+                if i == 0:
+                    cell.set_text_props(weight='bold', color='white')
+                    cell.set_facecolor('#40466e')
+
+        # ----------------- 保存参数调整 -----------------
+        plt.savefig(
+            output_path,
+            dpi=250,
+            bbox_inches='tight',
+            pad_inches=0.08
+        )
         plt.show()
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
-            img_path = tmpfile.name
-            plt.savefig(img_path)
-            plt.close()
-            c.drawImage(img_path, 50, 400, width=500, height=400)
-            c.showPage()
-        c.setFont("Helvetica", 10)
-        y_position = 350
-        table_data = {
-            'Metric': ['Annualized Return', 'Annualized Volatility', 'Mean Sharpe', 'Long Mean Sharpe',
-                       'Mean Short Sharpe', 'Rank IC', 'Rank ICIR', 'Turnover','Penalized Sharpe'],
-            'Value': [annualized_return, annualized_volatility, mean_sharp, long_mean_sharp,
-                      mean_short_sharp, rankic.mean(), rank_icir, turnover,penalized_sharpe]
-        }
-
-        # 绘制表格
-        for i in range(len(table_data['Metric'])):
-            if y_position < 50:
-                c.showPage()
-                y_position = 750
-
-            c.drawString(200, y_position, table_data['Metric'][i])
-            data=table_data['Value'][i]
-            c.drawString(400, y_position, f'{data:.2f}')
-            y_position -= 20
-        c.save()
-        os.remove(img_path)
-        print(f"PDF file saved to: {output_pdf}")
+        plt.close()
+        print(f"results saved：{output_path}")
 
 
 if __name__ == '__main__':
-    data_reader = DataReader.DataReader()
-    yearlist=[i for i in range(2010,2021,1)]
-    DO, DH, DL, DC, DV = data_reader.get_Day_data(yearlist)
-    # 每月价格
-    MO=DO[41:-120:20,:]
-    MC = DC[41:-120:20, :]
-    print('shape')
-    print(MO.shape)
-    T, N = MC.shape
-    ret20 = (MC[1:T] / MC[0:T - 1]) - 1
-    print(ret20.shape)
-    factor_tensor = ret20[:-1,:]
-    print(factor_tensor[1:])
-    ret = (MC[1:T]/ MO[0:T - 1]) - 1
-    ret[torch.isinf(ret)] = torch.nan  # 替换 Inf 和 -Inf
-    factor_target = ret[1:,:]
-    ft = FactorTest(factor_tensor, factor_target, yearlist,bins_num=5, factor_name='factor')
-    ft.plot(output_pdf='demo_output.pdf')
-    print("Plot saved to demo_output.pdf")
+    yearlist = [i for i in range(2010, 2021, 1)]
+
+    DO, DH, DL, DC, DV = DataReader.ParquetReader().get_Day_data(yearlist)
+    returns = torch.full_like(DC, 0, dtype=torch.float32)
+    returns[1:] = (DC[1:] - DC[:-1]) / DC[:-1]
+
+    def compute_factor(return_tensor):
+        days, stocks = return_tensor.shape
+        factor = torch.zeros_like(return_tensor)
+        start_indices = list(range(20, days + 1, 20))
+        for start_idx in start_indices:
+            window = return_tensor[start_idx - 20:start_idx, :]
+            cum_returns = torch.prod(1 + window, dim=0) - 1
+            fill_end = min(start_idx + 20, days)
+            factor[start_idx:fill_end, :] = cum_returns.unsqueeze(0).expand(fill_end - start_idx, -1)
+        return factor
+
+    # invoke example
+    factor = compute_factor(returns)
+    ft = FactorTest(factor, yearlist, bins_num=5, factor_name='ret20')
+    # saved under folder res
+    ft.plot('res')
+
+    #中性化后的因子值 e.g.pv
+    # pv_factor=ft.pv_neutra()
+    # every_interval_rate=ft.factor_stratified_return(pv_factor)
+    # fig,ax = plt.subplots(figsize=(8, 6))
+    # ft.plot_stratified_rtn(every_interval_rate,'factor_name',ax=ax)
+    # plt.show()

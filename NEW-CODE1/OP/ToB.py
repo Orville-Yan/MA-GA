@@ -41,21 +41,17 @@ class OP_B2B:
         return torch.where(mask, M_tensor, torch.tensor(float('nan'), device=M_tensor.device))
 
     @staticmethod
-    def M_cs_zscore(M_tensor):
+    def M_cs_zscore(x):
         # 计算每个股票每天的均值和标准差
-        mean = torch.mean(M_tensor, dim=2, keepdim=True)
-        std = torch.std(M_tensor, dim=2, keepdim=True)
+        x_mean = OP_Basic.nanmean(x, dim=1).unsqueeze(1)
+        x_std = OP_Basic.nanstd(x, dim=1).unsqueeze(1)
+        zscore = (x - x_mean) / x_std
+        s = zscore
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
-        # 避免除以零的情况
-        std[std == 0] = 1
-
-        # 进行标准化
-        zscore_tensor = (M_tensor - mean) / std
-
-        return zscore_tensor
 
     @staticmethod
-    def M_cs_rank(M_tensor):
+    def M_cs_rank(x):
         """
         将日内按照排序[0,1]标准化。
 
@@ -66,12 +62,17 @@ class OP_B2B:
         torch.Tensor: 排名标准化后的张量。
         """
         # 计算每个元素在每个交易日中的排名
-        rank_tensor = M_tensor.argsort(dim=-1).argsort(dim=-1).float()
-        rank_tensor = rank_tensor / (M_tensor.shape[-1] - 1)
-        return rank_tensor
+        mask = ~torch.isnan(x)
+        data_no_nan = torch.where(mask, x, torch.full_like(x, float('inf')))
+        ranks = torch.argsort(torch.argsort(data_no_nan, dim=1), dim=1).float()  # 首先排序，然后取序数
+        quantiles = ranks / torch.sum(mask, 1).unsqueeze(1)  # 计算分位数
+        s = torch.where(mask, quantiles, torch.tensor(float('nan')))
+
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
+
 
     @staticmethod
-    def M_cs_scale(M_tensor):
+    def M_cs_scale(x):
         """
         日内最大值最小值标准化。
 
@@ -81,56 +82,36 @@ class OP_B2B:
         返回:
         torch.Tensor: 最大值最小值标准化后的张量。
         """
-        max_values = torch.max(M_tensor, dim=2, keepdim=True)[0]
-        min_values = torch.min(M_tensor, dim=2, keepdim=True)[0]
+        mask = ~torch.isnan(x)
+        data_no_nan = torch.where(mask, x, torch.full_like(x, 0))
+        max = torch.max(torch.where(mask, x, torch.full_like(x, float('-inf'))), dim=1)[0].unsqueeze(dim=1)
+        min = torch.min(torch.where(mask, x, torch.full_like(x, float('inf'))), dim=1)[0].unsqueeze(dim=1)
+        sacled_data_no_nan = (data_no_nan - min) / (max - min)  # 公式核心
+        scaled_data = torch.where(mask, sacled_data_no_nan, torch.tensor(float('nan')))
+        s = scaled_data + 1
+        return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
-        # Range
-        range_values = max_values - min_values
-        range_values[range_values == 0] = 1.0
-
-        # Scale
-        scaled_tensor = (M_tensor - min_values) / range_values
-        return scaled_tensor
 
 
     @staticmethod
-    def M_cs_demean(M_tensor):
+    def M_cs_demean(x):
         """
         计算日内到均值的距离。
-
-        参数:
-        M_tensor (torch.Tensor): 输入的张量，假设其形状为 (num_stock, day_len, minute_len)。
-
-        返回:
-        torch.Tensor: 减去日内均值后的张量。
         """
-        num_stock, day_len, minute_len = M_tensor.shape
-
-        # 初始化减去均值后的张量
-        demeaned_tensor = torch.zeros_like(M_tensor)
-
-        # 计算每个股票每天的均值
-        daily_mean = torch.nanmean(M_tensor, dim=2, keepdim=True)  # shape: (num_stock, day_len, 1)
-
-        # 减去均值
-        demeaned_tensor = M_tensor - daily_mean
-
-        return demeaned_tensor
+        return OP_B2B.M_at_abs(x - OP_Basic.nanmean(x, dim=1).unsqueeze(1))
 
     @staticmethod
-    def M_cs_winsor(M_tensor, lower_percentile=0.05, upper_percentile=0.95):
-        num_stock, day_len, minute_len = M_tensor.shape
-
-        # 计算每个股票每天的上下百分位数
-        lower_quantiles = torch.quantile(M_tensor, lower_percentile, dim=2, keepdim=True)
-        upper_quantiles = torch.quantile(M_tensor, upper_percentile, dim=2, keepdim=True)
-
-        # 将低于下百分位数的值设置为下百分位数的值
-        M_tensor = torch.where(M_tensor < lower_quantiles, lower_quantiles, M_tensor)
-        # 将高于上百分位数的值设置为上百分位数的值
-        M_tensor = torch.where(M_tensor > upper_quantiles, upper_quantiles, M_tensor)
-
-        return M_tensor
+    def M_cs_winsor(x, limit=[0.05, 0.95]):
+        rank = OP_B2B.D_cs_rank(x)
+        min_limit = torch.where(rank >= limit[0], rank, float('nan'))
+        max_limit = torch.where(rank <= limit[1], rank, float('nan'))
+        mask = (~torch.isnan(min_limit)) & (~torch.isnan(max_limit))
+        max = torch.max(torch.where(mask, x, torch.full_like(x, float('-inf'))), dim=1)[0].unsqueeze(dim=1)
+        min = torch.min(torch.where(mask, x, torch.full_like(x, float('inf'))), dim=1)[0].unsqueeze(dim=1)
+        winsored_min = torch.where(rank <= limit[0], min, x)  # 最小值变化
+        winsored_max = torch.where(rank >= limit[1], max, winsored_min)
+        x_with_nan = torch.where(~torch.isnan(x), winsored_max, float('nan'))
+        return x_with_nan
 
     @staticmethod
     def M_at_abs(M_tensor):
@@ -160,15 +141,14 @@ class OP_BB2B:
     @staticmethod
     def M_at_sign(x):
         mask = ~torch.isnan(x)
-        x_no_nan = torch.where(mask, x, torch.tensor(0.0, device=x.device))
+        x_no_nan = torch.where(mask, x, 0)
         sign = torch.sign(x_no_nan)
-        return torch.where(mask, sign, torch.tensor(float('nan'), device=x.device))
+        return torch.where(mask, sign, float('nan'))
 
     @staticmethod
     def M_cs_cut(x, y):
-        x_mean = torch.nanmean(x, dim=1, keepdim=True)
-        sign_x = OP_BB2B.M_at_sign(x - x_mean)
-        return sign_x * y
+        sign = OP_BB2B.at_sign(x - OP_Basic.nanmean(x, dim=1).unsqueeze(1))
+        return sign * y
 
     @staticmethod
     def M_cs_umr(x, y):
@@ -177,11 +157,7 @@ class OP_BB2B:
 
     @staticmethod
     def M_at_prod(d_tensor_x, d_tensor_y):
-        mask = ~((d_tensor_y == 0) | torch.isnan(d_tensor_y))
-        result = torch.full_like(d_tensor_x, float('nan'))
-        result[mask] = torch.div(d_tensor_x[mask], d_tensor_y[mask])
-
-        return result
+        return torch.mul(d_tensor_x, d_tensor_y)
 
     @staticmethod
     def M_cs_norm_spread(x, y):
@@ -196,8 +172,8 @@ class OP_BA2B:  # B*A-B
 
     @staticmethod
     def M_toD_standard(M_tensor, D_tensor):
-        D_tensor_adjusted = D_tensor.transpose(0, 1).unsqueeze(2)
-        return M_tensor / D_tensor_adjusted
+        D_tensor_adjusted = D_tensor.unsqueeze(-1) 
+        return M_tensor / D_tensor_adjusted  
 
 
 class OP_BG2B:  # B*G-B
@@ -205,10 +181,16 @@ class OP_BG2B:  # B*G-B
         self.func_list = ['M_cs_edge_flip']  # B*G-B
 
     @staticmethod
-    def M_cs_edge_flip(M_tensor, thresh):
-        flipped = torch.where((M_tensor > thresh) & (M_tensor < 1 - thresh), -M_tensor, M_tensor)
-        return torch.where((M_tensor <= 0.3) | (M_tensor >= 0.7), M_tensor.flip(dims=[-1]), flipped)
+    def M_cs_edge_flip(x, thresh):
+        rank = OP_B2B.D_cs_rank(x)
+        if thresh < 0.3:
+            edge_fliped = torch.where((rank < thresh) | (rank > 1 - thresh), -x, x)
+        elif thresh > 0.7:
+            edge_fliped = torch.where((rank < 1 - thresh) | (rank > thresh), -x, x)
+        else:
+            edge_fliped = torch.where((rank < thresh) | (rank > 1 - thresh), x, -x)
 
+        return edge_fliped
 
 class OP_BF2B:  # B*F-B
     def __init__(self):
@@ -229,16 +211,15 @@ class OP_BF2B:  # B*F-B
 
     @staticmethod
     def M_ts_delay(x, d):
-        L = x.shape[-1]
-        new_tensor = torch.full(x.shape, float('nan'), device=x.device)
         if d > 0:
-            new_tensor[..., d:] = x[..., :-d]
+            new_tensor = torch.full(x.shape, float('nan'))
+            new_tensor[d:, :] = x[:-d, :]
             return new_tensor
         elif d == 0:
             return x
         else:
-            d_abs = abs(d)
-            new_tensor[..., :L - d_abs] = x[..., d_abs:]
+            new_tensor = torch.full(x.shape, float('nan'))
+            new_tensor[:d, :] = x[-d:, :]
             return new_tensor
 
     @staticmethod
@@ -247,92 +228,89 @@ class OP_BF2B:  # B*F-B
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def M_ts_delta(m_tensor, lookback):
-        return m_tensor - m_tensor.roll(lookback, dims=-1)
+    def M_ts_delta(x, lookback):
+        return x - OP_BF2B.D_ts_delay(x, lookback)
 
     @staticmethod
-    def M_ts_mean_left_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range + 1
+    def M_ts_mean_xx_neighbor(m_tensor, neighbor_range, orit=-1):
+        """
+        计算某分钟前/后/中心共n分钟的均值（不包含当前分钟或对称包含）
+    
+        :param m_tensor: 输入张量，形状 (num_stock, day_len, minute_len)
+        :param neighbor_range: 窗口范围（n分钟）
+        :param orit: 方向标识，-1=左侧均值，0=中心均值，1=右侧均值
+        :return: 与输入形状相同的张量，无法计算的位置填充NaN
+        """
+        window_size = neighbor_range
+        L = m_tensor.size(-1)  # 时间序列长度（最后一维长度）
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
-        window_mean = unfolded.mean(dim=-1)
+        window_mean = OP_Basic.nanmean(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., neighbor_range:] = window_mean
+    
+        if orit == -1:  # 左侧均值（前n分钟）
+            result_tensor[..., window_size:] = window_mean[..., :L - window_size]
+        
+        elif orit == 0:  # 中心均值（对称窗口）
+            offset = (window_size - 1) // 2
+            end = offset + window_mean.size(-1)
+            result_tensor[..., offset:end] = window_mean
+        
+        elif orit == 1:  # 右侧均值（后n分钟）
+            valid_length = L - window_size
+            result_tensor[..., :valid_length] = window_mean[..., 1:1 + valid_length]
+        
+        else:
+            raise ValueError("`orit` must be -1 (left), 0 (center), or 1 (right)")
         return result_tensor
 
     @staticmethod
-    def M_ts_mean_mid_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range * 2 + 1
-        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)
-        window_mean = unfolded.mean(dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[:, :, neighbor_range:-neighbor_range] = window_mean
-        return result_tensor
-
-    @staticmethod
-    def M_ts_mean_right_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range + 1
-        rolled = m_tensor.roll(-neighbor_range, dims=-1)
-        unfolded = rolled.unfold(dimension=-1, size=window_size, step=1)
-        window_mean = unfolded.mean(dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'))
-        T = m_tensor.shape[-1]
-        result_tensor[..., : T - neighbor_range] = window_mean
-        return result_tensor
-
-    @staticmethod
-    def M_ts_std_left_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range + 1
+    def M_ts_std_xx_neighbor(m_tensor, neighbor_range, orit=-1):
+        """
+        计算某分钟前/后/中心共n分钟的标准差（不包含当前分钟或对称包含）
+        """
+        window_size = neighbor_range
+        L = m_tensor.size(-1)  # 时间序列长度（最后一维长度）
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
-        window_std = unfolded.std(dim=-1)
+        window_std = OP_Basic.nanstd(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., neighbor_range:] = window_std
+    
+        if orit == -1:  
+            result_tensor[..., window_size:] = window_std[..., :L - window_size]
+        
+        elif orit == 0: 
+            offset = (window_size - 1) // 2
+            end = offset + window_std.size(-1)
+            result_tensor[..., offset:end] = window_std
+        
+        elif orit == 1: 
+            valid_length = L - window_size
+            result_tensor[..., :valid_length] = window_std[..., 1:1 + valid_length]
+        
+        else:
+            raise ValueError("`orit` must be -1 (left), 0 (center), or 1 (right)")
         return result_tensor
 
     @staticmethod
-    def M_ts_std_mid_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range * 2 + 1
+    def M_ts_producy_xx_neighbor(m_tensor, neighbor_range, orit=-1):
+        window_size = neighbor_range
+        L = m_tensor.size(-1)  # 时间序列长度
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
-        window_std = unfolded.std(dim=-1)
+        window_prod = torch.prod(unfolded, dim=-1)  # 计算窗口内元素的乘积
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[:, :, neighbor_range:-neighbor_range] = window_std
-        return result_tensor
-
-    @staticmethod
-    def M_ts_std_right_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range + 1
-        rolled = m_tensor.roll(-neighbor_range, dims=-1)
-        unfolded = rolled.unfold(dimension=-1, size=window_size, step=1)
-        window_std = unfolded.std(dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'))
-        T = m_tensor.shape[-1]
-        result_tensor[..., : T - neighbor_range] = window_std
-        return result_tensor
-
-    @staticmethod
-    def M_ts_product_left_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range + 1
-        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
-        window_prod = unfolded.prod(dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., neighbor_range:] = window_prod
-        return result_tensor
-
-    @staticmethod
-    def M_ts_product_mid_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range * 2 + 1
-        unfolded = m_tensor.unfold(dimension=2, size=window_size, step=1)
-        window_prod = unfolded.prod(dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[:, :, neighbor_range:-neighbor_range] = window_prod
-        return result_tensor
-
-    @staticmethod
-    def M_ts_product_right_neighbor(m_tensor, neighbor_range):
-        window_size = neighbor_range + 1
-        rolled = m_tensor.roll(-neighbor_range, dims=-1)
-        unfolded = rolled.unfold(dimension=-1, size=window_size, step=1)
-        window_prod = unfolded.prod(dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'))
-        T = m_tensor.shape[-1]
-        result_tensor[..., : T - neighbor_range] = window_prod
+        
+        if orit == -1:  # 左侧累乘（前n分钟）
+            result_tensor[..., window_size:] = window_prod[..., :L - window_size]
+        
+        elif orit == 0:  # 中心累乘（对称窗口）
+            offset = (window_size - 1) // 2
+            end = offset + window_prod.size(-1)
+            result_tensor[..., offset:end] = window_prod
+        
+        elif orit == 1:  # 右侧累乘（后n分钟）
+            valid_length = L - window_size
+            result_tensor[..., :valid_length] = window_prod[..., 1:1 + valid_length]
+        
+        else:
+            raise ValueError("`orit` must be -1 (left), 0 (center), or 1 (right)")
+    
         return result_tensor
