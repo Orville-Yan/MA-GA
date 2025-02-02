@@ -5,7 +5,7 @@ from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTem
 from langgraph.graph import  StateGraph,START
 from langchain_community.llms.moonshot import Moonshot
 
-LLM = Moonshot(model="moonshot-v1-8k", api_key='sk-MpplKWdi4h0RaEkTm405LcAZWbBEIr9AaiJ4XjJr7QYecRNa')
+LLM = Moonshot(model="moonshot-v1-8k", api_key=api_key)
 
 class Visual:
     def __init__(self, rpn: str):
