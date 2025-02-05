@@ -88,33 +88,36 @@ class MmapReader:
             mmap = np.memmap(f, dtype=dtype, mode='w+', shape=(num_rows, num_cols,num_days))
             mmap[:] = data
 
-    def save_daily(self):
+    def save_daily(self,out_path):
         data_reader = ParquetReader()
         years = self.years
-        os.makedirs(self.output_daily, exist_ok=True)
+        os.makedirs(out_path, exist_ok=True)
 
     # 定义数据的名称和对应的索引
         data_names = ['DO', 'DH', 'DL', 'DC', 'DV']
 
         for year in years:
+        # 获取当年的数据，data是一个包含5个Tensor的列表
             data = data_reader.get_Day_data([year])
+
             for i, name in enumerate(data_names):
                 tensor = data[i]  # 获取当前Tensor
-                file_path = os.path.join(self.output_daily, f'{name}{year}.mmap')  # 构造文件路径
-                self.save_daily_to_mmap(file_path, tensor)  # 保存为Memory Map文件
+                file_path = os.path.join(out_path, f'{name}{year}.mmap')  # 构造文件路径
+                self.save_daily_to_mmap(out_path, tensor)  # 保存为Memory Map文件
                 print(f"Saved {name} data for year {year} to {file_path}")
 
-    def save_minute(self):
+    def save_minute(self,out_path):
         data_reader = ParquetReader()
         years = self.years
-        os.makedirs(self.output_minute, exist_ok=True)
+        os.makedirs(out_path, exist_ok=True)
+
         data_names = ['MO', 'MH', 'ML', 'MC', 'MV']
 
         for year in years:
             data = data_reader.get_Minute_data([year])
             for i, name in enumerate(data_names):
                 tensor = data[i]  
-                file_path = os.path.join(self.output_minute, f'{name}{year}.mmap')  
+                file_path = os.path.join(out_path, f'{name}{year}.mmap')  
                 self.save_minute_to_mmap(file_path, tensor)  
                 print(f"Saved {name} data for year {year} to {file_path}")
     
