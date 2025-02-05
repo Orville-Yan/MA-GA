@@ -196,18 +196,19 @@ class RPN_Parser(RPN_Compiler):
 
     def get_abbrnsub(self, ac_tree, substr, flag=0, count=0):
         flag = max(flag-1,0)
+        tree_depth = self.get_tree_depth(ac_tree)
         abbr = ac_tree.root_node.name + '('
         sub = []
         for i,node in enumerate(ac_tree.nodes):
             if i > 0:
                 abbr += ', '
             if isinstance(node, Acyclic_Tree):
-                if flag == 0:
+                if flag+1+self.get_tree_depth(node)-tree_depth <= 0:
                     abbr += f'{substr}_ARG{count}'
                     count += 1
                     sub.append(node)
                 else:
-                    sub_abbr,sub_sub,count = self.get_abbrnsub(node,substr,flag,count)
+                    sub_abbr,sub_sub,count = self.get_abbrnsub(node,substr,flag+1+self.get_tree_depth(node)-tree_depth,count)
                     abbr += sub_abbr
                     sub.extend(sub_sub)
 
