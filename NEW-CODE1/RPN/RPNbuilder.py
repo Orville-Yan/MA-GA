@@ -4,6 +4,9 @@ sys.path.append('..')
 from ToolsGA import *
 from OP import *
 from RPN import *
+import random
+from collections import defaultdict
+from deap import gp
 
 class config:
     seed_size=10
@@ -13,6 +16,10 @@ class config:
     subtree_size=10
     tree_size=10
 
+def call_method_and_return_instance(instance, method_name, *args, **kwargs):
+        method = getattr(instance, method_name)
+        method(*args, **kwargs)
+        return instance
 
 class RPN_Producer:
     def __init__(self):
@@ -394,6 +401,149 @@ class RPN_Pruner(RPN_Parser):
     def prune(self):
         pass
 
+class RPN_gp(RPN_Compiler):
+    def __init__(self):
+        super().__init__()
+        self.D_OHLC = ['D_O', 'D_H', 'D_L', 'D_C']
+        self.D_V = ['D_V']
+        self.M_OHLC = ['M_O', 'M_H', 'M_L', 'M_C']
+        self.M_V = ['M_V']
+        self.dpseed = call_method_and_return_instance(DP_Seed(self.D_OHLC,config.seed_size),'add_primitive').pset
+        self.dvseed = call_method_and_return_instance(DP_Seed(self.D_V,config.seed_size),'add_primitive').pset
+        self.mpseed = call_method_and_return_instance(MP_Seed(self.M_OHLC,config.seed_size),'add_primitive').pset
+        self.mvseed = call_method_and_return_instance(MV_Seed(self.M_V,config.seed_size),'add_primitive').pset
+        self.dproot = call_method_and_return_instance(DP_Root([None for i in range(10)],config.root_size),'generate_toolbox').pset
+        self.dvroot = call_method_and_return_instance(DV_Root([None for i in range(10)],config.root_size),'generate_toolbox').pset
+        self.mproot = call_method_and_return_instance(MP_Root([None for i in range(10)],config.root_size),'generate_toolbox').pset
+        self.mvroot = call_method_and_return_instance(MV_Root([None for i in range(10)],config.root_size),'generate_toolbox').pset
+        self.trunk = call_method_and_return_instance(Trunk([None for i in range(10)],[None for i in range(10)],[None for i in range(10)],[None for i in range(10)],config.trunk_size),'generate_toolbox').pset
+        self.mp2dbranch = call_method_and_return_instance(M_Branch_MP2D([None for i in range(10)],config.branch_size),'add_primitive').pset
+        self.mv2dbranch = call_method_and_return_instance(M_Branch_MV2D([None for i in range(10)],config.branch_size),'add_primitive').pset
+        self.mpdp2dbranch = call_method_and_return_instance(M_Branch_MPDP2D([None for i in range(10)],[None for i in range(10)],config.branch_size),'add_primitive').pset
+        self.mvdv2dbranch = call_method_and_return_instance(M_Branch_MVDV2D([None for i in range(10)],[None for i in range(10)],config.branch_size),'add_primitive').pset
+        self.subtreewithmask = call_method_and_return_instance(SubtreeWithMask([None for i in range(10)],[None for i in range(10)],config.branch_size),'add_primitive').pset
+        self.subtreenomask = call_method_and_return_instance(SubtreeNoMask([None for i in range(10)],config.branch_size),'add_primitive').pset
+        self.tree = call_method_and_return_instance(Tree([None for i in range(10)],config.branch_size),'generate_toolbox').pset
+        self.psetlst = [
+            self.dpseed,self.dvseed,self.mpseed,self.mvseed,
+            self.dproot,self.dvroot,self.mproot,self.mvroot,
+            self.trunk,
+            self.mp2dbranch,self.mv2dbranch,self.mpdp2dbranch,self.mvdv2dbranch,
+            self.subtreewithmask,self.subtreenomask,
+            self.tree
+        ]
+
+    def mutnode(self, individual, prim_set, indpb=0.1):
+        """
+        Custom mutation function for genetic programming.
+        
+        :param individual: The individual to mutate (a PrimitiveTree).
+        :param prim_set: The PrimitiveSetTyped containing the primitives and terminals.
+        :param indpb: Independent probability for each attribute to be mutated.
+        :return: A tuple of one individual.
+        """
+        # Convert the individual to a list of nodes
+        nodes = list(individual)
+        primitives = []
+        terminals = []
+        for ret, primitivez in prim_set.primitives.items():
+            primitives.extend(primitivez)
+        for ret, terminalz in prim_set.terminals.items():
+            terminals.extend(terminalz)
+        
+        # Iterate over each node in the individual
+        for i, node in enumerate(nodes):
+            # Only mutate with a certain probability
+            if random.random() < indpb:
+                # Check if the node is in the given prim_set
+                if node in terminals or node in primitives:
+                    # Determine if the node is a primitive or terminal
+                    if isinstance(node, gp.Primitive):
+                        # Get all primitives with the same arity as the current node
+                        same_arity_primitives = [p for p in primitives if p.arity == node.arity and not (('M' in node.name) ^ ('M' in p.name))]
+                        # Randomly select a new primitive (can be the same)
+                        new_node = random.choice(same_arity_primitives)
+                    elif isinstance(node, gp.Terminal):
+                        # Get all terminals
+                        terminals = [t for t in list(terminals) if 'ARG' not in t.name and '_' not in node.name]
+                        # Randomly select a new terminal (can be the same)
+                        new_node = random.choice(terminals)
+                    
+                    # Replace the node with the new node
+                    nodes[i] = new_node
+        
+        # Convert the list of nodes back to a PrimitiveTree
+        mutated_individual = gp.PrimitiveTree(nodes)
+        
+        return mutated_individual
+
+    def custom_mutate(self, ind, indpb=0.1):
+        for pset in self.psetlst:
+            ind = self.mutnode(ind,pset,indpb)
+        return ind
+
+    def cx_one_point(self, ind1: gp.PrimitiveTree, ind2: gp.PrimitiveTree, psetlst: list) -> tuple:
+        """
+        Randomly selects a crossover point in each individual and exchanges
+        each subtree with the point as the root between each individual.
+        The crossover points are chosen based on the common primitives in the given psetlst,
+        where the primitives must have the same arity.
+
+        :param ind1: The first individual to mate.
+        :param ind2: The second individual to mate.
+        :param psetlst: A list of PrimitiveSetTyped objects.
+        :return: Two mated individuals.
+        """
+        if len(ind1) < 2 or len(ind2) < 2:
+            return ind1, ind2
+
+        # Step 1: Create a dictionary to store indices of primitives for each pset
+        pset_indices = defaultdict(list)
+
+        # Step 2: Loop through each pset and find matching primitives in ind1 and ind2
+        for pset_idx, pset in enumerate(psetlst):
+            primitives = []
+            for ret, primitivez in pset.primitives.items():
+                primitives.extend(primitivez)
+            for idx1, node1 in enumerate(ind1[1:], 1):
+                if isinstance(node1, gp.Primitive):
+                    for idx2, node2 in enumerate(ind2[1:], 1):
+                        if isinstance(node2, gp.Primitive):
+                            if node1 in primitives and node2 in primitives:
+                                if node1.arity == node2.arity:
+                                    pset_indices[pset_idx].append((idx1, idx2))
+
+        # Step 3: Check if there are any valid pset indices with matching primitives
+        if not pset_indices:
+            return ind1, ind2
+
+        # Step 4: Randomly select a pset index with non-empty list of matching primitives
+        selected_pset_idx = random.choice([idx for idx in pset_indices if pset_indices[idx]])
+
+        # Step 5: Randomly select a pair of indices from the selected pset
+        selected_indices = random.choice(pset_indices[selected_pset_idx])
+        index1, index2 = selected_indices
+
+        # Step 6: Find the subtrees to swap
+        slice1 = ind1.searchSubtree(index1)
+        slice2 = ind2.searchSubtree(index2)
+
+        # Step 7: Perform the crossover
+        ind1[slice1], ind2[slice2] = ind2[slice2], ind1[slice1]
+
+        return ind1, ind2
+
+    def custom_crossover(self,ind1,ind2,indpb=0.5):
+        if random.random() < indpb:
+            ind1, ind2 = self.cx_one_point(ind1,ind2,self.psetlst)
+        return ind1,ind2
+
+    def next_gen(self):
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("mutate", self.custom_mutate, indpb=0.2) 
+        self.toolbox.register("select", tools.selTournament, tournsize=3)
+        self.toolbox.register("crossover", self.custom_crossover, indpb=1)
+
 class Acyclic_Tree:
     def __init__(self, deap_str, pset):
         self.tree = deap_str
@@ -489,42 +639,17 @@ if __name__ == "__main__":
     producer = RPN_Producer()
     producer.run()
     print("生成的树：", producer.tree[0])
-    #print(producer.subtree[0])
-
-    # 测试RPN_Compiler类
     parser = RPN_Parser(producer.tree[0])
-    #compiler.prepare_data([2020])  # 假设准备2020年的数据
-    #compiled_func = compiler.compile(producer.tree[0])  # 编译生成的树中的第一个RPN表达式
-    #print("编译结果：", compiled_func)
-    #print(compiler.rpn)
-    #print(compiler.deap_code)
-    #isinstance('x',gp.Primitive)
-    def print_primitives(pset):
-        for output_type, primitives in pset.primitives.items():
-            print(f"Output Type: {output_type.__name__}")
-            for primitive in primitives:
-                print(f"  Name: {primitive.name}, Input Types: {[t.__name__ for t in primitive.args]}")
-                print('#####')
-                print(primitive.args)
-    def print_terminals(pset):
-        for output_type, terminals in pset.terminals.items():
-            print(f"Output Type: {output_type.__name__}")
-            for terminal in terminals:
-                print(f"  Terminal: {terminal}")
-    #print_primitives(parser.pset)
-    #print_terminals(parser.pset)
-    #print('####',type(parser.deap_code))
     tree_structure = parser.get_tree_structure()
-    
-    # 输出树结构
-    #print("Root Node:", tree_structure.root_node.name)
-    #print("Nodes:", [node if isinstance(node, Acyclic_Tree) else node for node in tree_structure.nodes])
     parser.plot_tree()
-    parser.parse_tree()
-    print(parser.tree)
-    print(parser.subtree)
-    print(parser.branch)
-    print(parser.trunk)
-    print(parser.root)
-    print(parser.seed)
-    print(parser.tree2str(parser.tree['tree_mode']))
+    print(parser.tree2dict())
+    rpngp = RPN_gp()
+    rpngp.next_gen()
+    c = rpngp.toolbox.mutate(gp.PrimitiveTree.from_string(producer.tree[0],parser.pset))
+    print('\n',c)
+    print('######')
+    print(producer.tree[0],'\n\n',producer.tree[1])
+    print('########')
+    a,b = rpngp.toolbox.crossover(gp.PrimitiveTree.from_string(producer.tree[0],parser.pset),
+                                  gp.PrimitiveTree.from_string(producer.tree[1],parser.pset))
+    print(a,'\n\n',b)
