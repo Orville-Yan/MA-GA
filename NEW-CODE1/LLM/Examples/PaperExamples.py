@@ -1,4 +1,10 @@
+from pathlib import Path
+import sys
+parent_path = Path(__file__).resolve().parent.parent
+sys.path.append(r'{}'.format(parent_path))
 from Info import *
+import json
+
 paper_example = '''
 换手率因子已经体现出了较强的选股能力，但仍然存在波动率较大的问题。由于换手率和个股的市值有较强的相关性，换手率的变化率相对换手率更能体现出因子的个性。采用日内振幅作为权重对换手率的变化率做加权平均，让量的变化有价格变化的确认。
 '''

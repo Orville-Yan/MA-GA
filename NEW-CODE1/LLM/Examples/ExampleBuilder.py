@@ -5,11 +5,13 @@ from langchain_openai import ChatOpenAI
 from PaperExamples import *
 from langchain.chains import LLMChain
 import json
+from pathlib import Path
+parent_path = Path(__file__).parent.parent
+sys.path.append(r'{}'.format(parent_path))
 
 # os.environ["OPENAI_API_KEY"] = "your-deepseek-api-key"
 
-llm = ChatOpenAI(model_name="deepseek-chat", api_key="your-deepseek-api-key",base_url='https://api.deepseek.com')
-
+llm = ChatOpenAI(model_name="deepseek-chat", api_key="",base_url='https://api.deepseek.com')
 class ExampleBuilder:
     def __init__(self, articles:list):
         self.LLM = llm
@@ -31,7 +33,12 @@ class ExampleBuilder:
 
 
     def retrieve_response(self):
-        llm_chain = LLMChain(prompt=self.final_prompt, llm=self.LLM)
+        llm_kwargs = {
+            'response_format':{
+            'type': 'json_object'
+            }
+        }
+        llm_chain = LLMChain(prompt=self.final_prompt, llm=self.LLM, llm_kwargs=llm_kwargs)
         response = llm_chain.run()
         return response
     
@@ -39,7 +46,8 @@ class ExampleBuilder:
         response_dict = json.loads(response)
         return response_dict
 
-builder = ExampleBuilder()
+builder = ExampleBuilder([paper_example])
 response = builder.retrieve_response()
-response = builder.retrieve_response(response)
+print(response)
+response = builder.extract_json(response)
 print(response)
