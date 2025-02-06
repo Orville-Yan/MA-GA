@@ -232,85 +232,91 @@ class OP_BF2B:  # B*F-B
         return x - OP_BF2B.D_ts_delay(x, lookback)
 
     @staticmethod
-    def M_ts_mean_xx_neighbor(m_tensor, neighbor_range, orit=-1):
-        """
-        计算某分钟前/后/中心共n分钟的均值（不包含当前分钟或对称包含）
-    
-        :param m_tensor: 输入张量，形状 (num_stock, day_len, minute_len)
-        :param neighbor_range: 窗口范围（n分钟）
-        :param orit: 方向标识，-1=左侧均值，0=中心均值，1=右侧均值
-        :return: 与输入形状相同的张量，无法计算的位置填充NaN
-        """
+    def M_ts_mean_right_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
-        L = m_tensor.size(-1)  # 时间序列长度（最后一维长度）
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_mean = OP_Basic.nanmean(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
+        valid_length = m_tensor.size(-1) - window_size
+        result_tensor[..., :valid_length] = window_mean[..., 1 : 1 + valid_length]
+        return result_tensor
     
-        if orit == -1:  # 左侧均值（前n分钟）
-            result_tensor[..., window_size:] = window_mean[..., :L - window_size]
-        
-        elif orit == 0:  # 中心均值（对称窗口）
-            offset = (window_size - 1) // 2
-            end = offset + window_mean.size(-1)
-            result_tensor[..., offset:end] = window_mean
-        
-        elif orit == 1:  # 右侧均值（后n分钟）
-            valid_length = L - window_size
-            result_tensor[..., :valid_length] = window_mean[..., 1:1 + valid_length]
-        
-        else:
-            raise ValueError("`orit` must be -1 (left), 0 (center), or 1 (right)")
+    @staticmethod
+    def M_ts_mean_left_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_mean = OP_Basic.nanmean(unfolded)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        valid_length = m_tensor.size(-1) - window_size
+        result_tensor[..., window_size:] = window_mean[..., :valid_length]
         return result_tensor
 
     @staticmethod
-    def M_ts_std_xx_neighbor(m_tensor, neighbor_range, orit=-1):
-        """
-        计算某分钟前/后/中心共n分钟的标准差（不包含当前分钟或对称包含）
-        """
+    def M_ts_mean_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
-        L = m_tensor.size(-1)  # 时间序列长度（最后一维长度）
+        offset = (window_size - 1) // 2  
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_mean = OP_Basic.nanmean(unfolded)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        result_tensor[..., offset : offset + unfolded.size(-1)] = window_mean
+        return result_tensor
+    
+    @staticmethod
+    def M_ts_std_right_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_std = OP_Basic.nanstd(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
+        valid_length = m_tensor.size(-1) - window_size
+        result_tensor[..., :valid_length] = window_std[..., 1 : 1 + valid_length]
+        return result_tensor
     
-        if orit == -1:  
-            result_tensor[..., window_size:] = window_std[..., :L - window_size]
-        
-        elif orit == 0: 
-            offset = (window_size - 1) // 2
-            end = offset + window_std.size(-1)
-            result_tensor[..., offset:end] = window_std
-        
-        elif orit == 1: 
-            valid_length = L - window_size
-            result_tensor[..., :valid_length] = window_std[..., 1:1 + valid_length]
-        
-        else:
-            raise ValueError("`orit` must be -1 (left), 0 (center), or 1 (right)")
+    @staticmethod
+    def M_ts_std_left_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_std = OP_Basic.nanstd(unfolded)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        valid_length = m_tensor.size(-1) - window_size
+        result_tensor[..., window_size:] = window_std[..., :valid_length]
         return result_tensor
 
     @staticmethod
-    def M_ts_producy_xx_neighbor(m_tensor, neighbor_range, orit=-1):
+    def M_ts_std_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
-        L = m_tensor.size(-1)  # 时间序列长度
+        offset = (window_size - 1) // 2  
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
-        window_prod = torch.prod(unfolded, dim=-1)  # 计算窗口内元素的乘积
+        window_std = OP_Basic.nanstd(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        
-        if orit == -1:  # 左侧累乘（前n分钟）
-            result_tensor[..., window_size:] = window_prod[..., :L - window_size]
-        
-        elif orit == 0:  # 中心累乘（对称窗口）
-            offset = (window_size - 1) // 2
-            end = offset + window_prod.size(-1)
-            result_tensor[..., offset:end] = window_prod
-        
-        elif orit == 1:  # 右侧累乘（后n分钟）
-            valid_length = L - window_size
-            result_tensor[..., :valid_length] = window_prod[..., 1:1 + valid_length]
-        
-        else:
-            raise ValueError("`orit` must be -1 (left), 0 (center), or 1 (right)")
+        result_tensor[..., offset : offset + unfolded.size(-1)] = window_std
+        return result_tensor
+
+    @staticmethod
+    def M_ts_product_right_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_prod = torch.prod(unfolded, dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        valid_length = m_tensor.size(-1) - window_size
+        result_tensor[..., :valid_length] = window_prod[..., 1 : 1 + valid_length]
+        return result_tensor
     
+    @staticmethod
+    def M_ts_product_left_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_prod = torch.prod(unfolded, dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        valid_length = m_tensor.size(-1) - window_size
+        result_tensor[..., window_size:] = window_prod[..., :valid_length]
+        return result_tensor
+
+    @staticmethod
+    def M_ts_product_mid_neighbor(m_tensor, neighbor_range):
+        window_size = neighbor_range
+        offset = (window_size - 1) // 2  
+        unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
+        window_prod = torch.prod(unfolded, dim=-1)
+        result_tensor = torch.full_like(m_tensor, float('nan'))
+        result_tensor[..., offset : offset + unfolded.size(-1)] = window_prod
         return result_tensor
