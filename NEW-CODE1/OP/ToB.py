@@ -197,7 +197,7 @@ class OP_BF2B:  # B*F-B
             'M_ts_delta',
             'M_ts_mean_xx_neighbor',
             'M_ts_std_xx_neighbor',
-            'M_ts_product_xx_neighbor',
+            'M_ts_producy_xx_neighbor',
             'M_ts_pctchg',
             'M_ts_delay',
         ]  # B*F-B
