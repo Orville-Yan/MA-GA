@@ -2,7 +2,7 @@ import os.path
 import sys
 
 sys.path.append('..')
-import DataReader
+from. import DataReader
 
 from OP import *
 import matplotlib.pyplot as plt
