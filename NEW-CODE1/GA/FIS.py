@@ -65,7 +65,10 @@ class FactorIntoStorage(RPN_Compiler):
         selected_strings = [factor for factor in best_clique if factor in new_factors]
         self.bk_factor = selected_strings
     def factor_evaluating(self):
-        pass
+        ft = FactorTest(self.bk_factor,[2016],bins_num=5)
+        ft.plot()
+
+
 
     def store_factors(self):
         self.add_factor = self.bk_factor
@@ -100,4 +103,6 @@ if __name__ == "__main__":
     FIS.get_exist_factor()
     FIS.bk_algo()
     FIS.store_factors()
+    FIS.factor_evaluating()
+
 
