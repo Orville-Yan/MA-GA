@@ -11,7 +11,7 @@ OPclass_name_2A = ['OP_A2A', 'OP_AE2A', 'OP_AA2A', 'OP_AG2A',
 class OP_A2A:
     def __init__(self):
         self.func_list = ['D_at_abs', 'D_cs_rank', 'D_cs_scale', 'D_cs_zscore', 'D_cs_harmonic_mean', 'D_cs_demean',
-                          'D_cs_winsor']
+                          'D_cs_winsor','D_at_neg']
 
     @staticmethod
     def D_at_abs(x):  # 取绝对值
