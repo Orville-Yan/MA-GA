@@ -64,11 +64,21 @@ class FactorIntoStorage(RPN_Compiler):
         best_clique = max(maximal_cliques, key=len)
         selected_strings = [factor for factor in best_clique if factor in new_factors]
         self.bk_factor = selected_strings
-    def factor_evaluating(self):
-        pass
+    def factor_evaluating(self,yearlst,factors):
+        compiler = RPN_Compiler()
+        compiler.prepare_data(yearlst) 
+        ft = FactorTest()
+        ic_dict = {}
+        for factor in factors:
+            compiled_fac = compiler.compile(factor)
+            ic = ft.get_rank_IC(compiled_fac)
+            ic_dict['factor'] = ic
+        return ic_dict
+
     def store_factors(self):
         self.add_factor = self.bk_factor
-        # factor_storage = pd.DataFrame(columns = ['tree','in_sample','out_sample','annual_yield','trunk','root','seed','branch','subtree'])
+        ic_dict = self.factor_evaluating(['2016'],self.add_factor)
+        # factor_storage = pd.DataFrame(columns = ['tree','ic','in_sample','out_sample','annual_yield','trunk','root','seed','branch','subtree'])
         if self.storage_path:
             file_path = os.path.join(self.storage_path,'factor_storage.xlsx')
             factor_storage = pd.read_excel(file_path)
@@ -90,7 +100,8 @@ class FactorIntoStorage(RPN_Compiler):
             seeds = tree2lst(parser.seed['tree_mode'])
             branches = tree2lst(parser.branch['tree_mode'])
             subtrees = tree2lst(parser.subtree['tree_mode'])
-            factor_storage.loc[factor_storage.shape[0]+1] = {'tree':tree, 'trunk':trunks,'root':roots,'seed':seeds,'branch':branches,'subtree':subtrees}
+            ic = ic_dict[factor]
+            factor_storage.loc[factor_storage.shape[0]+1] = {'tree':tree, 'trunk':trunks,'root':roots,'seed':seeds,'branch':branches,'subtree':subtrees,'ic':ic}
         factor_storage.to_excel(file_path)
 if __name__ == "__main__":
     producer = RPN_Producer()
