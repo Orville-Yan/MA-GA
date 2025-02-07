@@ -10,9 +10,9 @@ from datetime import datetime
 import torch
 
 class DailyDataReader:
-    def __init__(self, daily_data_path: str="../../Data/DailyData"):
+    def __init__(self, daily_data_path: str="../Data/DailyData"):
         self.daily_data_path = daily_data_path
-        self.MutualStockCodes = pd.read_parquet("../../Data/MutualStockCodes.parquet")["Mutual"].values
+        self.MutualStockCodes = pd.read_parquet("../Data/MutualStockCodes.parquet")["Mutual"].values
 
         self.ListedDate = self._ListedDate()
         self.TradingDate = self._TradingDate()
