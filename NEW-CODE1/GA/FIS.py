@@ -65,11 +65,7 @@ class FactorIntoStorage(RPN_Compiler):
         selected_strings = [factor for factor in best_clique if factor in new_factors]
         self.bk_factor = selected_strings
     def factor_evaluating(self):
-        ft = FactorTest(self.bk_factor,[2016],bins_num=5)
-        ft.plot()
-
-
-
+        pass
     def store_factors(self):
         self.add_factor = self.bk_factor
         # factor_storage = pd.DataFrame(columns = ['tree','in_sample','out_sample','annual_yield','trunk','root','seed','branch','subtree'])
