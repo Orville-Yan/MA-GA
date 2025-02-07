@@ -49,7 +49,6 @@ class OP_B2B:
         s = zscore
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
-
     @staticmethod
     def M_cs_rank(x):
         """
@@ -69,7 +68,6 @@ class OP_B2B:
         s = torch.where(mask, quantiles, torch.tensor(float('nan')))
 
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
-
 
     @staticmethod
     def M_cs_scale(x):
@@ -91,7 +89,12 @@ class OP_B2B:
         s = scaled_data + 1
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
-
+    @staticmethod
+    def M_at_sign(x):
+        mask = ~torch.isnan(x)
+        x_no_nan = torch.where(mask, x, 0)
+        sign = torch.sign(x_no_nan)
+        return torch.where(mask, sign, float('nan'))
 
     @staticmethod
     def M_cs_demean(x):
@@ -102,7 +105,7 @@ class OP_B2B:
 
     @staticmethod
     def M_cs_winsor(x, limit=[0.05, 0.95]):
-        rank = OP_B2B.D_cs_rank(x)
+        rank = OP_B2B.M_cs_rank(x)
         min_limit = torch.where(rank >= limit[0], rank, float('nan'))
         max_limit = torch.where(rank <= limit[1], rank, float('nan'))
         mask = (~torch.isnan(min_limit)) & (~torch.isnan(max_limit))
@@ -120,7 +123,7 @@ class OP_B2B:
 
 class OP_BB2B:
     def __init__(self):
-        self.func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod',
+        self.func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_cs_cut', 'M_cs_umr', 'M_at_prod',
                           'M_cs_norm_spread']
 
     @staticmethod
@@ -138,16 +141,11 @@ class OP_BB2B:
         result[zero_mask] = torch.nan
         return result
 
-    @staticmethod
-    def M_at_sign(x):
-        mask = ~torch.isnan(x)
-        x_no_nan = torch.where(mask, x, 0)
-        sign = torch.sign(x_no_nan)
-        return torch.where(mask, sign, float('nan'))
+
 
     @staticmethod
     def M_cs_cut(x, y):
-        sign = OP_BB2B.at_sign(x - OP_Basic.nanmean(x, dim=1).unsqueeze(1))
+        sign = OP_B2B.M_at_sign(x - OP_Basic.nanmean(x, dim=1).unsqueeze(1))
         return sign * y
 
     @staticmethod
@@ -172,8 +170,8 @@ class OP_BA2B:  # B*A-B
 
     @staticmethod
     def M_toD_standard(M_tensor, D_tensor):
-        D_tensor_adjusted = D_tensor.unsqueeze(-1) 
-        return M_tensor / D_tensor_adjusted  
+        D_tensor_adjusted = D_tensor.unsqueeze(-1)
+        return M_tensor / D_tensor_adjusted
 
 
 class OP_BG2B:  # B*G-B
@@ -182,7 +180,7 @@ class OP_BG2B:  # B*G-B
 
     @staticmethod
     def M_cs_edge_flip(x, thresh):
-        rank = OP_B2B.D_cs_rank(x)
+        rank = OP_B2B.M_cs_rank(x)
         if thresh < 0.3:
             edge_fliped = torch.where((rank < thresh) | (rank > 1 - thresh), -x, x)
         elif thresh > 0.7:
@@ -191,6 +189,7 @@ class OP_BG2B:  # B*G-B
             edge_fliped = torch.where((rank < thresh) | (rank > 1 - thresh), x, -x)
 
         return edge_fliped
+
 
 class OP_BF2B:  # B*F-B
     def __init__(self):
@@ -229,7 +228,7 @@ class OP_BF2B:  # B*F-B
 
     @staticmethod
     def M_ts_delta(x, lookback):
-        return x - OP_BF2B.D_ts_delay(x, lookback)
+        return x - OP_BF2B.M_ts_delay(x, lookback)
 
     @staticmethod
     def M_ts_mean_right_neighbor(m_tensor, neighbor_range):
@@ -238,9 +237,9 @@ class OP_BF2B:  # B*F-B
         window_mean = OP_Basic.nanmean(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
         valid_length = m_tensor.size(-1) - window_size
-        result_tensor[..., :valid_length] = window_mean[..., 1 : 1 + valid_length]
+        result_tensor[..., :valid_length] = window_mean[..., 1: 1 + valid_length]
         return result_tensor
-    
+
     @staticmethod
     def M_ts_mean_left_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
@@ -254,13 +253,13 @@ class OP_BF2B:  # B*F-B
     @staticmethod
     def M_ts_mean_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
-        offset = (window_size - 1) // 2  
+        offset = (window_size - 1) // 2
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_mean = OP_Basic.nanmean(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., offset : offset + unfolded.size(-1)] = window_mean
+        result_tensor[..., offset: offset + unfolded.size(-1)] = window_mean
         return result_tensor
-    
+
     @staticmethod
     def M_ts_std_right_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
@@ -268,9 +267,9 @@ class OP_BF2B:  # B*F-B
         window_std = OP_Basic.nanstd(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
         valid_length = m_tensor.size(-1) - window_size
-        result_tensor[..., :valid_length] = window_std[..., 1 : 1 + valid_length]
+        result_tensor[..., :valid_length] = window_std[..., 1: 1 + valid_length]
         return result_tensor
-    
+
     @staticmethod
     def M_ts_std_left_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
@@ -284,11 +283,11 @@ class OP_BF2B:  # B*F-B
     @staticmethod
     def M_ts_std_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
-        offset = (window_size - 1) // 2  
+        offset = (window_size - 1) // 2
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_std = OP_Basic.nanstd(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., offset : offset + unfolded.size(-1)] = window_std
+        result_tensor[..., offset: offset + unfolded.size(-1)] = window_std
         return result_tensor
 
     @staticmethod
@@ -298,9 +297,9 @@ class OP_BF2B:  # B*F-B
         window_prod = torch.prod(unfolded, dim=-1)
         result_tensor = torch.full_like(m_tensor, float('nan'))
         valid_length = m_tensor.size(-1) - window_size
-        result_tensor[..., :valid_length] = window_prod[..., 1 : 1 + valid_length]
+        result_tensor[..., :valid_length] = window_prod[..., 1: 1 + valid_length]
         return result_tensor
-    
+
     @staticmethod
     def M_ts_product_left_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
@@ -314,9 +313,9 @@ class OP_BF2B:  # B*F-B
     @staticmethod
     def M_ts_product_mid_neighbor(m_tensor, neighbor_range):
         window_size = neighbor_range
-        offset = (window_size - 1) // 2  
+        offset = (window_size - 1) // 2
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_prod = torch.prod(unfolded, dim=-1)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., offset : offset + unfolded.size(-1)] = window_prod
+        result_tensor[..., offset: offset + unfolded.size(-1)] = window_prod
         return result_tensor
