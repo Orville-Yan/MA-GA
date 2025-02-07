@@ -1,6 +1,7 @@
 import sys
-sys.path.append('..')
-
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
 from OP import *
 from ToolsGA.Data_tools import DailyDataReader, MinuteDataReader
 import pandas as pd
@@ -10,10 +11,10 @@ import numpy as np
 class ParquetReader:
     def __init__(
         self,
-            DailyDataPath: str = "../../Data/DailyData",
-            MinuteDataPath: str = "../../Data/MinuteData",
-            BarraPath: str = "../../Data/barra.pt",
-            DictPath: str = "../../Data/dict.pt",
+            DailyDataPath: str = "../Data/DailyData",
+            MinuteDataPath: str = "../Data/MinuteData",
+            BarraPath: str = "../Data/barra.pt",
+            DictPath: str = "../Data/dict.pt",
             device: str = 'cpu'
     ):
         self.DailyDataReader = DailyDataReader(DailyDataPath)
