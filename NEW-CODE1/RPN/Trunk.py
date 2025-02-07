@@ -11,7 +11,7 @@ class Trunk:
         self.input4 = ind_str
         self.population_size = population_size
         #self.industry=industry_used
-        self.OP_BB2B_func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_at_sign', 'M_cs_cut', 'M_cs_umr', 'M_at_prod',
+        self.OP_BB2B_func_list = ['M_at_add', 'M_at_sub', 'M_at_div', 'M_cs_cut', 'M_cs_umr', 'M_at_prod',
                                   'M_cs_norm_spread']  # 你这个class需要用到的算子类别的func_list
         self.OP_BA2B_func_list = ['M_toD_standard']
         self.OP_A2A_func_list = ['D_at_abs', 'D_cs_rank', 'D_cs_scale', 'D_cs_zscore', 'D_cs_harmonic_mean',
