@@ -110,6 +110,5 @@ if __name__ == "__main__":
     FIS.get_exist_factor()
     FIS.bk_algo()
     FIS.store_factors()
-    FIS.factor_evaluating()
 
 
