@@ -10,6 +10,9 @@ from RPN import *
 import random
 from collections import defaultdict
 from deap import gp
+import networkx as nx
+import matplotlib.pyplot as plt
+import pygraphviz
 
 class config:
     seed_size=10
@@ -244,7 +247,7 @@ class RPN_Parser(RPN_Compiler):
         self.tree_structure = Acyclic_Tree(self.rpn, self.pset)
         return self.tree_structure
 
-    def plot_tree(self, node=None, level=0):
+    def print_tree(self, node=None, level=0):
         if self.tree_structure is None:
             self.get_tree_structure()
         
@@ -259,10 +262,52 @@ class RPN_Parser(RPN_Compiler):
         # 递归打印子节点
         for child in node.nodes:
             if isinstance(child, Acyclic_Tree):
-                self.plot_tree(child, level + 1)
+                self.print_tree(child, level + 1)
             else:
                 print(f"    " * (level + 1)+ str(child.value))
 
+
+    def add_nodes_edges(self, tree, parent=None,level=0,count=0):
+        if isinstance(tree, Acyclic_Tree):
+            for i, child in enumerate(tree.nodes):
+                count+=1
+                if isinstance(child, Acyclic_Tree):
+                    child_label = f"{child.root_node.name}"#+str(level)+str(i)
+                    for _ in range(count):
+                        child_label += '\u200b'
+                    self.G.add_node(child_label)
+                    if parent:
+                        self.G.add_edge(parent, child_label)
+                    count = self.add_nodes_edges(child, child_label,level+1,count)
+                else:
+                    child_label = str(child.value)
+                    for _ in range(count):
+                        child_label += '\u200b'
+                    self.G.add_node(child_label)
+                    if parent:
+                        self.G.add_edge(parent, child_label)
+        return count
+
+    def plot_tree(self, node=None, level=0):
+        if self.tree_structure is None:
+            self.get_tree_structure()
+    
+        if node is None:
+            node = self.tree_structure
+    
+        # 创建一个空的有向图
+        self.G = nx.DiGraph()
+    
+        # 添加根节点
+        root_label = f"{node.root_node.name}"
+        self.G.add_node(root_label)
+        self.add_nodes_edges(node, root_label)
+    
+        # 使用matplotlib绘制图形
+        pos = nx.drawing.nx_agraph.graphviz_layout(self.G, prog='dot')
+        plt.figure(figsize=(12, 8))
+        nx.draw(self.G, pos, with_labels=True, arrows=True, node_size=2000, node_color='skyblue', font_size=10, font_weight='bold')
+        plt.show()
 
 
     def parse_from_the_outside_in(self):
@@ -609,6 +654,7 @@ if __name__ == "__main__":
     print("生成的树：", producer.tree[0])
     parser = RPN_Parser(producer.tree[0])
     tree_structure = parser.get_tree_structure()
+    parser.print_tree()
     parser.plot_tree()
     print(parser.tree2dict())
     # 输入的操作列表
