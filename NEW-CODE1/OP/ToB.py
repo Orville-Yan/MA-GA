@@ -201,9 +201,9 @@ class OP_BF2B:  # B*F-B
             'M_ts_std_left_neighbor',
             'M_ts_std_mid_neighbor',
             'M_ts_std_right_neighbor',
-            'M_ts_producy_left_neighbor',
-            'M_ts_producy_mid_neighbor',
-            'M_ts_producy_right_neighbor',
+            'M_ts_product_left_neighbor',
+            'M_ts_product_mid_neighbor',
+            'M_ts_product_right_neighbor',
             'M_ts_pctchg',
             'M_ts_delay',
         ]  # B*F-B
