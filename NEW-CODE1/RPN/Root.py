@@ -25,7 +25,8 @@ class MP_Root:
             self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
 
 
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("MP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
@@ -58,7 +59,8 @@ class MV_Root:
             func = getattr(OP_BB2B, func_name, None)
             self.pset.addPrimitive(func, [TypeB, TypeB], TypeB, name=func_name)
 
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("MV_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
@@ -93,8 +95,8 @@ class DP_Root:
             self.pset.addTerminal(constant_value,TypeF)
 
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("DP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
@@ -129,7 +131,8 @@ class DV_Root:
             self.pset.addTerminal(constant_value,TypeF)
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
 
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("DV_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
