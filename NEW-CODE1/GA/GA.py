@@ -1,7 +1,3 @@
-from OPT import *
-from FIS import *
-from RPN.RPNbuilder import RPN_Compiler
-
 class config:
     warm_start_time=[2016,2017]
 
@@ -12,6 +8,15 @@ class config:
     bins_num=5
 
     freque=5
+    
+import sys
+import os
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
+from OPT import *
+from FIS import *
+from RPN.RPNbuilder import RPN_Compiler
 
 class GroupTest(RPN_Compiler):
     def __init__(self,factor_list:[str]):
