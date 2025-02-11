@@ -14,8 +14,8 @@ import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
-from OPT import *
-from FIS import *
+from .OPT import *
+from .FIS import *
 from RPN.RPNbuilder import RPN_Compiler
 
 class GroupTest(RPN_Compiler):
