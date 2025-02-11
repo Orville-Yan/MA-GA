@@ -1,11 +1,14 @@
 import sys
-sys.path.append('..')
+import os
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
 
 class Seed:
-    def __init__(self, input_data, population_size=10):
+    def __init__(self, input_data, population_size=config.default_population):
         self.input=input_data
         self.population_size = population_size
         self.pset = None
@@ -28,7 +31,7 @@ class Seed:
 
 
 class DP_Seed(Seed):
-    def __init__(self, D_OHLC, population_size=10):
+    def __init__(self, D_OHLC, population_size=config.default_population):
         super().__init__(D_OHLC, population_size)
         self.input = D_OHLC
         self.OP_AF2A_func_list = ['D_ts_max', 'D_ts_min','D_ts_delay', 'D_ts_delta', 'D_ts_mean']
@@ -52,7 +55,7 @@ class DP_Seed(Seed):
 
 
 class DV_Seed(Seed):
-    def __init__(self, D_V, population_size=10):
+    def __init__(self, D_V, population_size=config.default_population):
         super.__init__(D_V, population_size)
         self.input = D_V
         self.OP_AF2A_func_list = ['D_ts_max', 'D_ts_min',
@@ -82,7 +85,7 @@ class DV_Seed(Seed):
 
 
 class MP_Seed(Seed):
-    def __init__(self, M_OHLC, population_size=10):
+    def __init__(self, M_OHLC, population_size=config.default_population):
         super().__init__(M_OHLC, population_size)
         self.input = M_OHLC
         self.OP_BF2B_func_list = ['M_ts_delay', 'M_ts_mean_left_neighbor',
@@ -106,7 +109,7 @@ class MP_Seed(Seed):
 
 
 class MV_Seed(Seed):
-    def __init__(self, M_V, population_size=10):
+    def __init__(self, M_V, population_size=config.default_population):
         super().__init__(M_V, population_size)
         self.input = M_V
         self.OP_BF2B_func_list = ['M_ts_delay', 'M_ts_mean_left_neighbor',
@@ -131,9 +134,9 @@ class MV_Seed(Seed):
 
 
 if __name__ == "__main__":
-    from ToolsGA.DataReader import DataReader
-    data_reader = DataReader()
-    MO, MH, ML, MC, MV = data_reader.get_Minute_data([2016])
+    from ToolsGA.DataReader import ParquetReader
+    data_reader = ParquetReader()
+    MO, MH, ML, MC, MV = data_reader.get_Minute_data(config.warm_start_time)
     print(MO.shape)
     mp_seed = MP_Seed([MO, MH, ML, MC], 10)
     print("MP_Seed Individual Str: ", mp_seed.individuals_str)
