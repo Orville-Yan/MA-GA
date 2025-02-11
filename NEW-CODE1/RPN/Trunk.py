@@ -93,7 +93,8 @@ class Trunk:
         self.pset.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
         self.pset.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
 
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Trunk", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
@@ -103,6 +104,7 @@ class Trunk:
         self.toolbox.register("compile", gp.compile, pset=self.pset)
 
     def generate_Trunk(self):
+        self.generate_toolbox()
         self.individuals_code = self.toolbox.population(n=self.population_size)
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input1+self.input2+self.input3+self.input4)
 
@@ -118,5 +120,4 @@ if __name__ == '__main__':
     op_E = ['mask_max(high)']
     #industry_used = data_reader.get_barra(config.warm_start_time])
     mp_trunk = Trunk(M_Root,op_A,op_D,op_E)
-    mp_trunk.generate_toolbox()
     mp_trunk.generate_Trunk()
