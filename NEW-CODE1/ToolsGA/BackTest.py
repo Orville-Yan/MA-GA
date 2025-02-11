@@ -10,6 +10,7 @@ import matplotlib.dates as mdates
 import pandas as pd
 import numpy as np
 import torch
+from GA.GA import config
 
 
 class FactorTest:
@@ -23,7 +24,7 @@ class FactorTest:
         self.factor = factor
         self.factor_target = returns
         self.yearlist = yearlist
-        self.bins_num = bins_num
+        self.bins_num = config.bins_num
         self.factor_name = factor_name
         self.period_num = period_num
 
@@ -450,7 +451,7 @@ class FactorTest:
 
 
 if __name__ == '__main__':
-    yearlist = [i for i in range(2010, 2021, 1)]
+    yearlist = config.warm_start_time
 
     DO, DH, DL, DC, DV = DataReader.ParquetReader().get_Day_data(yearlist)
     returns = torch.full_like(DC, 0, dtype=torch.float32)
