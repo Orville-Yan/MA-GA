@@ -8,6 +8,7 @@ from ToolsGA import *
 from OP import *
 from RPN import *
 import random
+from GA.GA import config as gconfig
 from collections import defaultdict
 from deap import gp
 import networkx as nx
@@ -657,6 +658,10 @@ if __name__ == "__main__":
     parser.print_tree()
     parser.plot_tree()
     print(parser.tree2dict())
+    # 编译
+    compiler = RPN_Compiler()
+    compiler.prepare_data(gconfig.warm_start_time)
+    print(compiler.compile('D_ts_mean(D_O, 5)'))
     # 输入的操作列表
     ops_lists = [
         ["op1", "op2", "op3", '', ''],
