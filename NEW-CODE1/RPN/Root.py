@@ -10,6 +10,9 @@ from OP import *
 class config:
     default_population = 10
     default_int = [2,3,5,10,20]
+    min_depth = 1
+    max_depth = 1
+
 class MP_Root:
     def __init__(self, MP_Seed: list[str], population_size=config.default_population):
         self.input = MP_Seed
@@ -33,7 +36,7 @@ class MP_Root:
         creator.create("MP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)  # 树的深度按需求改
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_ = min_depth, max_ = max_depth)  # 树的深度按需求改
         self.toolbox.register("MP_Root", tools.initIterate, creator.MP_Root, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.MP_Root)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -67,7 +70,7 @@ class MV_Root:
         creator.create("MV_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_ = min_depth, max_ = max_depth)
         self.toolbox.register("MV_Root", tools.initIterate, creator.MV_Root, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.MV_Root)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -103,7 +106,7 @@ class DP_Root:
         creator.create("DP_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_ = min_depth, max_ = max_depth)
         self.toolbox.register("DP_Root", tools.initIterate, creator.DP_Root, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.DP_Root)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -139,7 +142,7 @@ class DV_Root:
         creator.create("DV_Root", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_ = min_depth, max_ = max_depth)
         self.toolbox.register("DV_Root", tools.initIterate, creator.DV_Root, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.DV_Root)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
