@@ -56,7 +56,7 @@ class DP_Seed(Seed):
 
 class DV_Seed(Seed):
     def __init__(self, D_V, population_size=config.default_population):
-        super.__init__(D_V, population_size)
+        super().__init__(D_V, population_size)
         self.input = D_V
         self.OP_AF2A_func_list = ['D_ts_max', 'D_ts_min',
                                   'D_ts_delay', 'D_ts_delta',
