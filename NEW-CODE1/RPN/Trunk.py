@@ -1,10 +1,13 @@
+import os
 import sys
-sys.path.append('..')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
 class Trunk:
-    def __init__(self, M_Root: list[str], D_Root: list[str], Branch: list[str], ind_str: list[str],population_size=100):
+    def __init__(self, M_Root: list[str], D_Root: list[str], Branch: list[str], ind_str: list[str],population_size=config.default_population):
         self.input1 = M_Root
         self.input2 = D_Root
         self.input3 = Branch
@@ -105,15 +108,15 @@ class Trunk:
 
 
 if __name__ == '__main__':
-    from ToolsGA.DataReader import DataReader
-    data_reader = DataReader()
-    DO, DH, DL, DC, DV = data_reader.get_Day_data([2016, 2017])
+    from ToolsGA.DataReader import ParquetReader
+    data_reader = ParquetReader()
+    DO, DH, DL, DC, DV = data_reader.get_Day_data(config.warm_start_time)
     print(DO.shape)
     M_Root = ['at_div(open,close)', 'at_div(high,low)', 'at_sign(at_sub(high,low))']
     op_A = ['at_mean(open,close)']
     op_D = ['mask_max(high)']
     op_E = ['mask_max(high)']
-    #industry_used = data_reader.get_barra([2016, 2017])
+    #industry_used = data_reader.get_barra(config.warm_start_time])
     mp_trunk = Trunk(M_Root,op_A,op_D,op_E)
     mp_trunk.generate_toolbox()
     mp_trunk.generate_Trunk()
