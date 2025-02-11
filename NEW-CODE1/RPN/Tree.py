@@ -8,7 +8,7 @@ from ToolsGA.GA_tools import *
 from OP import *
 
 class Tree:
-    def __init__(self, subtrees: list[str], population_size=config.default_population):#subtree
+    def __init__(self, subtrees: list[str], population_size=10):#subtree
         self.subtrees = subtrees
         self.population_size = population_size
 
@@ -26,7 +26,8 @@ class Tree:
 
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
 
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Tree", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
@@ -46,6 +47,5 @@ class Tree:
 if __name__ == '__main__':
     Subtrees=['at_div(open,close)','at_div(high,low)','at_sign(at_sub(high,low))']
     tree=Tree(Subtrees)
-    tree.generate_toolbox()
     tree.generate_tree()
-    #print(tree.individuals_str)
+    print(tree.individuals_str)
