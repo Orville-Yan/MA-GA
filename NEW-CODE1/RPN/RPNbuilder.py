@@ -22,6 +22,11 @@ class config:
     subtree_size=10
     tree_size=10
     default_year = [2016]
+    default_population = 10
+    default_lookback = [2,3,5,10,20]
+    default_edge = [0.05,0.1]
+    min_depth = 1
+    max_depth = 10
 
 class RPN_Producer:
     def __init__(self):
@@ -154,7 +159,7 @@ class RPN_Compiler:
         creator.create('Tree_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=10)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=min_depth, max_=max_depth)
         self.toolbox.register('Tree_Compiler', tools.initIterate, getattr(creator, 'Tree_Compiler'), self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, 'Tree_Compiler'))
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -183,10 +188,10 @@ class RPN_Compiler:
         self.pset.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
         self.pset.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
 
-        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
+        for constant_value in config.default_lookback:
             self.pset.addTerminal(constant_value, TypeF)
 
-        for constant_value in [0.05, 0.1]:
+        for constant_value in config.default_edge:
             self.pset.addTerminal(constant_value, TypeG)
 
     def compile(self, RPN:str):
@@ -446,7 +451,7 @@ class RPN_Pruner(RPN_Parser):
         pass
 
 class GeneticAlgorithm:
-    def __init__(self, ops_lists, population_size=10, crossover_prob=0.5, mutation_prob=0.2, generations=1):
+    def __init__(self, ops_lists, population_size=config.default_population, crossover_prob=0.5, mutation_prob=0.2, generations=1):
         self.ops_lists = ops_lists
         self.population_size = population_size
         self.crossover_prob = crossover_prob
