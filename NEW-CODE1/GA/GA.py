@@ -5,6 +5,10 @@ class config:
 
     warm_start_threshold=0.8
 
+    similarity_threhold = 0.6
+
+    default_population = 10
+
     bins_num=5
 
     freque=5
