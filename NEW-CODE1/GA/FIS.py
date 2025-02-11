@@ -12,7 +12,9 @@ from itertools import combinations
 from RPN.RPNbuilder import*
 import difflib
 from ToolsGA.BackTest import*
-from .GA import config
+class config:
+    similarity_threhold = 0.6
+    default_year = [2016]
 class BK_Algo: #Bron-Kerbosch Algo
     pass
 
@@ -80,7 +82,7 @@ class FactorIntoStorage(RPN_Compiler):
 
     def store_factors(self):
         self.add_factor = self.bk_factor
-        ic_dict = self.factor_evaluating(config.warm_start_time,self.add_factor)
+        ic_dict = self.factor_evaluating(config.default_year,self.add_factor)
         # factor_storage = pd.DataFrame(columns = ['tree','ic','in_sample','out_sample','annual_yield','trunk','root','seed','branch','subtree'])
         if self.storage_path:
             file_path = os.path.join(self.storage_path,'factor_storage.xlsx')
