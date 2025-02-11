@@ -150,10 +150,8 @@ class DV_Root:
 if __name__ == "__main__":
     MP_Seed = ['M_ts_mean_left_neighbor(M_O, 5, -1)', 'M_ts_mean_right_neighbor(M_C, 10, 1)']
     mp_root = MP_Root(MP_Seed)
-    mp_root.generate_toolbox()
     mp_root.generate_MP_Root()
 
     DP_Seed = ['D_ts_mean(D_O, 5)', 'D_ts_mean(D_C, 10)']
     dp_root = DP_Root(DP_Seed)
-    dp_root.generate_toolbox()
     dp_root.generate_DP_Root()
