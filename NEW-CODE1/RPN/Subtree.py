@@ -1,11 +1,14 @@
+import os
 import sys
-sys.path.append('..')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
 
 class SubtreeBase:
-    def __init__(self, population_size=10):
+    def __init__(self, population_size=config.default_population):
         self.population_size = population_size
         self.pset = None
         self.toolbox = None
@@ -39,7 +42,7 @@ class SubtreeBase:
         self.generate_population()
 
 class SubtreeWithMask(SubtreeBase):
-    def __init__(self, input1, input2, population_size=10):
+    def __init__(self, input1, input2, population_size=config.default_population):
         super().__init__(population_size)
         self.input1 = input1
         self.input2 = input2
@@ -66,7 +69,7 @@ class SubtreeWithMask(SubtreeBase):
 
 
 class SubtreeNoMask(SubtreeBase):
-    def __init__(self, input_data, population_size=10):
+    def __init__(self, input_data, population_size=config.default_population):
         super().__init__(population_size)
         self.input = input_data
         self.OP_B2A_func_list = ['D_Minute_std', 'D_Minute_mean', 'D_Minute_trend']
@@ -93,10 +96,10 @@ if __name__ == "__main__":
     input_data = ['open','high']
     mask = ['low']
 
-    subtree_with_mask = SubtreeWithMask(input_data, mask, population_size=10)
+    subtree_with_mask = SubtreeWithMask(input_data, mask, population_size=config.default_population)
     subtree_with_mask.run()
     print("With Mask:", subtree_with_mask.individuals_str)
 
-    subtree_no_mask = SubtreeNoMask(input_data, population_size=10)
+    subtree_no_mask = SubtreeNoMask(input_data, population_size=config.default_population)
     subtree_no_mask.run()
     print("No Mask:", subtree_no_mask.individuals_str)
