@@ -11,6 +11,8 @@ import pandas as pd
 from itertools import combinations
 from RPN.RPNbuilder import*
 import difflib
+from ToolsGA.BackTest import*
+from .GA import config
 class BK_Algo: #Bron-Kerbosch Algo
     pass
 
@@ -37,7 +39,7 @@ class FactorIntoStorage(RPN_Compiler):
             should_add = True
             for factor in exist_factor:
                 similarity = self.calculate_similarity(new_factor, factor)
-                if similarity >= 0.6:  
+                if similarity >= config.similarity_threhold:  
                     should_add = False
                     break
             if should_add:
@@ -53,7 +55,7 @@ class FactorIntoStorage(RPN_Compiler):
         graph.add_nodes_from(factors_lst)
         for factor1, factor2 in combinations(factors_lst, 2):
             similarity = self.calculate_similarity(factor1, factor2)
-            if similarity < 0.6: 
+            if similarity < config.similarity_threhold: 
                 graph.add_edge(factor1, factor2, weight=similarity)
         return graph
 
@@ -64,6 +66,7 @@ class FactorIntoStorage(RPN_Compiler):
         best_clique = max(maximal_cliques, key=len)
         selected_strings = [factor for factor in best_clique if factor in new_factors]
         self.bk_factor = selected_strings
+        
     def factor_evaluating(self,yearlst,factors):
         compiler = RPN_Compiler()
         compiler.prepare_data(yearlst) 
@@ -77,7 +80,7 @@ class FactorIntoStorage(RPN_Compiler):
 
     def store_factors(self):
         self.add_factor = self.bk_factor
-        ic_dict = self.factor_evaluating(['2016'],self.add_factor)
+        ic_dict = self.factor_evaluating(config.warm_start_time,self.add_factor)
         # factor_storage = pd.DataFrame(columns = ['tree','ic','in_sample','out_sample','annual_yield','trunk','root','seed','branch','subtree'])
         if self.storage_path:
             file_path = os.path.join(self.storage_path,'factor_storage.xlsx')
@@ -104,11 +107,11 @@ class FactorIntoStorage(RPN_Compiler):
             factor_storage.loc[factor_storage.shape[0]+1] = {'tree':tree, 'trunk':trunks,'root':roots,'seed':seeds,'branch':branches,'subtree':subtrees,'ic':ic}
         factor_storage.to_excel(file_path)
 if __name__ == "__main__":
+    print(sys.path)
     producer = RPN_Producer()
     producer.run()
     FIS = FactorIntoStorage(producer.tree)
     FIS.get_exist_factor()
     FIS.bk_algo()
     FIS.store_factors()
-
 
