@@ -5,7 +5,7 @@ from ToolsGA.GA_tools import *
 from OP import *
 
 class Tree:
-    def __init__(self, subtrees: list[str], population_size=10):#subtree
+    def __init__(self, subtrees: list[str], population_size=config.default_population):#subtree
         self.subtrees = subtrees
         self.population_size = population_size
 
