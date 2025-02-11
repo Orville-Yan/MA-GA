@@ -2,7 +2,7 @@ import sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
-
+from GA.GA import config
 from RPN.Root import *
 from ToolsGA.GA_tools import *
 
@@ -31,7 +31,7 @@ class Branch:
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 class M_Branch_MP2D(Branch):
-    def __init__(self, mp_root: MP_Root, population_size=10):
+    def __init__(self, mp_root: MP_Root, population_size=config.default_population):
         super().__init__(mp_root, population_size)
         self.input = mp_root
 
@@ -60,7 +60,7 @@ class M_Branch_MP2D(Branch):
 
 class M_Branch_MPDP2D(Branch):
     # missing DP_Root
-    def __init__(self, mp_root: MP_Root, dp_root: DP_Root,population_size=10):
+    def __init__(self, mp_root: MP_Root, dp_root: DP_Root,population_size=config.default_population):
         # 暂时没有DP
         super().__init__(mp_root, population_size)
         self.input_m = mp_root
@@ -83,7 +83,7 @@ class M_Branch_MPDP2D(Branch):
 
 class M_Branch_MV2D(Branch):
     # missing MV_Root
-    def __init__(self, mv_root: MV_Root, population_size=10):
+    def __init__(self, mv_root: MV_Root, population_size=config.default_population):
         super().__init__(mv_root, population_size)
         self.input = mv_root
     def add_primitive(self):
@@ -110,7 +110,7 @@ class M_Branch_MV2D(Branch):
 
 class M_Branch_MVDV2D(Branch):
     # 暂时没有DV
-    def __init__(self, mv_root: MV_Root, dv_root: DV_Root,population_size=10):
+    def __init__(self, mv_root: MV_Root, dv_root: DV_Root,population_size=config.default_population):
         super().__init__(mv_root, population_size)
         self.input_m = mv_root
         self.input_d = dv_root
