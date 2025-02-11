@@ -2,10 +2,14 @@ import sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
-from GA.GA import config
 from RPN.Root import *
 from ToolsGA.GA_tools import *
 
+class config:
+    default_population = 10
+    default_lookback = [2,3,5,10,20]
+    min_depth = 1
+    max_depth = 1
 
 
 class Branch:
@@ -13,7 +17,7 @@ class Branch:
         self.population_size = population_size
         self.pset = None
         self.toolbox = None
-        self.int_values = [2,3,5,10,20]
+        self.int_values = config.default_lookback
 
     def generate_toolbox(self):
         if not hasattr(creator, "FitnessMax"):
@@ -21,7 +25,7 @@ class Branch:
         class_name = self.__class__.__name__
         creator.create(class_name, gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_= min_depth,  max_= max_depth)
         self.toolbox.register(class_name, tools.initIterate, getattr(creator,class_name), self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox,class_name))
         self.toolbox.register("compile", gp.compile, pset=self.pset)
