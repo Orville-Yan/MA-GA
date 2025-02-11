@@ -6,7 +6,12 @@ sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
-
+class config:
+class config:
+    default_population = 10
+    default_lookback = [2,3,5,10,20]
+    min_depth = 1
+    max_depth = 1
 class Seed:
     def __init__(self, input_data, population_size=config.default_population):
         self.input=input_data
@@ -20,7 +25,7 @@ class Seed:
         class_name = self.__class__.__name__
         creator.create(class_name, gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=1)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_= min_depth,  max_= max_depth)
         self.toolbox.register(class_name, tools.initIterate, getattr(creator, class_name), self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, class_name))
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -43,7 +48,7 @@ class DP_Seed(Seed):
             func = getattr(OP_AF2A, func_name)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
 
-        for constant_value in [2, 3, 5,  10, 20]:
+        for constant_value in config.default_lookback:
             self.pset.addTerminal(constant_value, TypeF)
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
 
@@ -65,11 +70,10 @@ class DV_Seed(Seed):
 
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN", [TypeA] * len(self.input), TypeA)
-        int_values = [int(i) for i in [1,2,3,5, 10, 20]]
         for func_name in self.OP_AF2A_func_list:
             func = getattr(OP_AF2A, func_name)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
-        for constant_value in int_values:
+        for constant_value in config.default_lookback:
             self.pset.addTerminal(constant_value, TypeF)
 
         for func_name in self.OP_AA2A_func_list:
@@ -94,7 +98,7 @@ class MP_Seed(Seed):
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
 
-        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20]]:
+        for constant_value in config.default_lookback:
             self.pset.addTerminal(constant_value, TypeF)
 
         for func_name in self.OP_BF2B_func_list:
@@ -117,8 +121,7 @@ class MV_Seed(Seed):
 
     def add_primitive(self):
         self.pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * len(self.input), TypeB)
-        int_values = [int(i) for i in [1, 2, 3, 5, 10, 20, 60]]
-        for constant_value in int_values:
+        for constant_value in config.default_lookback:
             self.pset.addTerminal(constant_value, TypeF)
 
         for func_name in self.OP_BF2B_func_list:
