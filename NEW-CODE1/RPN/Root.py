@@ -7,9 +7,11 @@ sys.path.append(parent_dir_path)
 from ToolsGA.GA_tools import *
 from OP import *
 
-
+class config:
+    default_population = 10
+    default_int = [2,3,5,10,20]
 class MP_Root:
-    def __init__(self, MP_Seed: list[str], population_size=10):
+    def __init__(self, MP_Seed: list[str], population_size=config.default_population):
         self.input = MP_Seed
         self.population_size = population_size
         self.OP_B2B_func_list = ['M_cs_rank', 'M_cs_scale', 'M_cs_zscore']
@@ -43,7 +45,7 @@ class MP_Root:
 
 
 class MV_Root:
-    def __init__(self, MV_Seed: list[str], population_size=10):
+    def __init__(self, MV_Seed: list[str], population_size=config.default_population):
         self.input = MV_Seed
         self.population_size = population_size
         self.OP_B2B_func_list = ['M_cs_rank', 'M_cs_scale', 'M_cs_zscore']
@@ -76,7 +78,7 @@ class MV_Root:
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 class DP_Root:
-    def __init__(self, DP_Seed: list[str], population_size=10):
+    def __init__(self, DP_Seed: list[str], population_size=config.default_population):
         self.input = DP_Seed
         self.population_size = population_size
         self.OP_AA2A_func_list = ['D_at_div']
@@ -92,7 +94,7 @@ class DP_Root:
             func = getattr(OP_AF2A, func_name, None)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
 
-        for constant_value in [2,3,5,10,20]:
+        for constant_value in config.default_int:
             self.pset.addTerminal(constant_value,TypeF)
 
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
@@ -112,7 +114,7 @@ class DP_Root:
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 class DV_Root:
-    def __init__(self, DV_Seed: list[str], population_size=10):
+    def __init__(self, DV_Seed: list[str], population_size=config.default_population):
         self.input = DV_Seed
         self.population_size = population_size
         self.OP_AA2A_func_list = ['D_at_div']
@@ -128,7 +130,7 @@ class DV_Root:
             func = getattr(OP_AF2A, func_name, None)
             self.pset.addPrimitive(func, [TypeA, TypeF], TypeA, name=func_name)
 
-        for constant_value in [2,3,5,10,20]:
+        for constant_value in config.default_int:
             self.pset.addTerminal(constant_value,TypeF)
         self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
 
