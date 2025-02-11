@@ -8,7 +8,6 @@ from ToolsGA import *
 from OP import *
 from RPN import *
 import random
-from GA.GA import config as gconfig
 from collections import defaultdict
 from deap import gp
 import networkx as nx
@@ -22,6 +21,7 @@ class config:
     trunk_size=10
     subtree_size=10
     tree_size=10
+    default_year = [2016]
 
 class RPN_Producer:
     def __init__(self):
@@ -660,7 +660,7 @@ if __name__ == "__main__":
     print(parser.tree2dict())
     # 编译
     compiler = RPN_Compiler()
-    compiler.prepare_data(gconfig.warm_start_time)
+    compiler.prepare_data(config.default_year)
     print(compiler.compile('D_ts_mean(D_O, 5)'))
     # 输入的操作列表
     ops_lists = [
