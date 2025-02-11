@@ -6,6 +6,12 @@ sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
+class config:
+    default_population = 10
+    default_lookback = [2,3,5,10,20]
+    default_edge = [0.05,0.1]
+    min_depth = 1
+    max_depth = 1
 class Trunk:
     def __init__(self, M_Root: list[str], D_Root: list[str], Branch: list[str], ind_str: list[str],population_size=config.default_population):
         self.input1 = M_Root
@@ -39,10 +45,10 @@ class Trunk:
 
 
         # 注册需要用到的primitives和terminals
-        for constant_value in [2, 3, 5, 10, 20]:
+        for constant_value in config.default_lookback:
             self.pset.addTerminal(constant_value, TypeF)
 
-        for constant_value in [0.05, 0.1]:
+        for constant_value in config.default_edge:
             self.pset.addTerminal(constant_value, TypeG)
 
         for func_name in self.OP_BB2B_func_list:
@@ -98,7 +104,7 @@ class Trunk:
         creator.create("Trunk", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=3)  # 树的深度按需求改
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=min_depth, max_=max_depth)  # 树的深度按需求改
         self.toolbox.register("Trunk", tools.initIterate, creator.Trunk, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.Trunk)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
