@@ -1,0 +1,10 @@
+torch==1.13.0
+networkx==3.2.1
+deap==1.4.1
+pandas==2.2.3
+numpy==1.26.4
+matplotlib==3.9.2          
+matplotlib-base==3.9.2           
+matplotlib-inline==0.1.7           
+pygraphviz==1.9
+scipy==1.14.1
