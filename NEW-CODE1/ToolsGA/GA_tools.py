@@ -30,7 +30,27 @@ class TypeG(torch.Tensor):
     def __new__(cls,*args,**kwargs):
         return super(TypeG,cls).__new__(cls,*args,dtype=torch.float32,**kwargs)
 
-    
+class Config:
+    # Chaotic map parameters
+    chebyshev_a = 4
+    circle_a = 0.5
+    circle_b = 2.2
+    iterative_a = 0.7
+    logistic_a = 4
+    piecewise_d = 0.3
+    sine_a = 4
+    singer_a = 1.07
+    tent_a = 0.4
+    spm_eta = 0.4
+    spm_mu = 0.3
+    spm_r = torch.rand(1)
+    tent_logistic_cosine_r = 0.7
+    sine_tent_cosine_r = 0.7
+    logistic_sine_cosine_r = 0.7
+    cubic_a = 2.595
+    logistic_tent_r = 0.3
+    bernoulli_a = 0.4
+
 class chaotic_map:
     def __init__(self):
         self.map_list = ["chebyshev_map","circle_map","iterative_map","logistic_map","piecewise_map","sine_map","singer_map",
@@ -38,68 +58,68 @@ class chaotic_map:
     "cubic_map","logistic_tent_map","bernoulli_map"]
 
     @staticmethod
-    def chebyshev_map(x, a=4):#(-1,1) 过于接近0/1则不会更新
+    def chebyshev_map(x, a=Config.chebyshev_a):#(-1,1) 过于接近0/1则不会更新
         return torch.cos(a * torch.acos(x))
 
     @staticmethod
-    def circle_map(x, a=0.5, b=2.2):#(0,1)
+    def circle_map(x, a=Config.circle_a, b=Config.circle_b):#(0,1)
         return (x + a - (b / 2 / torch.pi * torch.sin(2 * torch.pi * x))) % 1
 
     @staticmethod
-    def iterative_map(x, a=0.7):#(-1,1)
+    def iterative_map(x, a=Config.iterative_a):#(-1,1)
         return torch.sin(a * torch.pi / x)
 
     @staticmethod
-    def logistic_map(x, a=4):#(0,1)
+    def logistic_map(x, a=Config.logistic_a):#(0,1)
         return a * x * (1 - x)
 
     @staticmethod
-    def piecewise_map(x, d=0.3):#(0,1) 过于接近0/1则不会更新
+    def piecewise_map(x, d=Config.piecewise_d):#(0,1) 过于接近0/1则不会更新
         x = torch.where(x > 0.5, 1 - x, x)
         return torch.where(x < d, x / d,(x - d) / (0.5 - d))
 
     @staticmethod
-    def sine_map(x, a=4):#(0,1) 可能数值溢出 过于接近0/1则不会更新
+    def sine_map(x, a=Config.sine_a):#(0,1) 可能数值溢出 过于接近0/1则不会更新
         return a / 4 * torch.sin(torch.pi * x)
 
     @staticmethod
-    def singer_map(x, a=1.07):#(0,1) 过于接近1会数值溢出
+    def singer_map(x, a=Config.singer_a):#(0,1) 过于接近1会数值溢出
         return a * (7.86 * x - 23.31 * x**2 + 28.75 * x**3 - 13.302875 * x**4)
 
     @staticmethod
-    def tent_map(x, a=0.4):#(0,1)
+    def tent_map(x, a=Config.tent_a):#(0,1)
         return torch.where(x < a, x / a, (1 - x) / (1 - a))
 
     @staticmethod
-    def spm_map(x, eta=0.4, mu=0.3, r=torch.rand(1)):#(0,1)
+    def spm_map(x, eta=Config.spm_eta, mu=Config.spm_mu, r=Config.spm_r):#(0,1)
         x = torch.where(x > 0.5, 1 - x, x)
         return torch.where(x < eta,(x / eta + mu * torch.sin(torch.pi * x) + r) % 1,
         (x / eta / (0.5 - eta) + mu * torch.sin(torch.pi * x) + r) % 1)
 
     @staticmethod
-    def tent_logistic_cosine_map(x, r=0.7):#(0,1) 可能数值溢出 
+    def tent_logistic_cosine_map(x, r=Config.tent_logistic_cosine_r):#(0,1) 可能数值溢出 
         return torch.where(x<0.5,torch.cos(torch.pi * (2 * r * x + 4 * (1 - r) * x * (1 - x) - 0.5)),
         torch.cos(torch.pi * (2 * r * (1 - x) + 4 * (1 - r) * x * (1 - x) - 0.5)))
 
     @staticmethod
-    def sine_tent_cosine_map(x, r=0.7):#(0,1) 可能数值溢出
+    def sine_tent_cosine_map(x, r=Config.sine_tent_cosine_r):#(0,1) 可能数值溢出
         return torch.where(x < 0.5,torch.cos(torch.pi * (r * torch.sin(torch.pi * x) + 2 * (1 - r) * x - 0.5)),
         torch.cos(torch.pi * (r * torch.sin(torch.pi * x) + 2 * (1 - r) * (1 - x) - 0.5)))
 
     @staticmethod
-    def logistic_sine_cosine_map(x, r=0.7):#(0,1) 可能数值溢出
+    def logistic_sine_cosine_map(x, r=Config.logistic_sine_cosine_r):#(0,1) 可能数值溢出
         return torch.cos(torch.pi * (4 * r * x * (1-x) + (1-r) * torch.sin(torch.pi * x) - 0.5))
 
     @staticmethod
-    def cubic_map(x, a=2.595):#(0,1) 过于接近0/1可能不会更新
+    def cubic_map(x, a=Config.cubic_a):#(0,1) 过于接近0/1可能不会更新
         return a * x * (1 - x**2)
 
     @staticmethod
-    def logistic_tent_map(x, r=0.3):#(0,1) 过于接近0/1可能不会更新
+    def logistic_tent_map(x, r=Config.logistic_tent_r):#(0,1) 过于接近0/1可能不会更新
         return torch.where(x < 0.5,(r * x * (1 - x) + (4 - r) * x / 2) % 1,(r * x * (1 - x) + (4 - r) * (1 - x) / 2) % 1)
 
     @staticmethod
-    def bernoulli_map(x, a=0.4):#(0,1) 过于接近1则不会更新
+    def bernoulli_map(x, a=Config.bernoulli_a):#(0,1) 过于接近1则不会更新
         return torch.where(x <= 1 - a, x / (1 - a), (x - 1 + a) / a)
         
     
