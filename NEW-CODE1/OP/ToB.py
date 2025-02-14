@@ -212,13 +212,13 @@ class OP_BF2B:  # B*F-B
     def M_ts_delay(x, d):
         if d > 0:
             new_tensor = torch.full(x.shape, float('nan'))
-            new_tensor[d:, :] = x[:-d, :]
+            new_tensor[:, :, d:] = x[:, :, :-d]  
             return new_tensor
         elif d == 0:
             return x
         else:
             new_tensor = torch.full(x.shape, float('nan'))
-            new_tensor[:d, :] = x[-d:, :]
+            new_tensor[:, :, :d] = x[:, :, -d:]  
             return new_tensor
 
     @staticmethod
