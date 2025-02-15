@@ -8,11 +8,12 @@ from scipy.io import loadmat
 import os
 from datetime import datetime
 import torch
+from GA.Config import Data_tools_Config as Config
 
 class DailyDataReader:
-    def __init__(self, daily_data_path: str="../Data/DailyData"):
+    def __init__(self, daily_data_path: str=Config.DAILY_DATA_PATH):
         self.daily_data_path = daily_data_path
-        self.MutualStockCodes = pd.read_parquet("../Data/MutualStockCodes.parquet")["Mutual"].values
+        self.MutualStockCodes = pd.read_parquet(Config.MUTUAL_STOCK_CODES_PATH)["Mutual"].values
 
         self.ListedDate = self._ListedDate()
         self.TradingDate = self._TradingDate()
@@ -172,14 +173,14 @@ class DailyDataReader:
 
 
 class MinuteDataReader:
-    def __init__(self, minute_data_path: str="../../Data/MinuteData", device: str='cpu'):
-        self.data_path = minute_data_path  # M_tensor's Path
+    def __init__(self, minute_data_path: str=Config.MINUTE_DATA_PATH, device: str=Config.DEVICE):
+        self.data_path = minute_data_path
         self.device = device
-        self.cols = ["open", "high", "low", "close", "volume"]  # "amount"
-        self.MutualStockCodes = pd.read_parquet("../../Data/MutualStockCodes.parquet")
+        self.cols = Config.COLS
+        self.MutualStockCodes = pd.read_parquet(Config.MUTUAL_STOCK_CODES_PATH)
         self.MutualStockCodes = list(self.MutualStockCodes["StockCodes"].loc[self.MutualStockCodes["Mutual"]].values)
 
-    def dataframe_to_tensor(self, df: pd.DataFrame, minute_len=242):
+    def dataframe_to_tensor(self, df: pd.DataFrame, minute_len=Config.MINUTE_LEN):
         """
         Convert the DataFrame (one year's data) to a tensor
         """
