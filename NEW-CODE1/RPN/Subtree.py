@@ -6,12 +6,12 @@ sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
-class config:
-    default_population = 10
-    min_depth = 1
-    max_depth = 1
+from Config import Subtree_Config as Config
+
+
+
 class SubtreeBase:
-    def __init__(self, population_size=config.default_population):
+    def __init__(self, population_size=Config.default_population):
         self.population_size = population_size
         self.pset = None
         self.toolbox = None
@@ -29,7 +29,7 @@ class SubtreeBase:
             creator.create(individual_class_name, gp.PrimitiveTree, fitness=getattr(creator, fitness_class_name), pset=pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_ = min_depth , max_ = max_depth )
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_ = Config.min_depth , max_ = Config.max_depth )
         self.toolbox.register("individual", tools.initIterate, getattr(creator, individual_class_name), self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
         self.toolbox.register("compile", gp.compile, pset=pset)
@@ -45,7 +45,7 @@ class SubtreeBase:
         self.generate_population()
 
 class SubtreeWithMask(SubtreeBase):
-    def __init__(self, input1, input2, population_size=config.default_population):
+    def __init__(self, input1, input2, population_size=Config.default_population):
         super().__init__(population_size)
         self.input1 = input1
         self.input2 = input2
@@ -72,7 +72,7 @@ class SubtreeWithMask(SubtreeBase):
 
 
 class SubtreeNoMask(SubtreeBase):
-    def __init__(self, input_data, population_size=config.default_population):
+    def __init__(self, input_data, population_size=Config.default_population):
         super().__init__(population_size)
         self.input = input_data
         self.OP_B2A_func_list = ['D_Minute_std', 'D_Minute_mean', 'D_Minute_trend']
@@ -99,10 +99,10 @@ if __name__ == "__main__":
     input_data = ['open','high']
     mask = ['low']
 
-    subtree_with_mask = SubtreeWithMask(input_data, mask, population_size=config.default_population)
+    subtree_with_mask = SubtreeWithMask(input_data, mask, population_size=Config.default_population)
     subtree_with_mask.run()
     print("With Mask:", subtree_with_mask.individuals_str)
 
-    subtree_no_mask = SubtreeNoMask(input_data, population_size=config.default_population)
+    subtree_no_mask = SubtreeNoMask(input_data, population_size=Config.default_population)
     subtree_no_mask.run()
     print("No Mask:", subtree_no_mask.individuals_str)

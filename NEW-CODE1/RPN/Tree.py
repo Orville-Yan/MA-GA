@@ -6,14 +6,12 @@ sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
+from Config import Tree_Config as Config
 
-class config:
-    default_population = 10
-    min_depth = 1
-    max_depth = 1
+
 
 class Tree:
-    def __init__(self, subtrees: list[str], population_size=config.default_population):#subtree
+    def __init__(self, subtrees: list[str], population_size=Config.default_population):#subtree
         self.subtrees = subtrees
         self.population_size = population_size
 
@@ -36,7 +34,7 @@ class Tree:
         creator.create("Tree", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=config.min_depth, max_=config.max_depth)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=Config.min_depth, max_=Config.max_depth)
         self.toolbox.register("Tree", tools.initIterate, creator.Tree, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.Tree)
         self.toolbox.register("compile", gp.compile, pset=self.pset)

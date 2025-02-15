@@ -4,12 +4,8 @@ parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
 from RPN.Root import *
 from ToolsGA.GA_tools import *
+from Config import Branch_Config as Config
 
-class config:
-    default_population = 10
-    default_lookback = [2,3,5,10,20]
-    min_depth = 1
-    max_depth = 1
 
 
 class Branch:
@@ -17,7 +13,7 @@ class Branch:
         self.population_size = population_size
         self.pset = None
         self.toolbox = None
-        self.int_values = config.default_lookback
+        self.int_values = Config.default_lookback
 
     def generate_toolbox(self):
         if not hasattr(creator, "FitnessMax"):
@@ -25,7 +21,7 @@ class Branch:
         class_name = self.__class__.__name__
         creator.create(class_name, gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_= min_depth,  max_= max_depth)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_= Config.min_depth,  max_= Config.max_depth)
         self.toolbox.register(class_name, tools.initIterate, getattr(creator,class_name), self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox,class_name))
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -35,7 +31,7 @@ class Branch:
         self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
 
 class M_Branch_MP2D(Branch):
-    def __init__(self, mp_root: MP_Root, population_size=config.default_population):
+    def __init__(self, mp_root: MP_Root, population_size=Config.default_population):
         super().__init__(mp_root, population_size)
         self.input = mp_root
 
@@ -64,7 +60,7 @@ class M_Branch_MP2D(Branch):
 
 class M_Branch_MPDP2D(Branch):
     # missing DP_Root
-    def __init__(self, mp_root: MP_Root, dp_root: DP_Root,population_size=config.default_population):
+    def __init__(self, mp_root: MP_Root, dp_root: DP_Root,population_size=Config.default_population):
         # 暂时没有DP
         super().__init__(mp_root, population_size)
         self.input_m = mp_root
@@ -87,7 +83,7 @@ class M_Branch_MPDP2D(Branch):
 
 class M_Branch_MV2D(Branch):
     # missing MV_Root
-    def __init__(self, mv_root: MV_Root, population_size=config.default_population):
+    def __init__(self, mv_root: MV_Root, population_size=Config.default_population):
         super().__init__(mv_root, population_size)
         self.input = mv_root
     def add_primitive(self):
@@ -114,7 +110,7 @@ class M_Branch_MV2D(Branch):
 
 class M_Branch_MVDV2D(Branch):
     # 暂时没有DV
-    def __init__(self, mv_root: MV_Root, dv_root: DV_Root,population_size=config.default_population):
+    def __init__(self, mv_root: MV_Root, dv_root: DV_Root,population_size=Config.default_population):
         super().__init__(mv_root, population_size)
         self.input_m = mv_root
         self.input_d = dv_root

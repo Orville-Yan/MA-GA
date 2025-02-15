@@ -13,20 +13,21 @@ from deap import gp
 import networkx as nx
 import matplotlib.pyplot as plt
 import pygraphviz
+from Config import RPNbuilder_Config as Config
 
-class config:
-    seed_size=10
-    root_size=10
-    branch_size=10
-    trunk_size=10
-    subtree_size=10
-    tree_size=10
-    default_year = [2016]
-    default_population = 10
-    default_lookback = [2,3,5,10,20]
-    default_edge = [0.05,0.1]
-    min_depth = 1
-    max_depth = 10
+class Config:
+    SEED_SIZE = 10
+    ROOT_SIZE = 10
+    BRANCH_SIZE = 10
+    TRUNK_SIZE = 10
+    SUBTREE_SIZE = 10
+    TREE_SIZE = 10
+    DEFAULT_YEAR = [2016]
+    DEFAULT_POPULATION = 10
+    DEFAULT_LOOKBACK = [2, 3, 5, 10, 20]
+    DEFAULT_EDGE = [0.05, 0.1]
+    MIN_DEPTH = 1
+    MAX_DEPTH = 10
 
 class RPN_Producer:
     def __init__(self):
@@ -36,36 +37,36 @@ class RPN_Producer:
         self.M_V = ['M_V']
 
     def generate_seed(self):
-        DP_Seed_generator = DP_Seed(self.D_OHLC, config.seed_size)
+        DP_Seed_generator = DP_Seed(self.D_OHLC, Config.SEED_SIZE)
         DP_Seed_generator.run()
         self.dp_seed = DP_Seed_generator.individuals_str
 
-        DV_Seed_generator = DP_Seed(self.D_V, config.seed_size)
+        DV_Seed_generator = DP_Seed(self.D_V, Config.SEED_SIZE)
         DV_Seed_generator.run()
         self.dv_seed = DV_Seed_generator.individuals_str
 
-        MV_Seed_generator = MV_Seed(self.M_V, config.seed_size)
+        MV_Seed_generator = MV_Seed(self.M_V, Config.SEED_SIZE)
         MV_Seed_generator.run()
         self.mv_seed = MV_Seed_generator.individuals_str
 
-        MP_Seed_generator = MP_Seed(self.M_OHLC, config.seed_size)
+        MP_Seed_generator = MP_Seed(self.M_OHLC, Config.SEED_SIZE)
         MP_Seed_generator.run()
         self.mp_seed = MP_Seed_generator.individuals_str
 
     def generate_root(self):
-        MP_Root_generator = MP_Root(self.mp_seed, config.root_size)
+        MP_Root_generator = MP_Root(self.mp_seed, Config.ROOT_SIZE)
         MP_Root_generator.generate_MP_Root()
         self.mp_root = MP_Root_generator.individuals_str
 
-        DP_Root_generator = DP_Root(self.dp_seed, config.root_size)
+        DP_Root_generator = DP_Root(self.dp_seed, Config.ROOT_SIZE)
         DP_Root_generator.generate_DP_Root()
         self.dp_root = DP_Root_generator.individuals_str
 
-        DV_Root_generator = DV_Root(self.dv_seed, config.root_size)
+        DV_Root_generator = DV_Root(self.dv_seed, Config.ROOT_SIZE)
         DV_Root_generator.generate_DV_Root()
         self.dv_root = DV_Root_generator.individuals_str
 
-        MV_Root_generator = MV_Root(self.mv_seed, config.root_size)
+        MV_Root_generator = MV_Root(self.mv_seed, Config.ROOT_SIZE)
         MV_Root_generator.generate_MV_Root()
         self.mv_root = MV_Root_generator.individuals_str
 
@@ -75,24 +76,24 @@ class RPN_Producer:
     def generate_branch(self):
         self.m_branch = []
 
-        M_Branch_MP2D_generator = M_Branch_MP2D(self.mp_seed, config.branch_size)
+        M_Branch_MP2D_generator = M_Branch_MP2D(self.mp_seed, Config.BRANCH_SIZE)
         M_Branch_MP2D_generator.run()
         self.m_branch.extend(M_Branch_MP2D_generator.individuals_str)
 
-        M_Branch_MPDP2D_generator = M_Branch_MPDP2D(self.mp_seed, self.dp_seed, config.branch_size)
+        M_Branch_MPDP2D_generator = M_Branch_MPDP2D(self.mp_seed, self.dp_seed, Config.BRANCH_SIZE)
         M_Branch_MPDP2D_generator.run()
         self.m_branch.extend(M_Branch_MP2D_generator.individuals_str)
 
-        M_Branch_MV2D_generator = M_Branch_MV2D(self.mv_seed, config.branch_size)
+        M_Branch_MV2D_generator = M_Branch_MV2D(self.mv_seed, Config.BRANCH_SIZE)
         M_Branch_MV2D_generator.run()
         self.m_branch.extend(M_Branch_MV2D_generator.individuals_str)
 
-        M_Branch_MVDV2D_generator = M_Branch_MVDV2D(self.mv_seed, self.dv_seed, config.branch_size)
+        M_Branch_MVDV2D_generator = M_Branch_MVDV2D(self.mv_seed, self.dv_seed, Config.BRANCH_SIZE)
         M_Branch_MVDV2D_generator.run()
         self.m_branch.extend(M_Branch_MVDV2D_generator.individuals_str)
 
     def generate_trunk(self):
-        Trunk_generator = Trunk(self.m_root, self.d_root, self.m_branch, ['industry'], config.trunk_size)
+        Trunk_generator = Trunk(self.m_root, self.d_root, self.m_branch, ['industry'], Config.TRUNK_SIZE)
         Trunk_generator.generate_toolbox()
         Trunk_generator.generate_Trunk()
         self.trunk = Trunk_generator.individuals_str
@@ -100,16 +101,16 @@ class RPN_Producer:
     def generate_subtree(self):
         self.subtree = []
 
-        Subtree_withMask_generator = SubtreeWithMask(self.trunk, self.m_branch, config.subtree_size)
+        Subtree_withMask_generator = SubtreeWithMask(self.trunk, self.m_branch, Config.SUBTREE_SIZE)
         Subtree_withMask_generator.run()
         self.subtree.extend(Subtree_withMask_generator.individuals_str)
 
-        Subtree_noMask_generator = SubtreeNoMask(self.trunk, config.subtree_size)
+        Subtree_noMask_generator = SubtreeNoMask(self.trunk, Config.SUBTREE_SIZE)
         Subtree_noMask_generator.run()
         self.subtree.extend(Subtree_noMask_generator.individuals_str)
 
     def generate_tree(self):
-        Tree_generator = Tree(self.subtree, config.tree_size)
+        Tree_generator = Tree(self.subtree, Config.TREE_SIZE)
         Tree_generator.generate_toolbox()
         Tree_generator.generate_tree()
         self.tree = Tree_generator.individuals_str
@@ -159,7 +160,7 @@ class RPN_Compiler:
         creator.create('Tree_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=min_depth, max_=max_depth)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=Config.MIN_DEPTH, max_=Config.MAX_DEPTH)
         self.toolbox.register('Tree_Compiler', tools.initIterate, getattr(creator, 'Tree_Compiler'), self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, 'Tree_Compiler'))
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -188,10 +189,10 @@ class RPN_Compiler:
         self.pset.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
         self.pset.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
 
-        for constant_value in config.default_lookback:
+        for constant_value in Config.DEFAULT_LOOKBACK:
             self.pset.addTerminal(constant_value, TypeF)
 
-        for constant_value in config.default_edge:
+        for constant_value in Config.DEFAULT_EDGE:
             self.pset.addTerminal(constant_value, TypeG)
 
     def compile(self, RPN:str):
@@ -451,7 +452,7 @@ class RPN_Pruner(RPN_Parser):
         pass
 
 class GeneticAlgorithm:
-    def __init__(self, ops_lists, population_size=config.default_population, crossover_prob=0.5, mutation_prob=0.2, generations=1):
+    def __init__(self, ops_lists, population_size=Config.DEFAULT_POPULATION, crossover_prob=0.5, mutation_prob=0.2, generations=1):
         self.ops_lists = ops_lists
         self.population_size = population_size
         self.crossover_prob = crossover_prob
@@ -606,6 +607,7 @@ class Acyclic_Tree:
                     nodes.append(gp.PrimitiveTree.from_string(deap_code[i], self.pset)[0])
         else:
             # 如果根节点是终端（terminal），直接返回
+
             return root, []
 
         return root, nodes
@@ -665,7 +667,7 @@ if __name__ == "__main__":
     print(parser.tree2dict())
     # 编译
     compiler = RPN_Compiler()
-    compiler.prepare_data(config.default_year)
+    compiler.prepare_data(Config.DEFAULT_YEAR)
     print(compiler.compile('D_ts_mean(D_O, 5)'))
     # 输入的操作列表
     ops_lists = [

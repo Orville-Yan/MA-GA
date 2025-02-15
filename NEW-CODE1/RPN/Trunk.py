@@ -6,14 +6,11 @@ sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
-class config:
-    default_population = 10
-    default_lookback = [2,3,5,10,20]
-    default_edge = [0.05,0.1]
-    min_depth = 1
-    max_depth = 1
+from Config import Trunk_Config as Config
+
+
 class Trunk:
-    def __init__(self, M_Root: list[str], D_Root: list[str], Branch: list[str], ind_str: list[str],population_size=config.default_population):
+    def __init__(self, M_Root: list[str], D_Root: list[str], Branch: list[str], ind_str: list[str],population_size=Config.default_population):
         self.input1 = M_Root
         self.input2 = D_Root
         self.input3 = Branch
@@ -45,10 +42,10 @@ class Trunk:
 
 
         # 注册需要用到的primitives和terminals
-        for constant_value in config.default_lookback:
+        for constant_value in Config.default_lookback:
             self.pset.addTerminal(constant_value, TypeF)
 
-        for constant_value in config.default_edge:
+        for constant_value in Config.default_edge:
             self.pset.addTerminal(constant_value, TypeG)
 
         for func_name in self.OP_BB2B_func_list:
@@ -104,7 +101,7 @@ class Trunk:
         creator.create("Trunk", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=min_depth, max_=max_depth)  # 树的深度按需求改
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=Config.min_depth, max_=Config.max_depth)  # 树的深度按需求改
         self.toolbox.register("Trunk", tools.initIterate, creator.Trunk, self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.Trunk)
         self.toolbox.register("compile", gp.compile, pset=self.pset)
@@ -118,12 +115,12 @@ class Trunk:
 if __name__ == '__main__':
     from ToolsGA.DataReader import ParquetReader
     data_reader = ParquetReader()
-    DO, DH, DL, DC, DV = data_reader.get_Day_data(config.warm_start_time)
+    DO, DH, DL, DC, DV = data_reader.get_Day_data(Config.warm_start_time)
     print(DO.shape)
     M_Root = ['at_div(open,close)', 'at_div(high,low)', 'at_sign(at_sub(high,low))']
     op_A = ['at_mean(open,close)']
     op_D = ['mask_max(high)']
     op_E = ['mask_max(high)']
-    #industry_used = data_reader.get_barra(config.warm_start_time])
+    #industry_used = data_reader.get_barra(Config.warm_start_time])
     mp_trunk = Trunk(M_Root,op_A,op_D,op_E)
     mp_trunk.generate_Trunk()
