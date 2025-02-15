@@ -1,8 +1,9 @@
 import os.path
 import sys
-
-sys.path.append('..')
-from. import DataReader
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
+from ToolsGA import DataReader
 
 from OP import *
 import matplotlib.pyplot as plt
@@ -10,13 +11,10 @@ import matplotlib.dates as mdates
 import pandas as pd
 import numpy as np
 import torch
-
-class config:
-    bins_num = 5
-    default_year = [2016]
+from GA.Config import BackTest_Config as Config
 
 class FactorTest:
-    def __init__(self, factor, yearlist, bins_num, period_num=252, factor_name='ret20'):
+    def __init__(self, factor, yearlist,bins_num = Config.bins_num,factor_name = 'ret20',period_num = Config.period_num):
         self.data_reader = DataReader.ParquetReader()
         DO, DH, DL, DC, DV = self.data_reader.get_Day_data(yearlist)
         returns = torch.full_like(DC, 0, dtype=torch.float32)
@@ -26,7 +24,7 @@ class FactorTest:
         self.factor = factor
         self.factor_target = returns
         self.yearlist = yearlist
-        self.bins_num = config.bins_num
+        self.bins_num = bins_num
         self.factor_name = factor_name
         self.period_num = period_num
 
@@ -451,9 +449,8 @@ class FactorTest:
         plt.close()
         print(f"results saved：{output_path}")
 
-
 if __name__ == '__main__':
-    yearlist = config.default_year
+    yearlist = Config.default_year
 
     DO, DH, DL, DC, DV = DataReader.ParquetReader().get_Day_data(yearlist)
     returns = torch.full_like(DC, 0, dtype=torch.float32)
