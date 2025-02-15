@@ -8,20 +8,19 @@ from ToolsGA.Data_tools import DailyDataReader, MinuteDataReader
 import pandas as pd
 import torch
 import numpy as np
+from GA.Config import DataReader_Config as Config
 
 class ParquetReader:
-    def __init__(
-        self,
-            DailyDataPath: str = "../Data/DailyData",
-            MinuteDataPath: str = "../Data/MinuteData",
-            BarraPath: str = "../Data/barra.pt",
-            DictPath: str = "../Data/dict.pt",
-            device: str = 'cpu'
-    ):
-        self.DailyDataReader = DailyDataReader(DailyDataPath)
-        self.MinuteDataReader = MinuteDataReader(MinuteDataPath, device)
-        self.BarraPath = BarraPath
-        self.DictPath = DictPath
+    def __init__(self, 
+                 daily_data_path=Config.DailyDataPath, 
+                 minute_data_path=Config.MinuteDataPath, 
+                 barra_path=Config.BarraPath, 
+                 dict_path=Config.DictPath, 
+                 device=Config.device):
+        self.DailyDataReader = DailyDataReader(daily_data_path)
+        self.MinuteDataReader = MinuteDataReader(minute_data_path, device)
+        self.BarraPath = barra_path
+        self.DictPath = dict_path
         self.device = device
 
     def get_Minute_data(self, year_lst: list[int]) -> list[torch.Tensor]:
@@ -74,10 +73,10 @@ class ParquetReader:
 
 class MmapReader:
     def __init__(self):
-        self.years=range(2017,2018)#设定将哪些年的数据修改为mmap格式，最好不要很多年一起修改
-        self.output_daily='..'#mmap文件存放的路径
-        self.output_minute='..'
-
+        self.years = Config.years
+        self.output_daily = Config.output_daily
+        self.output_minute = Config.output_minute
+        
     def save_daily_to_mmap(self,data, dtype=np.float32):
         num_rows, num_cols = data.shape
         with open(self.origin_daily, 'w+b') as f:
