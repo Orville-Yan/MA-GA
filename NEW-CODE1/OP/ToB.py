@@ -257,7 +257,7 @@ class OP_BF2B:  # B*F-B
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_mean = OP_Basic.nanmean(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., offset: offset + unfolded.size(-1)] = window_mean
+        result_tensor[..., offset:offset + window_mean.size(-1)] = window_mean
         return result_tensor
 
     @staticmethod
@@ -287,7 +287,7 @@ class OP_BF2B:  # B*F-B
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_std = OP_Basic.nanstd(unfolded)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., offset: offset + unfolded.size(-1)] = window_std
+        result_tensor[..., offset:offset + window_std.size(-1)] = window_std
         return result_tensor
 
     @staticmethod
@@ -317,5 +317,5 @@ class OP_BF2B:  # B*F-B
         unfolded = m_tensor.unfold(dimension=-1, size=window_size, step=1)
         window_prod = torch.prod(unfolded, dim=-1)
         result_tensor = torch.full_like(m_tensor, float('nan'))
-        result_tensor[..., offset: offset + unfolded.size(-1)] = window_prod
+        result_tensor[..., offset:offset + window_prod.size(-1)] = window_prod
         return result_tensor
