@@ -1,6 +1,7 @@
 import torch
 from typing import Union
 from deap import gp, creator, base, tools
+from GA.Config import GA_tools_Config as Config
 
 class CustomError(Exception):
     def __init__(self, message="发生了自定义错误"):
@@ -30,26 +31,6 @@ class TypeG(torch.Tensor):
     def __new__(cls,*args,**kwargs):
         return super(TypeG,cls).__new__(cls,*args,dtype=torch.float32,**kwargs)
 
-class Config:
-    # Chaotic map parameters
-    chebyshev_a = 4
-    circle_a = 0.5
-    circle_b = 2.2
-    iterative_a = 0.7
-    logistic_a = 4
-    piecewise_d = 0.3
-    sine_a = 4
-    singer_a = 1.07
-    tent_a = 0.4
-    spm_eta = 0.4
-    spm_mu = 0.3
-    spm_r = torch.rand(1)
-    tent_logistic_cosine_r = 0.7
-    sine_tent_cosine_r = 0.7
-    logistic_sine_cosine_r = 0.7
-    cubic_a = 2.595
-    logistic_tent_r = 0.3
-    bernoulli_a = 0.4
 
 class chaotic_map:
     def __init__(self):
