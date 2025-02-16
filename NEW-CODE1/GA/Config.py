@@ -14,39 +14,39 @@ class RPNbuilder_Config:
     MAX_DEPTH = 10
 
 class Root_Config:
-    DEFAULT_POPULATION = 10
-    DEFAULT_INT = [2, 3, 5, 10, 20]
-    MIN_DEPTH = 1
-    MAX_DEPTH = 1
+    default_population = 10
+    default_int = [2, 3, 5, 10, 20]
+    min_depth = 1
+    max_depth = 1
 
 class Branch_Config:
-    DEFAULT_POPULATION = 10
-    DEFAULT_LOOKBACK = [2, 3, 5, 10, 20]
-    MIN_DEPTH = 1
-    MAX_DEPTH = 1
+    default_population = 10
+    default_lookback = [2, 3, 5, 10, 20]
+    min_depth = 1
+    max_depth = 1
 
 class Seed_Config:
-    DEFAULT_POPULATION = 10
-    DEFAULT_LOOKBACK = [2, 3, 5, 10, 20]
-    MIN_DEPTH = 1
-    MAX_DEPTH = 1
+    default_population = 10
+    default_lookback = [2, 3, 5, 10, 20]
+    min_depth = 1
+    max_depth = 1
 
 class Trunk_Config:
-    DEFAULT_POPULATION = 10
-    DEFAULT_LOOKBACK = [2, 3, 5, 10, 20]
-    DEFAULT_EDGE = [0.05, 0.1]
-    MIN_DEPTH = 1
-    MAX_DEPTH = 1
+    default_population = 10
+    default_lookback = [2, 3, 5, 10, 20]
+    default_edge = [0.05, 0.1]
+    min_depth = 1
+    max_depth = 1
 
 class Subtree_Config:
-    DEFAULT_POPULATION = 10
-    MIN_DEPTH = 1
-    MAX_DEPTH = 1
+    default_population = 10
+    min_depth = 1
+    max_depth = 1
 
 class Tree_Config:
-    DEFAULT_POPULATION = 10
-    MIN_DEPTH = 1
-    MAX_DEPTH = 1
+    default_population = 10
+    min_depth = 1
+    max_depth = 1
 
 class BackTest_Config:
     # FactorTest parameters

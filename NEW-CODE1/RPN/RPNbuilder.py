@@ -41,7 +41,7 @@ class RPN_Producer:
         DP_Seed_generator.run()
         self.dp_seed = DP_Seed_generator.individuals_str
 
-        DV_Seed_generator = DP_Seed(self.D_V, Config.SEED_SIZE)
+        DV_Seed_generator = DV_Seed(self.D_V, Config.SEED_SIZE)
         DV_Seed_generator.run()
         self.dv_seed = DV_Seed_generator.individuals_str
 
@@ -94,7 +94,6 @@ class RPN_Producer:
 
     def generate_trunk(self):
         Trunk_generator = Trunk(self.m_root, self.d_root, self.m_branch, ['industry'], Config.TRUNK_SIZE)
-        Trunk_generator.generate_toolbox()
         Trunk_generator.generate_Trunk()
         self.trunk = Trunk_generator.individuals_str
 
@@ -111,7 +110,6 @@ class RPN_Producer:
 
     def generate_tree(self):
         Tree_generator = Tree(self.subtree, Config.TREE_SIZE)
-        Tree_generator.generate_toolbox()
         Tree_generator.generate_tree()
         self.tree = Tree_generator.individuals_str
 
@@ -660,31 +658,31 @@ if __name__ == "__main__":
     producer = RPN_Producer()
     producer.run()
     print("生成的树：", producer.tree[0])
-    parser = RPN_Parser(producer.tree[0])
-    tree_structure = parser.get_tree_structure()
-    parser.print_tree()
-    parser.plot_tree()
-    print(parser.tree2dict())
-    # 编译
-    compiler = RPN_Compiler()
-    compiler.prepare_data(Config.DEFAULT_YEAR)
-    print(compiler.compile('D_ts_mean(D_O, 5)'))
-    # 输入的操作列表
-    ops_lists = [
-        ["op1", "op2", "op3", '', ''],
-        ["op4", "op5", "op6", '', ''],
-        ["op7", "op8", "op9", "op10"],
-        ["op7", "op8", "op9", "op10"],
-        ["op7", "op8", "op9", "op10", 'a', '']
-    ]
+    # parser = RPN_Parser(producer.tree[0])
+    # tree_structure = parser.get_tree_structure()
+    # parser.print_tree()
+    # parser.plot_tree()
+    # print(parser.tree2dict())
+    # # 编译
+    # compiler = RPN_Compiler()
+    # compiler.prepare_data(Config.DEFAULT_YEAR)
+    # print(compiler.compile('D_ts_mean(D_O, 5)'))
+    # # 输入的操作列表
+    # ops_lists = [
+    #     ["op1", "op2", "op3", '', ''],
+    #     ["op4", "op5", "op6", '', ''],
+    #     ["op7", "op8", "op9", "op10"],
+    #     ["op7", "op8", "op9", "op10"],
+    #     ["op7", "op8", "op9", "op10", 'a', '']
+    # ]
 
-    # 初始化遗传算法类
-    ga = GeneticAlgorithm(ops_lists, population_size=10, crossover_prob=0.5, mutation_prob=0.2, generations=1)
+    # # 初始化遗传算法类
+    # ga = GeneticAlgorithm(ops_lists, population_size=10, crossover_prob=0.5, mutation_prob=0.2, generations=1)
 
-    # 运行遗传算法
-    pop = ga.run()
+    # # 运行遗传算法
+    # pop = ga.run()
 
-    # 输出最终种群
-    print("Final population:")
-    for ind in pop:
-        print(ind, ind.fitness.values)
+    # # 输出最终种群
+    # print("Final population:")
+    # for ind in pop:
+    #     print(ind, ind.fitness.values)
