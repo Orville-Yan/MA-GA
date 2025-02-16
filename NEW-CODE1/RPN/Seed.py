@@ -134,7 +134,10 @@ class MV_Seed(Seed):
 
 
 if __name__ == "__main__":
-    mp_seed = MP_Seed(['MO', 'MH', 'ML', 'MC'], 10)
-    mp_seed.run()
+    from ToolsGA.DataReader import ParquetReader
+    data_reader = ParquetReader()
+    MO, MH, ML, MC, MV = data_reader.get_Minute_data(Config.warm_start_time)
+    print(MO.shape)
+    mp_seed = MP_Seed([MO, MH, ML, MC], 10)
     print("MP_Seed Individual Str: ", mp_seed.individuals_str)
     print("MP_Seed Individual Code: ", mp_seed.individuals_code)
