@@ -13,7 +13,7 @@ from deap import gp
 import networkx as nx
 import matplotlib.pyplot as plt
 import pygraphviz
-from Config import RPNbuilder_Config as Config
+from GA.Config import RPNbuilder_Config as Config
 
 class Config:
     SEED_SIZE = 10
