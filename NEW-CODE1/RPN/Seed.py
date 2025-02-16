@@ -6,7 +6,7 @@ sys.path.append(parent_dir_path)
 
 from ToolsGA.GA_tools import *
 from OP import *
-from Config import Seed_Config as Config
+from GA.Config import Seed_Config as Config
 
 
 class Seed:
