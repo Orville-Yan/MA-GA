@@ -72,10 +72,13 @@ class ParquetReader:
         return interval_return
 
 class MmapReader:
-    def __init__(self):
+    def __init__(self,daily_path = Config.mmap_DailyDataPath,minute_path = Config.mmap_MinuteDataPath):
         self.years = Config.years
         self.output_daily = Config.output_daily
         self.output_minute = Config.output_minute
+        self.daily_path = daily_path
+        self.minute_path = minute_path
+        
         
     def save_daily_to_mmap(self,data, dtype=np.float32):
         num_rows, num_cols = data.shape
@@ -122,7 +125,7 @@ class MmapReader:
                 self.save_minute_to_mmap(file_path, tensor)  
                 print(f"Saved {name} data for year {year} to {file_path}")
     
-    def mmap_readDaily(self,file_path):
+    def mmap_readDaily(self,file_path:str):
         # 定义数据的形状和数据类型
         num_rows = 244
         num_cols = 5601
@@ -130,12 +133,10 @@ class MmapReader:
 
         # 读取Memory Map文件
         mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols))
-
         tensor_read = torch.from_numpy(mmap_read)
-        print(f"Tensor的形状: {tensor_read.shape}")
         return tensor_read
 
-    def mmap_readMinute(self,file_path):
+    def mmap_readMinute(self,file_path:str):
         num_rows = 5528
         num_cols = 244
         num_days=242
@@ -143,8 +144,28 @@ class MmapReader:
         mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols,num_days))
         tensor_read = torch.from_numpy(mmap_read)
         return tensor_read
-
-
+    
+    def get_Day_data(self,year_lst:list[int])-> list[torch.Tensor]:
+        data_names = ['DO', 'DH', 'DL', 'DC', 'DV']
+        DOHLCV = []
+        for name in data_names:
+            data  = []
+            for year in year_lst:
+                file_path = os.path.join(self.daily_path, f'{name}{year}.mmap')
+                data.append(self.mmap_readDaily(file_path))
+            DOHLCV.append(torch.cat(data,dim=0))
+        return DOHLCV
+    def get_Minute_data(self,year_lst:list[int])-> list[torch.Tensor]:
+        data_names = ['MO', 'MH', 'ML', 'MC', 'MV']
+        MOHLCV = []
+        for name in data_names:
+            data  = []
+            for year in year_lst:
+                file_path = os.path.join(self.minute_path, f'{name}{year}.mmap')
+                data.append(self.mmap_readMinute(file_path))
+            MOHLCV.append(torch.cat(data,dim=1))
+        return MOHLCV
+        
 if __name__ == "__main__":
     # bgn_time = time.time()
     # data_path = "./processed_data"
@@ -159,16 +180,21 @@ if __name__ == "__main__":
     #       close_data.shape, volume_data.shape)
     # print("Time cost: ", time.strftime("%H:%M:%S", time.gmtime(time.time() - bgn_time)))
 
-    data_reader = ParquetReader()
+    data_reader = MmapReader()
 
-    DO, DH, DL, DC, DV = data_reader.get_Day_data([2016, 2017])
+    DO, DH, DL, DC, DV = data_reader.get_Day_data([2016,2017])
     print(DO.shape, DH.shape, DL.shape, DC.shape, DV.shape)
 
-    MO, MH, ML, MC, MV = data_reader.get_Minute_data([2016, 2017])
+    MO, MH, ML, MC, MV = data_reader.get_Minute_data([2016,2017])
     print(MO.shape, MH.shape, ML.shape, MC.shape, MV.shape)
 
-    barra = data_reader.get_barra([2016, 2017])
-    print(barra.shape)
+    # barra = data_reader.get_barra([2016, 2017])
+    # print(barra.shape)
 
-    interval_rtn = data_reader.get_labels([2016, 2017])
-    print(interval_rtn.shape)
+    # interval_rtn = data_reader.get_labels([2016, 2017])
+    # print(interval_rtn.shape)
+    # mmap_reader = MmapReader(minute_path=r'D:\运行文档\NFE遗传算法项目\Data\MC2016.mmap')
+    # tensor_read = mmap_reader.mmap_readDaily()
+    # print(tensor_read.shape)
+    # tensor_read = mmap_reader.mmap_readMinute()
+    # print(tensor_read.shape)
