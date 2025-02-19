@@ -8,3 +8,4 @@
   - barra_path/dict_path：barra和dict文件所在位置
   - minute_data_path：分钟频数据文件夹所在位置
   - 测试
+  - 更新测试
