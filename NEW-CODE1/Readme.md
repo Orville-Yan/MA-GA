@@ -1,26 +1,5 @@
 # 备注
-- 项目推进见飞书文档 https://x1rzpzd8gc3.feishu.cn/wiki/Flozw2hg9iXrzKkf1JLc3YQ1nKc
-- OLDCODE里面加了G3GP这个文件，是遗传算法的主要框架，大家可以从这里面看如何添加Terminal和Primitives。
-## 关于数据读取模块
-- 主要的数据读取功能在DataReader，路径为相对路径，只需要将存储在MA-GA同级的Data下
-- 按以下层级建立Data文件，用DataReader中的mmapreader,设置download参数为True,调用save_daily_data，save_minute_data直接获取mmap数据
-```
-Data
-├─ Daily
-├─ Minute
-├─ Mmap
-│  ├─ Barra
-│  ├─ Daily
-│  ├─ data_shape.json
-│  └─ Minute
-│     ├─ M_O
-│     ├─ M_H
-│     ├─ M_L
-│     ├─ M_C
-├─ MutualStockCodes.parquet
-└─ README.md
-
-```
+- 数据存储在MA-GA同级的Data下
 - nan值采用float('nan')
 
 # 变量类型

@@ -1,5 +1,9 @@
 import sys
-sys.path.append('..')
+import os
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
 from OP import *
 
 import pandas as pd
@@ -8,12 +12,11 @@ from scipy.io import loadmat
 import os
 from datetime import datetime
 import torch
-from GA.Config import Data_tools_Config as Config
 
 class DailyDataReader:
-    def __init__(self, daily_data_path: str=Config.DAILY_DATA_PATH):
+    def __init__(self, daily_data_path: str="../Data/Daily"):
         self.daily_data_path = daily_data_path
-        self.MutualStockCodes = pd.read_parquet(Config.MUTUAL_STOCK_CODES_PATH)["Mutual"].values
+        self.MutualStockCodes = pd.read_parquet("../Data/MutualStockCodes.parquet")["Mutual"].values
 
         self.ListedDate = self._ListedDate()
         self.TradingDate = self._TradingDate()
@@ -173,14 +176,14 @@ class DailyDataReader:
 
 
 class MinuteDataReader:
-    def __init__(self, minute_data_path: str=Config.MINUTE_DATA_PATH, device: str=Config.DEVICE):
-        self.data_path = minute_data_path
+    def __init__(self, minute_data_path: str="../Data/MinuteData", device: str='cpu'):
+        self.data_path = minute_data_path  # M_tensor's Path
         self.device = device
-        self.cols = Config.COLS
-        self.MutualStockCodes = pd.read_parquet(Config.MUTUAL_STOCK_CODES_PATH)
+        self.cols = ["open", "high", "low", "close", "volume"]  # "amount"
+        self.MutualStockCodes = pd.read_parquet("../Data/MutualStockCodes.parquet")
         self.MutualStockCodes = list(self.MutualStockCodes["StockCodes"].loc[self.MutualStockCodes["Mutual"]].values)
 
-    def dataframe_to_tensor(self, df: pd.DataFrame, minute_len=Config.MINUTE_LEN):
+    def dataframe_to_tensor(self, df: pd.DataFrame, minute_len=242):
         """
         Convert the DataFrame (one year's data) to a tensor
         """
@@ -271,5 +274,4 @@ def get_factor_target(buydays,selldays)->torch.Tensor:
     buy_price.index=sell_price.index
     target=sell_price/buy_price
     return torch.from_numpy(target.value)
-
 

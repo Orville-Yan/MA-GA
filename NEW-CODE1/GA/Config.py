@@ -1,52 +1,58 @@
+class FIS_Config:
+    similarity_threhold = 0.6
+    storage_path = r'D:\运行文档\NFE遗传算法项目\MA-GA'
+
 import torch
 class RPNbuilder_Config:
-    SEED_SIZE = 10
-    ROOT_SIZE = 10
-    BRANCH_SIZE = 10
-    TRUNK_SIZE = 10
-    SUBTREE_SIZE = 10
-    TREE_SIZE = 10
-    DEFAULT_YEAR = [2016]
-    DEFAULT_POPULATION = 10
-    DEFAULT_LOOKBACK = [2, 3, 5, 10, 20]
-    DEFAULT_EDGE = [0.05, 0.1]
-    MIN_DEPTH = 1
-    MAX_DEPTH = 10
+    seed_size = 10
+    root_size = 10
+    branch_size = 10
+    trunk_size = 10
+    subtree_size = 10
+    tree_size = 10
 
 class Root_Config:
-    default_population = 10
-    default_int = [2, 3, 5, 10, 20]
     min_depth = 1
     max_depth = 1
+    OP_B2B_func_list = ['M_cs_rank', 'M_cs_scale', 'M_cs_zscore']
+    OP_BB2B_func_list = ['M_at_div']
+    OP_AA2A_func_list = ['D_at_div']
+    OP_AF2A_func_list = ['D_ts_pctchg','D_ts_norm']
+    default_lookback = [2, 3, 5, 10, 20]
 
 class Branch_Config:
-    default_population = 10
-    default_lookback = [2, 3, 5, 10, 20]
     min_depth = 1
     max_depth = 1
+    default_lookback = [2, 3, 5, 10, 20]
 
 class Seed_Config:
-    default_population = 10
-    default_lookback = [2, 3, 5, 10, 20]
     min_depth = 1
     max_depth = 1
+    OP_AF2A_func_list = ['D_ts_max', 'D_ts_min','D_ts_delay', 'D_ts_delta', 'D_ts_mean']
+    OP_AA2A_func_list = ['D_at_mean']
+    default_lookback = [2, 3, 5,  10, 20]
+    OP_BF2B_func_list = ['M_ts_delay', 'M_ts_mean_left_neighbor',
+                                  'M_ts_mean_mid_neighbor', 'M_ts_mean_right_neighbor']
 
 class Trunk_Config:
-    default_population = 10
     default_lookback = [2, 3, 5, 10, 20]
     default_edge = [0.05, 0.1]
     min_depth = 1
-    max_depth = 1
+    max_depth = 3
 
 class Subtree_Config:
-    default_population = 10
     min_depth = 1
     max_depth = 1
-
+    OP_B2A_func_list = ['D_Minute_std', 'D_Minute_mean', 'D_Minute_trend']
+    OP_BB2A_func_list  = ['D_Minute_corr', 'D_Minute_weight_mean']
+    OP_BD2A_func_list = ['D_Minute_area_mean', 'D_Minute_area_std', 'D_Minute_area_sum', 'D_Minute_area_prod']
+    OP_BBD2A_func_list = ['D_Minute_area_weight_mean', 'D_Minute_area_corr', 'D_Minute_area_rankcorr',
+                                   'D_Minute_area_bifurcate_mean', 'D_Minute_area_bifurcate_std']
 class Tree_Config:
-    default_population = 10
     min_depth = 1
     max_depth = 1
+    OP_AF2A_func_list = ['D_ts_mean', 'D_ts_harmonic_mean', 'D_ts_std']
+    default_lookback = [2, 3, 5, 10, 20]
 
 class BackTest_Config:
     # FactorTest parameters
@@ -54,47 +60,9 @@ class BackTest_Config:
     period_num = 252
     default_year = [2016]
 
-class Data_tools_Config:
-    DAILY_DATA_PATH = "../Data/DailyData"
-    MUTUAL_STOCK_CODES_PATH = "../Data/MutualStockCodes.parquet"
-    MINUTE_DATA_PATH = "../../Data/MinuteData"
+class Data_Config:
+    DATA_PATH = "../Data"
     DEVICE = 'cpu'
     MINUTE_LEN = 242
     COLS = ["open", "high", "low", "close", "volume"]
 
-class DataReader_Config:
-    # Paths
-    DailyDataPath = "../Data/DailyData"
-    MinuteDataPath = "../Data/MinuteData"
-    BarraPath = "../Data/barra.pt"
-    DictPath = "../Data/dict.pt"
-    
-    # Device
-    device = 'cpu'
-
-    
-    # MmapReader settings
-    years = range(2017, 2018)
-    output_daily = '..'
-    output_minute = '..'
-
-class GA_tools_Config:
-    # Chaotic map parameters
-    chebyshev_a = 4
-    circle_a = 0.5
-    circle_b = 2.2
-    iterative_a = 0.7
-    logistic_a = 4
-    piecewise_d = 0.3
-    sine_a = 4
-    singer_a = 1.07
-    tent_a = 0.4
-    spm_eta = 0.4
-    spm_mu = 0.3
-    spm_r = torch.rand(1)
-    tent_logistic_cosine_r = 0.7
-    sine_tent_cosine_r = 0.7
-    logistic_sine_cosine_r = 0.7
-    cubic_a = 2.595
-    logistic_tent_r = 0.3
-    bernoulli_a = 0.4 

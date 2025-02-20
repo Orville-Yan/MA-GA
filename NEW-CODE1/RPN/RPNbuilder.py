@@ -1,33 +1,21 @@
 import sys
 import os
+import networkx as nx
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
 
+
 from ToolsGA import *
 from OP import *
 from RPN import *
-import random
-from collections import defaultdict
-from deap import gp
-import networkx as nx
-import matplotlib.pyplot as plt
-import pygraphviz
-from GA.Config import RPNbuilder_Config as Config
+import torch
+from tqdm import tqdm
+from GA.Config import RPNbuilder_Config as config
 
-class Config:
-    SEED_SIZE = 10
-    ROOT_SIZE = 10
-    BRANCH_SIZE = 10
-    TRUNK_SIZE = 10
-    SUBTREE_SIZE = 10
-    TREE_SIZE = 10
-    DEFAULT_YEAR = [2016]
-    DEFAULT_POPULATION = 10
-    DEFAULT_LOOKBACK = [2, 3, 5, 10, 20]
-    DEFAULT_EDGE = [0.05, 0.1]
-    MIN_DEPTH = 1
-    MAX_DEPTH = 10
+
+
 
 class RPN_Producer:
     def __init__(self):
@@ -37,37 +25,37 @@ class RPN_Producer:
         self.M_V = ['M_V']
 
     def generate_seed(self):
-        DP_Seed_generator = DP_Seed(self.D_OHLC, Config.SEED_SIZE)
+        DP_Seed_generator = DP_Seed(self.D_OHLC, config.seed_size)
         DP_Seed_generator.run()
         self.dp_seed = DP_Seed_generator.individuals_str
 
-        DV_Seed_generator = DV_Seed(self.D_V, Config.SEED_SIZE)
+        DV_Seed_generator = DV_Seed(self.D_V, config.seed_size)
         DV_Seed_generator.run()
         self.dv_seed = DV_Seed_generator.individuals_str
 
-        MV_Seed_generator = MV_Seed(self.M_V, Config.SEED_SIZE)
+        MV_Seed_generator = MV_Seed(self.M_V, config.seed_size)
         MV_Seed_generator.run()
         self.mv_seed = MV_Seed_generator.individuals_str
 
-        MP_Seed_generator = MP_Seed(self.M_OHLC, Config.SEED_SIZE)
+        MP_Seed_generator = MP_Seed(self.M_OHLC, config.seed_size)
         MP_Seed_generator.run()
         self.mp_seed = MP_Seed_generator.individuals_str
 
     def generate_root(self):
-        MP_Root_generator = MP_Root(self.mp_seed, Config.ROOT_SIZE)
-        MP_Root_generator.generate_MP_Root()
+        MP_Root_generator = MP_Root(self.mp_seed, config.root_size)
+        MP_Root_generator.run()
         self.mp_root = MP_Root_generator.individuals_str
 
-        DP_Root_generator = DP_Root(self.dp_seed, Config.ROOT_SIZE)
-        DP_Root_generator.generate_DP_Root()
+        DP_Root_generator = DP_Root(self.dp_seed, config.root_size)
+        DP_Root_generator.run()
         self.dp_root = DP_Root_generator.individuals_str
 
-        DV_Root_generator = DV_Root(self.dv_seed, Config.ROOT_SIZE)
-        DV_Root_generator.generate_DV_Root()
+        DV_Root_generator = DV_Root(self.dv_seed, config.root_size)
+        DV_Root_generator.run()
         self.dv_root = DV_Root_generator.individuals_str
 
-        MV_Root_generator = MV_Root(self.mv_seed, Config.ROOT_SIZE)
-        MV_Root_generator.generate_MV_Root()
+        MV_Root_generator = MV_Root(self.mv_seed, config.root_size)
+        MV_Root_generator.run()
         self.mv_root = MV_Root_generator.individuals_str
 
         self.m_root = self.mv_root + self.mp_root
@@ -76,41 +64,41 @@ class RPN_Producer:
     def generate_branch(self):
         self.m_branch = []
 
-        M_Branch_MP2D_generator = M_Branch_MP2D(self.mp_seed, Config.BRANCH_SIZE)
+        M_Branch_MP2D_generator = M_Branch_MP2D(self.mp_seed, config.branch_size)
         M_Branch_MP2D_generator.run()
         self.m_branch.extend(M_Branch_MP2D_generator.individuals_str)
 
-        M_Branch_MPDP2D_generator = M_Branch_MPDP2D(self.mp_seed, self.dp_seed, Config.BRANCH_SIZE)
+        M_Branch_MPDP2D_generator = M_Branch_MPDP2D(self.mp_seed, self.dp_seed, config.branch_size)
         M_Branch_MPDP2D_generator.run()
         self.m_branch.extend(M_Branch_MP2D_generator.individuals_str)
 
-        M_Branch_MV2D_generator = M_Branch_MV2D(self.mv_seed, Config.BRANCH_SIZE)
+        M_Branch_MV2D_generator = M_Branch_MV2D(self.mv_seed, config.branch_size)
         M_Branch_MV2D_generator.run()
         self.m_branch.extend(M_Branch_MV2D_generator.individuals_str)
 
-        M_Branch_MVDV2D_generator = M_Branch_MVDV2D(self.mv_seed, self.dv_seed, Config.BRANCH_SIZE)
+        M_Branch_MVDV2D_generator = M_Branch_MVDV2D(self.mv_seed, self.dv_seed, config.branch_size)
         M_Branch_MVDV2D_generator.run()
         self.m_branch.extend(M_Branch_MVDV2D_generator.individuals_str)
 
     def generate_trunk(self):
-        Trunk_generator = Trunk(self.m_root, self.d_root, self.m_branch, ['industry'], Config.TRUNK_SIZE)
-        Trunk_generator.generate_Trunk()
+        Trunk_generator = Trunk(self.m_root, self.d_root, self.m_branch, ['industry'], config.trunk_size)
+        Trunk_generator.run() 
         self.trunk = Trunk_generator.individuals_str
 
     def generate_subtree(self):
         self.subtree = []
 
-        Subtree_withMask_generator = SubtreeWithMask(self.trunk, self.m_branch, Config.SUBTREE_SIZE)
+        Subtree_withMask_generator = SubtreeWithMask(self.trunk, self.m_branch, config.subtree_size)
         Subtree_withMask_generator.run()
         self.subtree.extend(Subtree_withMask_generator.individuals_str)
 
-        Subtree_noMask_generator = SubtreeNoMask(self.trunk, Config.SUBTREE_SIZE)
+        Subtree_noMask_generator = SubtreeNoMask(self.trunk, config.subtree_size)
         Subtree_noMask_generator.run()
         self.subtree.extend(Subtree_noMask_generator.individuals_str)
 
     def generate_tree(self):
-        Tree_generator = Tree(self.subtree, Config.TREE_SIZE)
-        Tree_generator.generate_tree()
+        Tree_generator = Tree(self.subtree, config.tree_size)
+        Tree_generator.run()
         self.tree = Tree_generator.individuals_str
 
     def run(self):
@@ -122,32 +110,16 @@ class RPN_Producer:
         self.generate_tree()
 
 
-class RPN_Compiler:
+class General_toolbox:
     def __init__(self):
         self.input1 = ['M_O', 'M_H', 'M_L', 'M_C', 'M_V']
         self.input2 = ['D_O', 'D_H', 'D_L', 'D_C', 'D_V']
         self.input3 = ['industry']
         self.input4 = ['TypeD_data']
         self.input5 = ['TypeC_data']
-        self.generate_toolbox()
+        self.generate_ini_toolbox()
 
-    def prepare_data(self,year_lst):
-        data_reader = ParquetReader()
-
-        Minute_data = data_reader.get_Minute_data(year_lst)
-
-        Day_data = data_reader.get_Day_data(year_lst)
-
-        industry_data = data_reader.get_barra(year_lst)[:, :, 10:]
-
-        TypeD_data = OP_B2D.Mmask_1h_after_open(Minute_data[0])
-
-        TypeC_data = OP_AF2C.Dmask_min(Day_data[0], 20)
-
-        self.data = list(Minute_data) + list(Day_data) + [industry_data] + [TypeD_data] + [TypeC_data]
-        del Minute_data, Day_data, industry_data, TypeD_data, TypeC_data
-
-    def generate_toolbox(self):
+    def generate_ini_toolbox(self):
         self.pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * 5 + [TypeA] * 5 + [TypeE] + [TypeD] + [TypeC], TypeA)
         name = self.input1 + self.input2 + self.input3 + self.input4 + self.input5
         for i in range(len(name)):
@@ -158,14 +130,13 @@ class RPN_Compiler:
         creator.create('Tree_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
 
         self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=Config.MIN_DEPTH, max_=Config.MAX_DEPTH)
+        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=10)
         self.toolbox.register('Tree_Compiler', tools.initIterate, getattr(creator, 'Tree_Compiler'), self.toolbox.expr)
         self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, 'Tree_Compiler'))
-        self.toolbox.register("compile", gp.compile, pset=self.pset)
 
-        self.add_all_primitives()
+        self.add_all_primitives('pset')
 
-    def add_primitive_byclass(self, op_classname):
+    def add_primitive_byclass(self, op_classname, pset_name):
         parts = op_classname.split('2')
         part1 = parts[0].split('_')[1]
         part2 = parts[1]
@@ -175,53 +146,52 @@ class RPN_Compiler:
             func = getattr(op, func_name)
             input_class_list = [globals()[f"Type{char}"] for char in part1]
             output_class = globals()[f"Type{part2}"]
-            self.pset.addPrimitive(func, input_class_list, output_class, name=func_name)
+            pset = getattr(self, pset_name)
+            pset.addPrimitive(func, input_class_list, output_class, name=func_name)
 
-    def add_all_primitives(self):
+    def add_all_primitives(self, pset_name):
+        pset = getattr(self, pset_name)
+
         for type in ['A', 'B', 'C', 'D']:
             class_list = globals()[f"OPclass_name_2{type}"]
             for class_name in class_list:
-                self.add_primitive_byclass(class_name)
+                self.add_primitive_byclass(class_name, pset_name)
 
-        self.pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
-        self.pset.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
+        pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        pset.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
+        pset.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
+        pset.addPrimitive(OP_Closure.id_tensor, [TypeA], TypeA, name='id_tensor')
 
-        for constant_value in Config.DEFAULT_LOOKBACK:
-            self.pset.addTerminal(constant_value, TypeF)
+        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
+            pset.addTerminal(constant_value, TypeF)
 
-        for constant_value in Config.DEFAULT_EDGE:
-            self.pset.addTerminal(constant_value, TypeG)
-
-    def compile(self, RPN:str):
-        inidividual=gp.PrimitiveTree.from_string(RPN, self.pset)
-        compiled_func = self.toolbox.compile(expr=inidividual)
-        return compiled_func(*self.data)
+        for constant_value in [0.05, 0.1]:
+            pset.addTerminal(constant_value, TypeG)
 
 
-class RPN_Parser(RPN_Compiler):
-    def __init__(self,RPN:str):
-        super().__init__()
-        self.rpn=RPN
-        self.deap_code=gp.PrimitiveTree.from_string(RPN, self.pset)
+class RPN_Parser:
+    def __init__(self, RPN, pset):
+
+        self.rpn = RPN
+        self.pset = pset
+        self.deap_code = gp.PrimitiveTree.from_string(RPN, pset)
         self.tree_structure = None
         self.tree = None
 
     def get_abbrnsub(self, ac_tree, substr, flag=0, count=0):
-        flag = max(flag-1,0)
-        tree_depth = self.get_tree_depth(ac_tree)
+        flag = max(flag - 1, 0)
         abbr = ac_tree.root_node.name + '('
         sub = []
-        for i,node in enumerate(ac_tree.nodes):
+        for i, node in enumerate(ac_tree.nodes):
             if i > 0:
                 abbr += ', '
             if isinstance(node, Acyclic_Tree):
-                if flag+1+self.get_tree_depth(node)-tree_depth <= 0:
+                if flag == 0:
                     abbr += f'{substr}_ARG{count}'
                     count += 1
                     sub.append(node)
                 else:
-                    sub_abbr,sub_sub,count = self.get_abbrnsub(node,substr,flag+1+self.get_tree_depth(node)-tree_depth,count)
+                    sub_abbr, sub_sub, count = self.get_abbrnsub(node, substr, flag, count)
                     abbr += sub_abbr
                     sub.extend(sub_sub)
 
@@ -229,9 +199,9 @@ class RPN_Parser(RPN_Compiler):
                 abbr += str(node.value)
             else:
                 raise ValueError('instance error')
-        return abbr+')',sub,count
-        
-    def get_tree_depth(self,tree):
+        return abbr + ')', sub, count
+
+    def get_tree_depth(self, tree):
         if not isinstance(tree, Acyclic_Tree):
             raise ValueError("instance error")
         max_depth = 0
@@ -242,7 +212,7 @@ class RPN_Parser(RPN_Compiler):
                 node_depth = 0
             max_depth = max(max_depth, node_depth)
         return max_depth + 1
-    
+
     def tree2str(self, tree):
         depth = self.get_tree_depth(tree)
         abbr, _, _ = self.get_abbrnsub(tree, '', depth)
@@ -252,10 +222,10 @@ class RPN_Parser(RPN_Compiler):
         self.tree_structure = Acyclic_Tree(self.rpn, self.pset)
         return self.tree_structure
 
-    def print_tree(self, node=None, level=0):
+    def plot_tree(self, node=None, level=0):
         if self.tree_structure is None:
             self.get_tree_structure()
-        
+
         if node is None:
             node = self.tree_structure
 
@@ -267,65 +237,15 @@ class RPN_Parser(RPN_Compiler):
         # 递归打印子节点
         for child in node.nodes:
             if isinstance(child, Acyclic_Tree):
-                self.print_tree(child, level + 1)
+                self.plot_tree(child, level + 1)
             else:
-                print(f"    " * (level + 1)+ str(child.value))
-
-
-    def add_nodes_edges(self, tree, parent=None,level=0,count=0):
-        if isinstance(tree, Acyclic_Tree):
-            for i, child in enumerate(tree.nodes):
-                count+=1
-                if isinstance(child, Acyclic_Tree):
-                    child_label = f"{child.root_node.name}"#+str(level)+str(i)
-                    for _ in range(count):
-                        child_label += '\u200b'
-                    self.G.add_node(child_label)
-                    if parent:
-                        self.G.add_edge(parent, child_label)
-                    count = self.add_nodes_edges(child, child_label,level+1,count)
-                else:
-                    child_label = str(child.value)
-                    for _ in range(count):
-                        child_label += '\u200b'
-                    self.G.add_node(child_label)
-                    if parent:
-                        self.G.add_edge(parent, child_label)
-        return count
-
-    def plot_tree(self, node=None, level=0):
-        if self.tree_structure is None:
-            self.get_tree_structure()
-    
-        if node is None:
-            node = self.tree_structure
-    
-        # 创建一个空的有向图
-        self.G = nx.DiGraph()
-    
-        # 添加根节点
-        root_label = f"{node.root_node.name}"
-        self.G.add_node(root_label)
-        self.add_nodes_edges(node, root_label)
-    
-        # 使用matplotlib绘制图形
-        pos = nx.drawing.nx_agraph.graphviz_layout(self.G, prog='dot')
-        plt.figure(figsize=(12, 8))
-        nx.draw(self.G, pos, with_labels=True, arrows=True, node_size=2000, node_color='skyblue', font_size=10, font_weight='bold')
-        plt.show()
-
-
-    def parse_from_the_outside_in(self):
-        pass
-
-    def parse_from_the_inside_out(self):
-        pass
+                print(f"    " * (level + 1) + str(child.value))
 
     def parse_tree(self):
-        abbr_tree,sub_tree,_ = self.get_abbrnsub(self.tree_structure,'subtree')
-        self.tree={
+        abbr_tree, sub_tree, _ = self.get_abbrnsub(self.tree_structure, 'subtree')
+        self.tree = {
             'abbreviation': abbr_tree,
-            'tree_mode':self.tree_structure,
+            'tree_mode': self.tree_structure,
         }
 
         abbr_subtree = ''
@@ -335,11 +255,11 @@ class RPN_Parser(RPN_Compiler):
             count_branch = 0
             count_trunk = 0
             abbr_subtree += tree.root_node.name + '('
-            for i,node in enumerate(tree.nodes):
+            for i, node in enumerate(tree.nodes):
                 if i > 0:
                     abbr_subtree += ', '
                 if isinstance(node, Acyclic_Tree):
-                    if i < len(tree.nodes)-1 or 'TypeD' not in [t.__name__ for t in tree.root_node.args]:
+                    if i < len(tree.nodes) - 1 or 'TypeD' not in [t.__name__ for t in tree.root_node.args]:
                         abbr_subtree += f'trunk_ARG{count_trunk}'
                         count_trunk += 1
                         trunk_lst.append(node)
@@ -353,54 +273,53 @@ class RPN_Parser(RPN_Compiler):
                 else:
                     raise ValueError('instance error')
             abbr_subtree += ')'
-            
-        self.subtree={
-            'abbreviation': abbr_subtree,
-            'tree_mode':sub_tree[0],
-        }
 
+        self.subtree = {
+            'abbreviation': abbr_subtree,
+            'tree_mode': sub_tree[0],
+        }
 
         abbr_trunk = []
         sub_trunk = []
         count = 0
         for trunk in trunk_lst:
-            trunk_depth = self.get_tree_depth(trunk)-2
-            abbr,sub,count = self.get_abbrnsub(trunk,'root',trunk_depth,count)
+            trunk_depth = self.get_tree_depth(trunk) - 2
+            abbr, sub, count = self.get_abbrnsub(trunk, 'root', trunk_depth, count)
             abbr_trunk.append(abbr)
             sub_trunk.extend(sub)
-        
+
         self.trunk = {
-            'abbreviation':abbr_trunk,
-            'tree_mode':trunk_lst,
+            'abbreviation': abbr_trunk,
+            'tree_mode': trunk_lst,
         }
         count = 0
         abbr_root = []
         sub_root = []
         for root in sub_trunk:
-            abbr,sub,count = self.get_abbrnsub(root,'seed',0,count)
+            abbr, sub, count = self.get_abbrnsub(root, 'seed', 0, count)
             abbr_root.append(abbr)
             sub_root.extend(sub)
 
         abbr_branch = []
         for branch in branch_lst:
-            branch_depth = self.get_tree_depth(branch)-1
-            abbr,sub,count = self.get_abbrnsub(branch,'seed',branch_depth,count)
+            branch_depth = self.get_tree_depth(branch) - 1
+            abbr, sub, count = self.get_abbrnsub(branch, 'seed', branch_depth, count)
             abbr_branch.append(abbr)
             sub_root.extend(sub)
 
-        self.branch={
+        self.branch = {
             'abbreviation': abbr_branch,
             'tree_mode': branch_lst,
         }
 
         self.root = {
-            'abbreviation':abbr_root,
-            'tree_mode':sub_trunk,
+            'abbreviation': abbr_root,
+            'tree_mode': sub_trunk,
         }
 
         self.seed = {
-            'abbreviation':[seed.abbreviation for seed in sub_root],
-            'tree_mode':sub_root,
+            'abbreviation': [seed.abbreviation for seed in sub_root],
+            'tree_mode': sub_root,
         }
 
     def argnorm(self, seed_str):
@@ -419,270 +338,252 @@ class RPN_Parser(RPN_Compiler):
         for key, value in map.items():
             seed_str = seed_str.replace(value, key)
         return seed_str
-    
+
     def tree2dict(self):
         if not self.tree:
             self.parse_tree()
         self.tree_dict = {
-            'tree':[self.tree['abbreviation']],
-            'subtree':[self.subtree['abbreviation']],
-            'branch':self.branch['abbreviation'],
-            'trunk':self.trunk['abbreviation'],
-            'root':self.root['abbreviation'],
-            'seed':[self.argnorm(seed) for seed in self.seed['abbreviation']]
+            'tree': [self.tree['abbreviation']],
+            'subtree': [self.subtree['abbreviation']],
+            'branch': self.branch['abbreviation'],
+            'trunk': self.trunk['abbreviation'],
+            'root': self.root['abbreviation'],
+            'seed': [self.argnorm(seed) for seed in self.seed['abbreviation']]
         }
         return self.tree_dict
 
 
+class RPN_Compiler:
+    def __init__(self, year_list, device=torch.device("cuda")):
+        self.general_toolbox=General_toolbox()
+        self.general_pset=self.general_toolbox.pset
+        self.device = device
+        self.prepare_data(year_list)
 
-class RPN_Pruner(RPN_Parser):
-    def __init__(self,RPN:str):
-        super().__init__(RPN)
-        self.get_tree_structure()
 
-    def delete_param_redundancy(self):
-        pass
+    def prepare_data(self, year_lst):
+        self.data_reader = MmapReader()
+        self.Day_data = list(self.data_reader.get_Day_data(year_lst))
+        self.Day_data=[i.to(self.device) for i in self.Day_data]
+        self.day_list = self.data_reader.get_daylist(year_lst)
 
-    def delete_closure(self):
-        pass
+        self.industry_data = [self.data_reader.get_Barra(year_lst)[:, :, 10:].to(self.device)]
+        self.TypeC_data = [OP_AF2C.Dmask_min(self.Day_data[0], 20)]
 
-    def prune(self):
-        pass
+    def add_primitive_byclass(self, op_classname, pset_name):
+        parts = op_classname.split('2')
+        part1 = parts[0].split('_')[1]
+        part2 = parts[1]
 
-class GeneticAlgorithm:
-    def __init__(self, ops_lists, population_size=Config.DEFAULT_POPULATION, crossover_prob=0.5, mutation_prob=0.2, generations=1):
-        self.ops_lists = ops_lists
-        self.population_size = population_size
-        self.crossover_prob = crossover_prob
-        self.mutation_prob = mutation_prob
-        self.generations = generations
+        op = globals()[op_classname]()
+        for func_name in op.func_list:
+            func = getattr(op, func_name)
+            input_class_list = [globals()[f"Type{char}"] for char in part1]
+            output_class = globals()[f"Type{part2}"]
+            pset = getattr(self, pset_name)
+            pset.addPrimitive(func, input_class_list, output_class, name=func_name)
 
-        # 初始化DEAP工具箱
-        self.toolbox = base.Toolbox()
+    def split_segment(self, rpn):
+        parser = RPN_Parser(rpn,self.general_pset)
+        parser.get_tree_structure()
+        parser.parse_tree()
 
-        # 创建适应度类和个体类
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        creator.create("Individual", list, fitness=creator.FitnessMax)
+        num_record = 0
+        data_record = []
+        subtree = parser.tree2str(parser.subtree['tree_mode'])
 
-        # 注册个体生成函数
-        self.toolbox.register("individual", self.init_individual, creator.Individual, self.ops_lists)
+        for root in parser.root['tree_mode']:
+            root_expr = parser.tree2str(root)
+            if (root_expr.startswith('D')) and (root_expr in subtree):
+                subtree = subtree.replace(root_expr, f'DARG_{num_record}')
+                data_record.append(root_expr)
+                num_record += 1
 
-        # 注册种群生成函数
-        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+        for seed in parser.seed['tree_mode']:
+            seed_expr = parser.tree2str(seed)
+            if seed_expr.startswith('D') and (seed_expr in subtree):
+                subtree = subtree.replace(seed_expr, f'DARG_{num_record}')
+                data_record.append(seed_expr)
+                num_record += 1
 
-        # 注册适应度评估函数
-        self.toolbox.register("evaluate", self.eval_fitness)
+        segment1 = data_record
+        segment2 = subtree
+        segment3 = parser.tree['abbreviation']
+        return [segment1, segment2, segment3]
 
-        # 注册自定义变异函数
-        self.toolbox.register("mutate", self.custom_mutate)
+    def toolbox4segment1(self):
+        self.pset1 = gp.PrimitiveSetTyped("MAIN", [TypeA] * 5, TypeA)
+        name = self.general_toolbox.input2
+        for i in range(len(name)):
+            self.pset1.renameArguments(**{f'ARG{i}': name[i]})
 
-        # 注册自定义交叉函数
-        self.toolbox.register("mate1", self.custom_crossover1)
-        self.toolbox.register("mate2", self.custom_crossover2)
+        creator.create('segment1_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset1)
 
-        # 注册选择操作
-        self.toolbox.register("select", tools.selBest)
+        self.toolbox1 = base.Toolbox()
+        self.toolbox1.register("expr", gp.genHalfAndHalf, pset=self.pset1, min_=1, max_=10)
+        self.toolbox1.register('segment1_Compiler', tools.initIterate, getattr(creator, 'segment1_Compiler'),
+                               self.toolbox1.expr)
+        self.toolbox1.register("population", tools.initRepeat, list, getattr(self.toolbox1, 'segment1_Compiler'))
+        self.toolbox1.register("compile", gp.compile, pset=self.pset1)
 
-    def init_individual(self, icls, content):
-        # 从每个子列表中随机选择一个索引
-        return icls(random.randint(0, len(lst) - 1) for lst in content)
+        for class_name in ['OP_A2A', 'OP_AA2A', 'OP_AG2A', 'OP_AAF2A', 'OP_AF2A']:
+            self.add_primitive_byclass(class_name, 'pset1')
 
-    def eval_fitness(self, individual):
-        # 所有个体的适应度值都为1
-        return (1.0,)
+        self.pset1.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        self.pset1.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
 
-    def custom_mutate(self, individual, min_nodes=0, max_nodes=2):
-        # 从指定范围(min_nodes, max_nodes)中随机选择变异节点的个数
-        num_nodes_to_mutate = random.randint(min_nodes, max_nodes)
-        # 从所有节点中随机选择相应个数的不同节点
-        nodes_to_mutate = random.sample(range(len(individual)), num_nodes_to_mutate)
-        # 对选中的节点实施变异
-        for node in nodes_to_mutate:
-            individual[node] = random.randint(0, len(self.ops_lists[node]) - 1)
-        return individual,
+        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
+            self.pset1.addTerminal(constant_value, TypeF)
 
-    def custom_crossover1(self, ind1, ind2, min_nodes=1, max_nodes=2):
-        # 从指定范围(min_nodes, max_nodes)中随机选择交叉节点的个数
-        num_nodes_to_crossover = random.randint(min_nodes, max_nodes)
-        # 从所有节点中随机选择相应个数的不同节点
-        nodes_to_crossover = random.sample(range(len(ind1)), num_nodes_to_crossover)
-        # 对选中的节点进行交叉
-        for node in nodes_to_crossover:
-            ind1[node], ind2[node] = ind2[node], ind1[node]
-        return ind1, ind2
+        for constant_value in [0.05, 0.1]:
+            self.pset1.addTerminal(constant_value, TypeG)
 
-    def custom_crossover2(self, ind1, ind2):
-        # 随机选择一个节点
-        crossover_point = random.randint(0, len(ind1) - 1)
-        # 从该节点开始，交换两个个体的后续部分
-        ind1[crossover_point:], ind2[crossover_point:] = ind2[crossover_point:], ind1[crossover_point:]
-        return ind1, ind2
+    def toolbox4segment2(self, ARG_name):
+        self.pset2 = gp.PrimitiveSetTyped("MAIN", [TypeB] * 5 + [TypeD] + [TypeA] * len(ARG_name), TypeA)
+        name = self.general_toolbox.input1 + self.general_toolbox.input4 + [f'DARG_{i}' for i in range(len(ARG_name))]
+        for i in range(len(name)):
+            self.pset2.renameArguments(**{f'ARG{i}': name[i]})
 
-    def run(self):
-        # 初始化种群
-        pop = self.toolbox.population(n=self.population_size)
-        print("Initial population:", pop)#仅供演示
+        creator.create('segment2_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset2)
 
-        # 评估初始种群
-        fitnesses = map(self.toolbox.evaluate, pop)
-        for ind, fit in zip(pop, fitnesses):
-            ind.fitness.values = fit
+        self.toolbox2 = base.Toolbox()
+        self.toolbox2.register("expr", gp.genHalfAndHalf, pset=self.pset2, min_=1, max_=10)
+        self.toolbox2.register('segment2_Compiler', tools.initIterate, getattr(creator, 'segment2_Compiler'),
+                               self.toolbox2.expr)
+        self.toolbox2.register("population", tools.initRepeat, list, getattr(self.toolbox2, 'segment2_Compiler'))
+        self.toolbox2.register("compile", gp.compile, pset=self.pset2)
 
-        for gen in range(self.generations):
-            # 选择下一代个体
-            offspring = self.toolbox.select(pop, len(pop))
-            # 克隆选中的个体
-            offspring = list(map(self.toolbox.clone, offspring))
+        for class_name in ['OP_B2B', 'OP_BB2B', 'OP_BA2B', 'OP_BG2B', 'OP_BF2B', 'OP_B2D', 'OP_BF2D', 'OP_BA2D',
+                           'OP_DD2D', 'OP_B2A', 'OP_BB2A', 'OP_BD2A', 'OP_BBD2A']:
+            self.add_primitive_byclass(class_name, 'pset2')
 
-            # 应用交叉操作
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                if random.random() < self.crossover_prob:
-                    # 随机选择一种交叉方式
-                    if random.random() < 0.5:
-                        self.toolbox.mate1(child1, child2, min_nodes=1, max_nodes=2)
-                    else:
-                        self.toolbox.mate2(child1, child2)
-                    del child1.fitness.values
-                    del child2.fitness.values
+        self.pset2.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        self.pset2.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
+        self.pset2.addPrimitive(OP_Closure.id_tensor, [TypeA], TypeA, name='id_tensor')
 
-            # 应用自定义变异操作
-            for mutant in offspring:
-                if random.random() < self.mutation_prob:
-                    self.toolbox.mutate(mutant, min_nodes=0, max_nodes=2)
-                    del mutant.fitness.values
+        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
+            self.pset2.addTerminal(constant_value, TypeF)
 
-            # 评估无效适应度的个体
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            fitnesses = map(self.toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
+        for constant_value in [0.05, 0.1]:
+            self.pset2.addTerminal(constant_value, TypeG)
 
-            # 替换种群
-            pop[:] = offspring
+    def toolbox4segment3(self):
+        self.pset3 = gp.PrimitiveSetTyped("MAIN", [TypeE] + [TypeC] + [TypeA], TypeA)
+        self.pset3.renameArguments(**{f'ARG{0}': 'industry'})
+        self.pset3.renameArguments(**{f'ARG{1}': 'TypeC_data'})
+        self.pset3.renameArguments(**{f'ARG{2}': 'subtree_ARG0'})
+        creator.create('segment3_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset3)
 
-        return pop
+        self.toolbox3 = base.Toolbox()
+        self.toolbox3.register("expr", gp.genHalfAndHalf, pset=self.pset3, min_=1, max_=10)
+        self.toolbox3.register('segment3_Compiler', tools.initIterate, getattr(creator, 'segment3_Compiler'),
+                               self.toolbox3.expr)
+        self.toolbox3.register("population", tools.initRepeat, list, getattr(self.toolbox3, 'segment3_Compiler'))
+        self.toolbox3.register("compile", gp.compile, pset=self.pset3)
 
-class Acyclic_Tree:
-    def __init__(self, deap_str, pset):
-        self.tree = deap_str
-        self.root_node = None  # gp.Primitive or gp.Terminal
-        self.nodes = []  # List[Union[Leaf, Acyclic_Tree]]
-        self.abbreviation = ''
-        self.pset = pset
+        for type in ['A', 'C']:
+            class_list = globals()[f"OPclass_name_2{type}"]
+            for class_name in class_list:
+                self.add_primitive_byclass(class_name, 'pset3')
 
-        # 解析DEAP字符串并构建树结构
-        self.parse_deap_str(deap_str, pset)
+        self.pset3.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
+        self.pset3.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
+        self.pset3.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
 
-    def parse_deap_str(self, deap_str, pset):
-        # 将DEAP字符串转换为PrimitiveTree
-        primitive_tree = gp.PrimitiveTree.from_string(deap_str, pset)
-        # 递归构建树结构
-        self.root_node, self.nodes = self.build_tree(primitive_tree)
-        self.abbreviation += self.root_node.name if isinstance(self.root_node, gp.Primitive) else str(self.root_node.value)
-        self.abbreviation += '('
-        counter = 0
-        for i,node in enumerate(self.nodes):
-            if i > 0:
-                self.abbreviation += ', '
-            if isinstance(node, Acyclic_Tree):
-                self.abbreviation += f"ARG{counter}" 
-                counter += 1
-            else:
-                self.abbreviation += str(node.value)   
-        self.abbreviation += ')'         
+        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
+            self.pset3.addTerminal(constant_value, TypeF)
 
-    def build_tree(self, primitive_tree):
-        root = primitive_tree[0]  # 根节点
-        nodes = []
-        deap_code = self.extract_string(self.tree)
-        if isinstance(root, gp.Primitive):
-            # 如果根节点是操作（primitive），递归构建子树
-            for i in range(root.arity):
-                if '(' in deap_code[i]:
-                    child_tree = Acyclic_Tree(deap_code[i], self.pset)
-                    nodes.append(child_tree)
-                else:
-                    nodes.append(gp.PrimitiveTree.from_string(deap_code[i], self.pset)[0])
-        else:
-            # 如果根节点是终端（terminal），直接返回
+        for constant_value in [0.05, 0.1]:
+            self.pset3.addTerminal(constant_value, TypeG)
 
-            return root, []
+    def compile_segment1(self, individual):
+        compiled_func = self.toolbox1.compile(expr=individual)
+        result = compiled_func(*self.Day_data[:])
+        return result
 
-        return root, nodes
-    
+    def compile_segment2(self, individual, segment1_data):
+        TypeD_data = OP_B2D.Mmask_1h_after_open(self.data_reader.get_Minute_data_daily(self.day_list[0])[0])
 
-    def extract_string(self,s):
-    # 检查字符串是否包含括号
-        if '(' not in s:
-            return None
+        template = torch.full_like(self.Day_data[0], float('nan'))
+        for i, day in tqdm(enumerate(self.day_list)):
+            curr_Min_data = self.data_reader.get_Minute_data_daily(day)
+            curr_Min_data=[i.to(self.device) for i in curr_Min_data]
+            curr_Day_data = [data[i].unsqueeze(0) for data in segment1_data]
+            curr_data = curr_Min_data + [TypeD_data] + curr_Day_data
+            compiled_func = self.toolbox2.compile(expr=individual)
+            result = compiled_func(*curr_data[:])
+            template[i] = result
+        return template
 
-        # 初始化计数器和临时字符串
-        count = 0
-        temp_str = ''
-        result_list = []
-        
-        # 遍历字符串中的每个字符
-        for char in s:
-            if char == '(':
-                count += 1
-                # 如果是第一个左括号，跳过它
-                if count == 1:
-                    continue
-            elif char == ')':
-                count -= 1
-                # 如果是与第一个左括号匹配的右括号，处理临时字符串并停止遍历
-                if count == 0:
-                    # 分割临时字符串并添加到结果列表
-                    # 只有在所有左括号都匹配的情况下才进行分割
-                    if temp_str:
-                        result_list.append(temp_str.strip())
-                    break
-            # 如果在最外层括号内，处理字符
-            if count > 0:
-                if char == ',' and count == 1:
-                    # 如果遇到逗号且所有左括号都已匹配，添加之前的临时字符串到结果列表
-                    if temp_str:
-                        result_list.append(temp_str.strip())
-                        temp_str = ''
-                elif char != ' ' or temp_str:
-                    temp_str += char
-        
-        
-        return result_list
+    def compile_segment3(self, individual, segment2_data):
+        compiled_func = self.toolbox3.compile(expr=individual)
+        data = self.industry_data + self.TypeC_data + [segment2_data]
+        result = compiled_func(*data[:])
+        return result
 
-    
-    
+    def compile_tree(self, rpn):
+        segment1, segment2, segment3 = self.split_segment(rpn)
+
+        self.toolbox4segment1()
+        self.toolbox4segment2(segment1)
+        self.toolbox4segment3()
+
+        day_data = []
+        for segment1 in segment1:
+            day_data.append(self.compile_segment1(segment1))
+
+        subtree = self.compile_segment2(segment2, day_data)
+        tree = self.compile_segment3(segment3, subtree)
+        return tree
+
 
 if __name__ == "__main__":
     # 测试RPN_Producer类
     producer = RPN_Producer()
     producer.run()
-    print("生成的树：", producer.tree[0])
+    # print("生成的树：", producer.tree[0])
+    # print(producer.subtree[0])
+
+    # # 测试RPN_Compiler类
     # parser = RPN_Parser(producer.tree[0])
+
+
+    # # compiler.prepare_data([2020])  # 假设准备2020年的数据
+    # # compiled_func = compiler.compile(producer.tree[0])  # 编译生成的树中的第一个RPN表达式
+    # # print("编译结果：", compiled_func)
+    # # print(compiler.rpn)
+    # # print(compiler.deap_code)
+    # # isinstance('x',gp.Primitive)
+    # def print_primitives(pset):
+    #     for output_type, primitives in pset.primitives.items():
+    #         print(f"Output Type: {output_type.__name__}")
+    #         for primitive in primitives:
+    #             print(f"  Name: {primitive.name}, Input Types: {[t.__name__ for t in primitive.args]}")
+    #             print('#####')
+    #             print(primitive.args)
+
+
+    # def print_terminals(pset):
+    #     for output_type, terminals in pset.terminals.items():
+    #         print(f"Output Type: {output_type.__name__}")
+    #         for terminal in terminals:
+    #             print(f"  Terminal: {terminal}")
+
+
+    # # print_primitives(parser.pset)
+    # # print_terminals(parser.pset)
+    # # print('####',type(parser.deap_code))
     # tree_structure = parser.get_tree_structure()
-    # parser.print_tree()
+
+    # # 输出树结构
+    # # print("Root Node:", tree_structure.root_node.name)
+    # # print("Nodes:", [node if isinstance(node, Acyclic_Tree) else node for node in tree_structure.nodes])
     # parser.plot_tree()
-    # print(parser.tree2dict())
-    # # 编译
-    # compiler = RPN_Compiler()
-    # compiler.prepare_data(Config.DEFAULT_YEAR)
-    # print(compiler.compile('D_ts_mean(D_O, 5)'))
-    # # 输入的操作列表
-    # ops_lists = [
-    #     ["op1", "op2", "op3", '', ''],
-    #     ["op4", "op5", "op6", '', ''],
-    #     ["op7", "op8", "op9", "op10"],
-    #     ["op7", "op8", "op9", "op10"],
-    #     ["op7", "op8", "op9", "op10", 'a', '']
-    # ]
-
-    # # 初始化遗传算法类
-    # ga = GeneticAlgorithm(ops_lists, population_size=10, crossover_prob=0.5, mutation_prob=0.2, generations=1)
-
-    # # 运行遗传算法
-    # pop = ga.run()
-
-    # # 输出最终种群
-    # print("Final population:")
-    # for ind in pop:
-    #     print(ind, ind.fitness.values)
+    # parser.parse_tree()
+    # print(parser.tree)
+    # print(parser.subtree)
+    # print(parser.branch)
+    # print(parser.trunk)
+    # print(parser.root)
+    # print(parser.seed)
+    # print(parser.tree2str(parser.tree['tree_mode']))

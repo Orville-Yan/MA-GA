@@ -1,5 +1,8 @@
 import sys
-sys.path.append('..')
+import os
+dir_path = os.path.dirname(os.path.realpath(__file__))
+parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+sys.path.append(parent_dir_path)
 
 from OP.Others import OP_Basic
 import torch
@@ -54,6 +57,7 @@ class OP_AF2C:
         unfolded_std = OP_Basic.nanstd(unfolded, dim=-1).unsqueeze(-1)
         unfolded_zscore = (unfolded - unfolded_mean) / unfolded_std
         mask = (unfolded_zscore) > 1  # 大于均值+标准差的部分
+        print(mask.shape)
         return mask
 
     @staticmethod
@@ -67,3 +71,53 @@ class OP_AF2C:
         unfolded_zscore = (unfolded - unfolded_mean) / unfolded_std
         mask = (unfolded_zscore) < 1  # 小于均值-标准差的部分
         return mask
+if __name__ == '__main__':
+    import time
+    TypeA_shape = (10, 100) 
+    TypeC_shape = (10,100,2)
+
+    # 创建随机数据
+    A = torch.randn(TypeA_shape)
+    F = 2
+
+
+    # 测试函数
+    def test_functions(class_instance, data, *args):
+        results = {}
+        for func_name in class_instance.func_list:
+            func = getattr(class_instance, func_name)
+            start_time = time.time()
+            try:
+                result = func(*data, *args)
+                results[func_name] = time.time() - start_time
+                shape_result = (result.shape == TypeC_shape)
+                if not shape_result:
+                    print(func_name)
+                    print('shape fault')
+            except Exception as e:
+                results[func_name] = str(e)
+        
+
+
+
+    # 测试每个类
+    def test_class(class_type, *args):
+        instance = class_type()
+        if class_type in [OP_AF2C]               :
+            return test_functions(instance, (A,F))
+
+    # # 打印结果
+    # def print_results(results, class_name):
+    #     print(f"Results for {class_name}:")
+    #     for func_name, duration in results.items():
+    #         if isinstance(duration, float):
+    #             print(f"  {func_name}: {duration:.6f} seconds")
+    #         else:
+    #             print(f"  {func_name}: {duration}")
+
+
+    # 运行测试
+    classes = [OP_AF2C]
+    for class_type in classes:
+        results = test_class(class_type)
+        # print_results(results, class_type.__name__)

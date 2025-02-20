@@ -1,26 +1,33 @@
 import sys
 import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
+
 from OP import *
 from ToolsGA.Data_tools import DailyDataReader, MinuteDataReader
 import pandas as pd
 import torch
+import os
+import re
 import numpy as np
-from GA.Config import DataReader_Config as Config
+import tqdm
+import json
 
 class ParquetReader:
-    def __init__(self, 
-                 daily_data_path=Config.DailyDataPath, 
-                 minute_data_path=Config.MinuteDataPath, 
-                 barra_path=Config.BarraPath, 
-                 dict_path=Config.DictPath, 
-                 device=Config.device):
-        self.DailyDataReader = DailyDataReader(daily_data_path)
-        self.MinuteDataReader = MinuteDataReader(minute_data_path, device)
-        self.BarraPath = barra_path
-        self.DictPath = dict_path
+    def __init__(
+        self, 
+        DailyDataPath: str = "../Data/Daily",
+        MinuteDataPath: str = "../Data/Minute",
+        BarraPath: str = "../Data/barra.pt",
+        DictPath: str = "../Data/dict.pt",
+        device: str = 'cpu'
+    ):
+        self.DailyDataReader = DailyDataReader(DailyDataPath)
+        self.MinuteDataReader = MinuteDataReader(MinuteDataPath, device)
+        self.BarraPath = BarraPath
+        self.DictPath = DictPath
         self.device = device
 
     def get_Minute_data(self, year_lst: list[int]) -> list[torch.Tensor]:
@@ -71,101 +78,187 @@ class ParquetReader:
         interval_return = close / open - 1
         return interval_return
 
-class MmapReader:
-    def __init__(self,daily_path = Config.mmap_DailyDataPath,minute_path = Config.mmap_MinuteDataPath):
-        self.years = Config.years
-        self.output_daily = Config.output_daily
-        self.output_minute = Config.output_minute
-        self.daily_path = daily_path
-        self.minute_path = minute_path
-        
-        
-    def save_daily_to_mmap(self,data, dtype=np.float32):
-        num_rows, num_cols = data.shape
-        with open(self.origin_daily, 'w+b') as f:
-            mmap = np.memmap(f, dtype=dtype, mode='w+', shape=(num_rows, num_cols))
-            mmap[:] = data
+    def get_barra_by_daylist(self,day_list):
+        barra = torch.load(self.BarraPath, weights_only=True)
+        dict = torch.load(self.DictPath, weights_only=False)['index']
+        index=[dict.get_loc(day)  for day in day_list]
+        return barra[index][:, self.DailyDataReader.MutualStockCodes]
 
-    def save_minute_to_mmap(self,data, dtype=np.float32):
-        num_rows, num_cols , num_days= data.shape
-        with open(self.origin_minute, 'w+b') as f:
-            mmap = np.memmap(f, dtype=dtype, mode='w+', shape=(num_rows, num_cols,num_days))
-            mmap[:] = data
+    def get_daylist(self,year_list):
+        trading_dates=self.DailyDataReader.TradingDate
+        return trading_dates[trading_dates.dt.year.isin(year_list)]
 
-    def save_daily(self,out_path):
-        data_reader = ParquetReader()
-        years = self.years
-        os.makedirs(out_path, exist_ok=True)
+class Interface:
+    def __init__(self):
+        pass
+    def get_daylist(self,year):
+        if not hasattr(self, 'DailyDataReader'):
+            self.DailyDataReader = DailyDataReader()
+        trading_dates = self.DailyDataReader.TradingDate
+        return list(trading_dates[trading_dates.dt.year == year])
 
-    # 定义数据的名称和对应的索引
-        data_names = ['DO', 'DH', 'DL', 'DC', 'DV']
+    def tensor2df(self,tensor,year_list):
+        day_list=self.get_daylist(year_list)
+        stocks=self.DailyDataReader.StockCodes
+        df=pd.DataFrame(np.asarray(tensor),index=day_list,columns=stocks)
+        return df
 
-        for year in years:
-        # 获取当年的数据，data是一个包含5个Tensor的列表
-            data = data_reader.get_Day_data([year])
 
-            for i, name in enumerate(data_names):
-                tensor = data[i]  # 获取当前Tensor
-                file_path = os.path.join(out_path, f'{name}{year}.mmap')  # 构造文件路径
-                self.save_daily_to_mmap(out_path, tensor)  # 保存为Memory Map文件
-                print(f"Saved {name} data for year {year} to {file_path}")
+class MmapReader(Interface):
+    def __init__(self,
+                 DailyDataPath: str = "../Data/Daily",
+                 MinuteDataPath: str = "../Data/Minute",
+                 MmapPath: str = "../Data/Mmap",
+                 device='cpu',download = False):
+        if download:
+            self.MinuteDataReader = MinuteDataReader(MinuteDataPath, device)
+            self.DailyDataReader = DailyDataReader(DailyDataPath)
+        self.MmapPath = MmapPath
+        self.daily_data_info = {}
 
-    def save_minute(self,out_path):
-        data_reader = ParquetReader()
-        years = self.years
-        os.makedirs(out_path, exist_ok=True)
+        self.D_name = ['D_O', 'D_H', 'D_L', 'D_C', 'D_V']
+        self.M_name = ['M_O', 'M_H', 'M_L', 'M_C', 'M_V']
+        with open("../Data/Mmap/data_shape.json", "r", encoding="utf-8") as file:
+            self.data_shape = json.load(file)
 
-        data_names = ['MO', 'MH', 'ML', 'MC', 'MV']
+    def save_daily_data(self):
+        D_O, D_H, D_L, D_C = self.DailyDataReader.GetOHLC()
+        D_O, D_H, D_L, D_C, D_V = self.DailyDataReader.get_df_ohlcv(D_O, D_H, D_L, D_C)
+        root_path = self.MmapPath + '/Daily'
 
-        for year in years:
-            data = data_reader.get_Minute_data([year])
-            for i, name in enumerate(data_names):
-                tensor = data[i]  
-                file_path = os.path.join(out_path, f'{name}{year}.mmap')  
-                self.save_minute_to_mmap(file_path, tensor)  
-                print(f"Saved {name} data for year {year} to {file_path}")
-    
-    def mmap_readDaily(self,file_path:str):
-        # 定义数据的形状和数据类型
-        num_rows = 244
-        num_cols = 5601
-        dtype = np.float32
+        for i, data in enumerate([D_O, D_H, D_L, D_C, D_V]):
+            for year in range(2016, 2024):
+                curr_data = data.loc[str(year)]
+                self.daily_data_info[year] = curr_data.shape
+                mmap = np.memmap(os.path.join(root_path, f'{self.D_name[i]}_{year}.mmap'), dtype=np.float32, mode='w+',
+                                 shape=curr_data.shape)
+                mmap[:] = curr_data
 
-        # 读取Memory Map文件
-        mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols))
-        tensor_read = torch.from_numpy(mmap_read)
-        return tensor_read
+    def save_minute_data(self):
+        for year in range(2016, 2024):
+            day_list = self.get_daylist(year)
+            M_O, M_H, M_L, M_C, M_V = self.MinuteDataReader.get_Minute_data([year])
+            for i, data in enumerate([M_O, M_H, M_L, M_C, M_V]):
+                for j, day in enumerate(day_list):
+                    day  = day.date().strftime("%Y_%m_%d")
+                    curr_data = data[j]
+                    mmap = np.memmap(
+                        os.path.join(f"../Data/Mmap/Minute/{self.M_name[i]}", f'{self.M_name[i]}_{day}.mmap'),
+                        dtype=np.float32, mode='w+', shape=curr_data.shape)
+                    mmap[:] = curr_data
 
-    def mmap_readMinute(self,file_path:str):
-        num_rows = 5528
-        num_cols = 244
-        num_days=242
-        dtype = np.float32
-        mmap_read = np.memmap(file_path, dtype=dtype, mode='r', shape=(num_rows, num_cols,num_days))
-        tensor_read = torch.from_numpy(mmap_read)
-        return tensor_read
-    
-    def get_Day_data(self,year_lst:list[int])-> list[torch.Tensor]:
-        data_names = ['DO', 'DH', 'DL', 'DC', 'DV']
-        DOHLCV = []
-        for name in data_names:
-            data  = []
-            for year in year_lst:
-                file_path = os.path.join(self.daily_path, f'{name}{year}.mmap')
-                data.append(self.mmap_readDaily(file_path))
-            DOHLCV.append(torch.cat(data,dim=0))
-        return DOHLCV
-    def get_Minute_data(self,year_lst:list[int])-> list[torch.Tensor]:
-        data_names = ['MO', 'MH', 'ML', 'MC', 'MV']
-        MOHLCV = []
-        for name in data_names:
-            data  = []
-            for year in year_lst:
-                file_path = os.path.join(self.minute_path, f'{name}{year}.mmap')
-                data.append(self.mmap_readMinute(file_path))
-            MOHLCV.append(torch.cat(data,dim=1))
-        return MOHLCV
-        
+    def save_barra_data(self):
+        root_path = self.MmapPath + '/Barra'
+        year_list = list(range(2016, 2024))
+
+        reader = ParquetReader()
+        barra = reader.get_barra(year_list)
+        day_list = self.get_daylist(year_list)
+
+        for i, day in enumerate(day_list):
+            curr_data = barra[i]
+            mmap = np.memmap(os.path.join(root_path, f'barra_{day.strftime("%Y_%m_%d")}.mmap'), dtype=np.float32,
+                             mode='w+',
+                             shape=curr_data.shape)
+            mmap[:] = curr_data
+
+    def get_Day_data(self, year_lst: list[int]):
+        length = 0
+        width = self.data_shape[str(year_lst[0])][1]
+
+        for year in year_lst:
+            length += self.data_shape[str(year)][0]
+
+        start = 0
+
+        D_O, D_H, D_L, D_C, D_V = [torch.full((length, width), float('nan')) for _ in range(5)]
+        for i, year in enumerate(year_lst):
+
+            for j, data in enumerate([D_O, D_H, D_L, D_C, D_V]):
+                file_path = os.path.join(self.MmapPath + '/Daily', f'{self.D_name[j]}_{year}.mmap')
+                shape = self.data_shape[str(year)]
+                mmap_read = np.memmap(file_path, dtype=np.float32, mode='r', shape=tuple(shape))
+                tensor_read = torch.from_numpy(mmap_read.copy())
+                data[start:start + tensor_read.shape[0]] = tensor_read
+
+            start += tensor_read.shape[0]
+
+        return D_O, D_H, D_L, D_C, D_V
+
+    def get_Minute_data(self, year_lst: list[int]):
+        def get_all_files(folder_path, year_lst):
+            year_pattern = re.compile(r'_({})_'.format('|'.join(map(str, year_lst))))
+            entries = os.listdir(folder_path)
+            files = [file for file in entries if os.path.isfile(os.path.join(folder_path, file))]
+            filtered_files = [file for file in files if year_pattern.search(file)]
+            return sorted(filtered_files)
+
+        day_len = 0
+        minute_num = 242
+        stock_num = self.data_shape[str(year_lst[0])][1]
+
+        for year in year_lst:
+            day_len += self.data_shape[str(year)][0]
+
+        pos = 0
+        M_O, M_H, M_L, M_C, M_V = [torch.full((day_len, stock_num, minute_num), float('nan')) for _ in range(5)]
+        for j, data in enumerate([M_O, M_H, M_L, M_C, M_V]):
+            folder_path = os.path.join(self.MmapPath + '/Minute', self.M_name[j])
+            files = get_all_files(folder_path, year_lst)
+
+            for file in files:
+                file_path = os.path.join(folder_path, file)
+                mmap_read = np.memmap(file_path, dtype=np.float32, mode='r', shape=(minute_num, stock_num))
+                tensor_read = torch.from_numpy(mmap_read.copy())
+                data[pos] = tensor_read.permute(1, 0)
+                pos += 1
+
+            pos = 0
+
+        return M_O, M_H, M_L, M_C, M_V
+
+    def get_Minute_data_daily(self, day):
+        data = []
+        for name in self.M_name:
+            file_path = os.path.join(self.MmapPath + f'/Minute/{name}', f'{name}_{day.strftime("%Y_%m_%d")}.mmap')
+            mmap_read = np.memmap(file_path, dtype=np.float32, mode='r', shape=(242, 5483))
+            data.append(torch.from_numpy(mmap_read.copy()).permute(1, 0).unsqueeze(0))
+
+        return data
+
+    def get_Barra(self, year_lst):
+        num_stock = self.data_shape[str(year_lst[0])][1]
+        day_list = self.get_daylist(year_lst)
+        barra = torch.full((len(day_list), num_stock, 41), float('nan'))
+        for i, day in enumerate(day_list):
+            barra[i] = self.get_Barra_daily(day)
+        return barra
+
+    def get_Barra_daily(self, day):
+        num_stocks = self.data_shape['2016'][1]
+        file_path = os.path.join(self.MmapPath + '/Barra', f'barra_{day.strftime("%Y_%m_%d")}.mmap')
+        mmap_read = np.memmap(file_path, dtype=np.float32, mode='r', shape=(num_stocks, 41))
+        return torch.from_numpy(mmap_read.copy())
+
+    def get_labels(self, year_lst, freq):
+        if not hasattr(self, 'DailyDataReader'):
+            self.DailyDataReader = DailyDataReader()
+
+        index = self.DailyDataReader.get_index(year_lst)
+        clean = self.DailyDataReader.get_clean()[index]
+
+
+        D_O,_,_, D_C,_ = self.get_Day_data(year_lst)
+        D_O, D_C = [torch.where(clean | (tensor < 1e-5), float('nan'), tensor) for tensor in [D_O, D_C]]
+
+        open = OP_AF2A.D_ts_delay(D_O, -1)
+        close = OP_AF2A.D_ts_delay(D_C, -freq)
+        interval_return = close / open
+
+        return interval_return
+
+
+
 if __name__ == "__main__":
     # bgn_time = time.time()
     # data_path = "./processed_data"
@@ -179,22 +272,16 @@ if __name__ == "__main__":
     # print("Open, High, Low, Close, Volume [2016, 2017] shape: ", open_data.shape, high_data.shape, low_data.shape,
     #       close_data.shape, volume_data.shape)
     # print("Time cost: ", time.strftime("%H:%M:%S", time.gmtime(time.time() - bgn_time)))
+    # data_reader1 = ParquetReader()
+    # MO1 , MH1, ML1, MC1, MV1 = data_reader1.get_Minute_data([2016])
+    data_reader2 = MmapReader(download=False)
+    MO2 , MH2, ML2, MC2, MV2 = data_reader2.get_Minute_data([2016])
+    # print(MO1.shape == MO2.shape, MH1.shape == MH2.shape, ML1.shape == ML2.shape, MC1.shape == MC2.shape, MV1.shape == MV2.shape)
 
-    data_reader = MmapReader()
 
-    DO, DH, DL, DC, DV = data_reader.get_Day_data([2016,2017])
-    print(DO.shape, DH.shape, DL.shape, DC.shape, DV.shape)
-
-    MO, MH, ML, MC, MV = data_reader.get_Minute_data([2016,2017])
-    print(MO.shape, MH.shape, ML.shape, MC.shape, MV.shape)
 
     # barra = data_reader.get_barra([2016, 2017])
     # print(barra.shape)
 
     # interval_rtn = data_reader.get_labels([2016, 2017])
     # print(interval_rtn.shape)
-    # mmap_reader = MmapReader(minute_path=r'D:\运行文档\NFE遗传算法项目\Data\MC2016.mmap')
-    # tensor_read = mmap_reader.mmap_readDaily()
-    # print(tensor_read.shape)
-    # tensor_read = mmap_reader.mmap_readMinute()
-    # print(tensor_read.shape)

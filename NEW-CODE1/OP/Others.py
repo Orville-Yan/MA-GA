@@ -76,7 +76,7 @@ class OP_Basic:
         correlation = covariance / (tensor1_std * tensor2_std)
         return correlation
 
-
+    @staticmethod
     def multi_regress(y, x_s, dim=-1):
         down_epsilon = 1e-10
         B, N, D = x_s.shape
@@ -110,18 +110,36 @@ class OP_Basic:
         b = torch.where(torch.abs(b) < down_epsilon, 0.0, b)
         res = torch.where(torch.abs(res) < down_epsilon, 0.0, res)
         return k.squeeze(-1), b.squeeze(-1), res.squeeze(-1)
-
+    
     @staticmethod
-    def regress(y, x_s, dim=-1):
-        if y.dim() == x_s.dim():
-            if y.dim() == 2:
-                return OP_Basic.multi_regress(y.unsqueeze(-1), x_s.unsqueeze(-1), dim=dim)
-            return OP_Basic.multi_regress(y, x_s, dim=dim)
-        elif y.dim() == (x_s.dim() - 1):
-            y = y.unsqueeze(-1)  # Unsqueeze y to match dimensions with x_s
-            return OP_Basic.multi_regress(y, x_s, dim=dim)
-        else:
-            raise ValueError(f"Unsupported dimension mismatch: x_s.dim()={x_s.dim()}, y.dim()={y.dim()}")
+    def regress(y, x, dim=-1):
+        # 确保输入的两个张量形状相同
+        if y.shape != x.shape:
+            raise ValueError("The shapes of y and x must be the same.")
+
+        # 创建mask，确保x和y都为非NaN
+        mask = ~torch.isnan(x) & ~torch.isnan(y)
+
+        # 只保留mask为True的部分
+        y_valid = torch.where(mask, y, torch.tensor(0.0, device=y.device))
+        x_valid = torch.where(mask, x, torch.tensor(0.0, device=x.device))
+
+        # 计算x的均值和方差
+        x_mean = torch.sum(x_valid, dim=dim) / torch.sum(mask, dim=dim)
+        y_mean = torch.sum(y_valid, dim=dim) / torch.sum(mask, dim=dim)
+
+        # 计算回归系数k和截距b
+        xy_cov = torch.sum((x_valid - x_mean.unsqueeze(dim)) * (y_valid - y_mean.unsqueeze(dim)), dim=dim)
+        x_var = torch.sum((x_valid - x_mean.unsqueeze(dim)) ** 2, dim=dim)
+
+        k = xy_cov / x_var
+        b = y_mean - k * x_mean
+
+        # 计算预测值和残差
+        predict = k.unsqueeze(dim) * x + b.unsqueeze(dim)
+        res = torch.where(mask, y - predict, float('nan'))
+
+        return k, b, res
 
 
     @staticmethod
