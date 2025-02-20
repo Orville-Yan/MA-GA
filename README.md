@@ -27,9 +27,9 @@ Data
 | Type   | Name           | Tensor_Shape                             |
 |--------|----------------|-------------------------------------------|
 | TypeA  | day_OHLCV      | (day_len, num_stock)                      |
-| TypeB  | minute_OHLCV   | (num_stock, day_len, minute_len=240)      |
+| TypeB  | minute_OHLCV   | (day_len, num_stock, minute_len=240)      |
 | TypeC  | day_mask       | (day_len, num_stock, rolling_day)         |
-| TypeD  | minute_mask    | (num_stock, day_len, minute_len=240)      |
+| TypeD  | minute_mask    | (day_len, num_stock, minute_len=240)      |
 | TypeE  | industry       | (day_len, num_stock, industry_num=31)     |
 | TypeF  | time_int       | int                                       |
 | TypeG  | threshold      | float                                     |
