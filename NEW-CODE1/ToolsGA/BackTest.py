@@ -20,6 +20,8 @@ class FactorTest:
         self._init_data()
 
     def _init_data(self):
+        data_tools=DailyDataReader()
+        self.factor=data_tools._clean_data(self.factor)
         self.factor[self.factor_target.isna()]=np.nan
         self.factor_target[self.factor.isna()] = np.nan
 
@@ -30,7 +32,6 @@ class FactorTest:
         self.barra=torch.full((len(self.trading_dates),len(self.stock_codes),41),float('nan'))
         for i,day in enumerate(self.trading_dates):
             self.barra[i]=barra_reader.get_Barra_daily(day)
-
 
     @staticmethod
     def get_stratified_return(tensor: torch.Tensor, target: torch.Tensor, bins_num):
@@ -383,9 +384,70 @@ class FactorTest:
         print(f"results saved：{output_path}")
 
 class TensorTest:
-    def __init__(self,factor,year_list):
-        self.factor=factor
+    def __init__(self,year_list,freq):
+        self.freq=freq
         self.year_list=year_list
+        self.get_clean()
+
+    def get_clean(self):
+        data_tools = DailyDataReader()
+        index =data_tools.get_index(self.year_list)
+        clean = data_tools.get_clean()
+        self.clean=clean[index]
+
+    def get_stratified_return(self, tensor: torch.Tensor, target: torch.Tensor, bins_num):
+        tensor=torch.where(self.clean,float('nan'),tensor)
+        target=torch.where(self.clean,float('nan'),target)
+
+        quantiles = torch.linspace(0, 1, bins_num + 1, device=tensor.device)
+        boundaries = torch.nanquantile(tensor, quantiles[1:-1], dim=1).T
+
+        comparison = tensor.unsqueeze(-1) > boundaries.unsqueeze(1)
+        bins = comparison.sum(dim=-1).float()
+        mask = torch.isnan(tensor) | torch.isnan(target)
+        bins[mask] = float('nan')
+
+        # 计算每个桶的平均收益
+        bin_indices = torch.arange(bins_num, device=tensor.device).view(1, 1, bins_num).float()
+        mask_b = (bins.unsqueeze(-1) == bin_indices)
+
+        masked_target = torch.where(
+            mask_b,
+            target.unsqueeze(-1),
+            torch.full_like(target.unsqueeze(-1), float('nan'))
+        )
+
+        group_ret = torch.nanmean(masked_target, dim=1)
+        return group_ret
+
+    def get_rank_IC(self, tensor: torch.Tensor, target: torch.Tensor):
+        tensor = torch.where(self.clean, float('nan'), tensor)
+        target = torch.where(self.clean, float('nan'), target)
+        return OP_Basic.nanmean(OP_Basic.rank_corrwith(tensor,target))
+
+    def get_rank_ICIR(self, tensor: torch.Tensor, target: torch.Tensor):
+        tensor = torch.where(self.clean, float('nan'), tensor)
+        target = torch.where(self.clean, float('nan'), target)
+        IC_list=OP_Basic.rank_corrwith(tensor, target)
+        return OP_Basic.nanmean(IC_list)/OP_Basic.nanstd(IC_list)*np.sqrt(252/self.freq)
+
+    def get_long_sharpe(self, tensor: torch.Tensor, target: torch.Tensor, bins_num):
+        every_interval_rate=self.get_stratified_return(tensor,target,bins_num)
+        mask=torch.isnan(every_interval_rate).any(dim=1)
+        valid_interval_rate=torch.where(torch.isnan(every_interval_rate[mask]),1,every_interval_rate[mask])
+        cum_yield=torch.prod(valid_interval_rate)
+        max_indice=torch.argmax(cum_yield)
+
+        if max_indice==0 or max_indice==bins_num-1:
+            long=valid_interval_rate[:,torch.argmax(cum_yield)]
+        else:
+            long=valid_interval_rate[:,bins_num//2+1]
+
+        short=torch.mean(valid_interval_rate,dim=1)
+
+        long_short=long-short
+        long_sharpe=torch.mean(long_short)/torch.std(long_short)*np.sqrt(252/self.freq)
+        return long_sharpe
 
 
 

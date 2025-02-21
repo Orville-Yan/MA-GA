@@ -4,136 +4,84 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
 
-from RPN.Root import *
-from ToolsGA.GA_tools import *
-from GA.Config import Branch_Config as Config
+from OrganAbstractClass import *
 
-
-
-class Branch:
-    def generate_toolbox(self):
-        if not hasattr(creator, "FitnessMax"):
-            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        class_name = self.__class__.__name__
-        creator.create(class_name, gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
-        self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=Config.min_depth, max_=Config.max_depth)
-        self.toolbox.register(class_name, tools.initIterate, getattr(creator,class_name), self.toolbox.expr)
-        self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox,class_name))
-
-    def generate_population(self):
-        self.individuals_code = self.toolbox.population(n=self.population_size)
-        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
-
-class M_Branch_MP2D(Branch):
-    def __init__(self, mp_root: MP_Root, population_size=10):
-        super().__init__()
+class M_Branch_MP2D(Organ):
+    def __init__(self, mp_root: [str]):
         self.input = mp_root
-        self.population_size = population_size
-    def add_primitive(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input), TypeD)   
-        for constant in Config.default_lookback:
-            self.pset.addTerminal(constant,TypeF)
-        self.pset.addPrimitive(OP_Closure.id_int,[TypeF],TypeF)
-        op = OP_BF2D()
-        op_func_lst = op.func_list
-        for name in op_func_lst:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeF], TypeD)
-        op = OP_B2D()
-        op_func_lst = op.func_list
-        for name in op_func_lst:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB], TypeD)
-        super().generate_toolbox()
-        
-    def run(self):
-        self.add_primitive()
-        self.generate_population()
+        self.config = globals()[f'{self.__class__.__name__[2:-5]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
 
-class M_Branch_MPDP2D(Branch):
-    def __init__(self, mp_root: MP_Root, dp_root: DP_Root,population_size=10):
-        super().__init__()
+    def generate_pset(self):
+        self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input), TypeD)
+        self.pset=self.add_constant_terminal(self.config.default_lookback,self.pset)
+        self.pset = self.add_primitive_byclass('OP_B2D', self.pset)
+
+class M_Branch_MPDP2D(Organ):
+    def __init__(self, mp_root: [str], dp_root: [str]):
         self.input_m = mp_root
         self.input_d = dp_root
-        self.input = self.input_m + self.input_d
-        self.population_size = population_size
-    def add_primitive(self):
+        self.input=self.input_m+self.input_d
+        self.config = globals()[f'{self.__class__.__name__[2:-7]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
+
+    def generate_pset(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input_m)+[TypeA]*len(self.input_d), TypeD)
-        op = OP_BA2D()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeA], TypeD)
-        super().generate_toolbox()
+        self.pset = self.add_primitive_byclass('OP_BA2D', self.pset)
 
-    def run(self):
-        self.add_primitive()
-        self.generate_population()
+class M_Branch_MV2D(Organ):
+    def __init__(self, mv_root: [str]):
+        self.input = mv_root
+        self.config = globals()[f'{self.__class__.__name__[2:-5]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
 
-class M_Branch_MV2D(Branch):
-    # missing MV_Root
-    def __init__(self, mv_root: MV_Root, population_size=10):
-        super().__init__()
-        self.input = mv_root    
-        self.population_size = population_size
-    def add_primitive(self):
+    def generate_pset(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input), TypeD)
-        # 添加TypeF
-        for constant in Config.default_lookback:
-            self.pset.addTerminal(constant,TypeF)
-        self.pset.addPrimitive(OP_Closure.id_int,[TypeF],TypeF)
-        # 添加primitive
-        op = OP_BF2D()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeF], TypeD)
-        op = OP_B2D()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB], TypeD)
-        # 创建工具箱
-        super().generate_toolbox()
+        self.pset = self.add_constant_terminal(self.config.default_lookback,self.pset)
+        self.pset = self.add_primitive_byclass('OP_B2D', self.pset)
 
-    def run(self):
-        self.add_primitive()
-        self.generate_population()
 
-class M_Branch_MVDV2D(Branch):
-    # 暂时没有DV
-    def __init__(self, mv_root: MV_Root, dv_root: DV_Root,population_size=10):
-        super().__init__()
+class M_Branch_MVDV2D(Organ):
+    def __init__(self, mv_root: [str], dv_root: [str]):
         self.input_m = mv_root
         self.input_d = dv_root
-        self.input = self.input_m + self.input_d
-        self.population_size = population_size
+        self.input=self.input_m+self.input_d
+        self.config = globals()[f'{self.__class__.__name__[2:-7]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
 
-    def add_primitive(self):
+    def generate_pset(self):
         self.pset = gp.PrimitiveSetTyped("MAIN",[TypeB]*len(self.input_m)+[TypeA]*len(self.input_d), TypeD)
-   
-        # 添加primitive
-        op = OP_BA2D()
-        for name in op.func_list:
-            func = getattr(op, name)
-            self.pset.addPrimitive(func, [TypeB,TypeA], TypeD)
-        # 创建工具箱
-        super().generate_toolbox()
+        self.pset = self.add_primitive_byclass('OP_BA2D', self.pset)
 
-    def run(self):
-        self.add_primitive()
-        self.generate_population()
+
+class D_Branch_DP2C(Organ):
+    def __init__(self,dp_root:list[str]):
+        self.input=dp_root
+        self.config = globals()[f'{self.__class__.__name__[2:-5]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
+
+    def generate_pset(self):
+        self.pset=gp.PrimitiveSetTyped('main',[TypeA]*len(self.input),TypeC)
+        self.pset=self.add_primitive_byclass('OP_AF2C',self.pset)
+        self.pset=self.add_constant_terminal(self.config.default_lookback,self.pset)
+
+
+class D_Branch_DV2C(Organ):
+    def __init__(self, dv_root: list[str]):
+        self.input = dv_root
+        self.config = globals()[f'{self.__class__.__name__[2:-5]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
+
+    def generate_pset(self):
+        self.pset = gp.PrimitiveSetTyped('main', [TypeA] * len(self.input), TypeC)
+        self.pset = self.add_primitive_byclass('OP_AF2C', self.pset)
+        self.pset = self.add_constant_terminal(self.config.default_lookback, self.pset)
 
 if __name__ == "__main__":
-    mp_root = ['M_cs_scale(M_ts_mean_left_neighbor(M_O, 5, -1))', 'M_ts_pctchg(M_ts_mean_right_neighbor(M_C, 10, 1))', 'M_cs_zscore(M_ts_mean_left_neighbor(M_O, 5, -1))', 'M_cs_rank(M_ts_mean_left_neighbor(M_O, 5, -1))']
-    dp_root = ['D_ts_pctchg(D_at_abs(D_O))','D_ts_pctchg(D_ts_max(D_O,5))']
-    m_branch_mp2d = M_Branch_MP2D(mp_root)
-    m_branch_mp2d.run()
-    print("M_Branch_MP2D Individual Str: ", m_branch_mp2d.individuals_str)
-    print("M_Branch_MP2D Individual Code: ", m_branch_mp2d.individuals_code)
-
-    m_branch_mpdp2d = M_Branch_MPDP2D(mp_root,dp_root)
-
-    print(type(m_branch_mpdp2d.population_size))
-    m_branch_mpdp2d.run()
-
-    print("M_Branch_MP2D Individual Str: ", m_branch_mpdp2d.individuals_str)
-    print("M_Branch_MP2D Individual Code: ", m_branch_mpdp2d.individuals_code)
+    pass

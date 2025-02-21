@@ -6,15 +6,11 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
 
-
+import re
 from ToolsGA import *
-from OP import *
 from RPN import *
-import torch
 from tqdm import tqdm
-from GA.Config import RPNbuilder_Config as config
-
-
+from OrganAbstractClass import *
 
 
 class RPN_Producer:
@@ -25,38 +21,30 @@ class RPN_Producer:
         self.M_V = ['M_V']
 
     def generate_seed(self):
-        DP_Seed_generator = DP_Seed(self.D_OHLC, config.seed_size)
-        DP_Seed_generator.run()
-        self.dp_seed = DP_Seed_generator.individuals_str
+        DP_Seed_generator = DP_Seed(self.D_OHLC)
+        self.dp_seed = DP_Seed_generator.generator(DP_Seed_generator)
 
-        DV_Seed_generator = DV_Seed(self.D_V, config.seed_size)
-        DV_Seed_generator.run()
-        self.dv_seed = DV_Seed_generator.individuals_str
+        DV_Seed_generator = DV_Seed(self.D_V)
+        self.dv_seed = DV_Seed_generator.generator(DV_Seed_generator)
 
-        MV_Seed_generator = MV_Seed(self.M_V, config.seed_size)
-        MV_Seed_generator.run()
-        self.mv_seed = MV_Seed_generator.individuals_str
+        MP_Seed_generator = MP_Seed(self.M_OHLC)
+        self.mp_seed = MP_Seed_generator.generator(MP_Seed_generator)
 
-        MP_Seed_generator = MP_Seed(self.M_OHLC, config.seed_size)
-        MP_Seed_generator.run()
-        self.mp_seed = MP_Seed_generator.individuals_str
+        MV_Seed_generator = MV_Seed(self.M_V)
+        self.mv_seed = MV_Seed_generator.generator(MV_Seed_generator)
 
     def generate_root(self):
-        MP_Root_generator = MP_Root(self.mp_seed, config.root_size)
-        MP_Root_generator.run()
-        self.mp_root = MP_Root_generator.individuals_str
+        MP_Root_generator = MP_Root(self.mp_seed)
+        self.mp_root = MP_Root_generator.generator(MP_Root_generator)
 
-        DP_Root_generator = DP_Root(self.dp_seed, config.root_size)
-        DP_Root_generator.run()
-        self.dp_root = DP_Root_generator.individuals_str
+        DP_Root_generator = DP_Root(self.dp_seed)
+        self.dp_root = DP_Root_generator.generator(DP_Root_generator)
 
-        DV_Root_generator = DV_Root(self.dv_seed, config.root_size)
-        DV_Root_generator.run()
-        self.dv_root = DV_Root_generator.individuals_str
+        DV_Root_generator = DV_Root(self.dv_seed)
+        self.dv_root = DV_Root_generator.generator(DV_Root_generator)
 
-        MV_Root_generator = MV_Root(self.mv_seed, config.root_size)
-        MV_Root_generator.run()
-        self.mv_root = MV_Root_generator.individuals_str
+        MV_Root_generator = MV_Root(self.mv_seed)
+        self.mv_root = MV_Root_generator.generator(MV_Root_generator)
 
         self.m_root = self.mv_root + self.mp_root
         self.d_root = self.dv_root + self.dp_root
@@ -64,42 +52,50 @@ class RPN_Producer:
     def generate_branch(self):
         self.m_branch = []
 
-        M_Branch_MP2D_generator = M_Branch_MP2D(self.mp_seed, config.branch_size)
-        M_Branch_MP2D_generator.run()
-        self.m_branch.extend(M_Branch_MP2D_generator.individuals_str)
+        M_Branch_MP2D_generator = M_Branch_MP2D(self.mp_seed)
+        self.m_branch.extend(M_Branch_MP2D_generator.generator(M_Branch_MP2D_generator))
 
-        M_Branch_MPDP2D_generator = M_Branch_MPDP2D(self.mp_seed, self.dp_seed, config.branch_size)
-        M_Branch_MPDP2D_generator.run()
-        self.m_branch.extend(M_Branch_MP2D_generator.individuals_str)
+        M_Branch_MPDP2D_generator = M_Branch_MPDP2D(self.mp_seed, self.dp_seed)
+        self.m_branch.extend(M_Branch_MPDP2D_generator.generator(M_Branch_MPDP2D_generator))
 
-        M_Branch_MV2D_generator = M_Branch_MV2D(self.mv_seed, config.branch_size)
-        M_Branch_MV2D_generator.run()
-        self.m_branch.extend(M_Branch_MV2D_generator.individuals_str)
+        M_Branch_MV2D_generator = M_Branch_MV2D(self.mv_seed)
+        self.m_branch.extend(M_Branch_MV2D_generator.generator(M_Branch_MV2D_generator))
 
-        M_Branch_MVDV2D_generator = M_Branch_MVDV2D(self.mv_seed, self.dv_seed, config.branch_size)
-        M_Branch_MVDV2D_generator.run()
-        self.m_branch.extend(M_Branch_MVDV2D_generator.individuals_str)
+        M_Branch_MVDV2D_generator = M_Branch_MVDV2D(self.mv_seed, self.dv_seed)
+        self.m_branch.extend(M_Branch_MVDV2D_generator.generator(M_Branch_MVDV2D_generator))
+
+        self.d_branch = []
+
+        D_Branch_DP2C_generator = D_Branch_DP2C(self.dp_root)
+        self.d_branch.extend(D_Branch_DP2C_generator.generator((D_Branch_DP2C_generator)))
+
+        D_Branch_DV2C_generator = D_Branch_DV2C(self.dv_root)
+        self.d_branch.extend(D_Branch_DV2C_generator.generator((D_Branch_DV2C_generator)))
 
     def generate_trunk(self):
-        Trunk_generator = Trunk(self.m_root, self.d_root, self.m_branch, ['industry'], config.trunk_size)
-        Trunk_generator.run() 
-        self.trunk = Trunk_generator.individuals_str
+        Trunk_generator = Trunk(self.m_root, self.d_root, self.d_branch, self.m_branch, 'industry')
+        self.trunk = Trunk_generator.generator(Trunk_generator)
 
     def generate_subtree(self):
         self.subtree = []
 
-        Subtree_withMask_generator = SubtreeWithMask(self.trunk, self.m_branch, config.subtree_size)
-        Subtree_withMask_generator.run()
-        self.subtree.extend(Subtree_withMask_generator.individuals_str)
+        Subtree_withMask_generator = SubtreeWithMask(self.trunk, self.m_branch)
+        self.subtree.extend(Subtree_withMask_generator.generator(Subtree_withMask_generator))
 
-        Subtree_noMask_generator = SubtreeNoMask(self.trunk, config.subtree_size)
-        Subtree_noMask_generator.run()
-        self.subtree.extend(Subtree_noMask_generator.individuals_str)
+        Subtree_noMask_generator = SubtreeNoMask(self.trunk)
+        self.subtree.extend(Subtree_noMask_generator.generator(Subtree_noMask_generator))
 
     def generate_tree(self):
-        Tree_generator = Tree(self.subtree, config.tree_size)
-        Tree_generator.run()
-        self.tree = Tree_generator.individuals_str
+        Tree_generator = Tree(self.subtree)
+        self.tree = Tree_generator.generator(Tree_generator)
+
+    def reduce_redundancy(self,rpn):
+        deap_code = gp.PrimitiveTree.from_string(rpn, general_pset.pset)
+        reduced_code=[]
+        for code in deap_code:
+            if not code.name.startswith('id'):
+                reduced_code.append(code)
+        return str(gp.PrimitiveTree(reduced_code))
 
     def run(self):
         self.generate_seed()
@@ -108,69 +104,11 @@ class RPN_Producer:
         self.generate_trunk()
         self.generate_subtree()
         self.generate_tree()
-
-
-class General_toolbox:
-    def __init__(self):
-        self.input1 = ['M_O', 'M_H', 'M_L', 'M_C', 'M_V']
-        self.input2 = ['D_O', 'D_H', 'D_L', 'D_C', 'D_V']
-        self.input3 = ['industry']
-        self.input4 = ['TypeD_data']
-        self.input5 = ['TypeC_data']
-        self.generate_ini_toolbox()
-
-    def generate_ini_toolbox(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN", [TypeB] * 5 + [TypeA] * 5 + [TypeE] + [TypeD] + [TypeC], TypeA)
-        name = self.input1 + self.input2 + self.input3 + self.input4 + self.input5
-        for i in range(len(name)):
-            self.pset.renameArguments(**{f'ARG{i}': name[i]})
-
-        if not hasattr(creator, "FitnessMax"):
-            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        creator.create('Tree_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset)
-
-        self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=1, max_=10)
-        self.toolbox.register('Tree_Compiler', tools.initIterate, getattr(creator, 'Tree_Compiler'), self.toolbox.expr)
-        self.toolbox.register("population", tools.initRepeat, list, getattr(self.toolbox, 'Tree_Compiler'))
-
-        self.add_all_primitives('pset')
-
-    def add_primitive_byclass(self, op_classname, pset_name):
-        parts = op_classname.split('2')
-        part1 = parts[0].split('_')[1]
-        part2 = parts[1]
-
-        op = globals()[op_classname]()
-        for func_name in op.func_list:
-            func = getattr(op, func_name)
-            input_class_list = [globals()[f"Type{char}"] for char in part1]
-            output_class = globals()[f"Type{part2}"]
-            pset = getattr(self, pset_name)
-            pset.addPrimitive(func, input_class_list, output_class, name=func_name)
-
-    def add_all_primitives(self, pset_name):
-        pset = getattr(self, pset_name)
-
-        for type in ['A', 'B', 'C', 'D']:
-            class_list = globals()[f"OPclass_name_2{type}"]
-            for class_name in class_list:
-                self.add_primitive_byclass(class_name, pset_name)
-
-        pset.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        pset.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
-        pset.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
-        pset.addPrimitive(OP_Closure.id_tensor, [TypeA], TypeA, name='id_tensor')
-
-        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
-            pset.addTerminal(constant_value, TypeF)
-
-        for constant_value in [0.05, 0.1]:
-            pset.addTerminal(constant_value, TypeG)
+        self.tree=[self.reduce_redundancy(tree) for tree in self.tree]
 
 
 class RPN_Parser:
-    def __init__(self, RPN, pset):
+    def __init__(self, RPN, pset=general_pset.pset):
 
         self.rpn = RPN
         self.pset = pset
@@ -355,186 +293,163 @@ class RPN_Parser:
 
 class RPN_Compiler:
     def __init__(self, year_list, device=torch.device("cuda")):
-        self.general_toolbox=General_toolbox()
-        self.general_pset=self.general_toolbox.pset
+
+        self.year_list = year_list
+        self.general_pset = general_pset.pset
         self.device = device
-        self.prepare_data(year_list)
+        self.__init_data(self.year_list)
 
-
-    def prepare_data(self, year_lst):
+    def __init_data(self, year_list):
         self.data_reader = MmapReader()
-        self.Day_data = list(self.data_reader.get_Day_data(year_lst))
-        self.Day_data=[i.to(self.device) for i in self.Day_data]
-        self.day_list = self.data_reader.get_daylist(year_lst)
+        self.day_list = self.data_reader.get_daylist(year_list)
+        self.D_O, self.D_H, self.D_L, self.D_C, self.D_V = list(self.data_reader.get_Day_data(year_list))
+        self.industry = [self.data_reader.get_Barra(year_list)[:, :, 10:].to(self.device)]
 
-        self.industry_data = [self.data_reader.get_Barra(year_lst)[:, :, 10:].to(self.device)]
-        self.TypeC_data = [OP_AF2C.Dmask_min(self.Day_data[0], 20)]
+    def extract_op(self, expression):
+        op_list = []
+        # 初始化一个列表，用于存储左括号、右括号和逗号的位置
+        positions = []
+        # 初始化括号计数器
+        bracket_count = 0
+        # 遍历表达式字符串
+        for i, char in enumerate(expression):
+            if char == '(':
+                # 如果是左括号，计数器加1
+                bracket_count += 1
+                if bracket_count == 1:
+                    # 记录第一个左括号的位置
+                    positions.append(i)
+            elif char == ')':
+                # 如果是右括号，计数器减1
+                bracket_count -= 1
+                if bracket_count == 0:
+                    # 如果括号计数器为0，说明找到了匹配的右括号，记录位置
+                    positions.append(i)
+            elif char == ',' and bracket_count == 1:
+                # 如果是逗号且括号计数器为1，记录逗号位置
+                positions.append(i)
 
-    def add_primitive_byclass(self, op_classname, pset_name):
-        parts = op_classname.split('2')
-        part1 = parts[0].split('_')[1]
-        part2 = parts[1]
+        # 如果没有记录任何位置，说明这段表达式中没有算子
+        if not positions:
+            return op_list
 
-        op = globals()[op_classname]()
-        for func_name in op.func_list:
-            func = getattr(op, func_name)
-            input_class_list = [globals()[f"Type{char}"] for char in part1]
-            output_class = globals()[f"Type{part2}"]
-            pset = getattr(self, pset_name)
-            pset.addPrimitive(func, input_class_list, output_class, name=func_name)
+        # 提取第一个左括号之前的所有字符，即算子名称
+        op_name = expression[:positions[0]]
+        # 将算子名称添加到结果列表中
+        op_list.append(op_name)
 
-    def split_segment(self, rpn):
-        parser = RPN_Parser(rpn,self.general_pset)
-        parser.get_tree_structure()
-        parser.parse_tree()
+        # 如果有多个位置记录，说明有嵌套的算子
+        if len(positions) > 1:
+            # 遍历所有记录的位置，提取子表达式并递归调用
+            for start, end in zip(positions[:-1], positions[1:]):
+                # 提取子表达式
+                sub_expression = expression[start + 1:end]
+                # 递归调用函数，传入空列表
+                sub_list = self.extract_op(sub_expression)
+                # 将递归调用的结果扩展到主列表中
+                op_list.extend(sub_list)
+        return op_list
 
-        num_record = 0
-        data_record = []
-        subtree = parser.tree2str(parser.subtree['tree_mode'])
+    def add_op_class(self, op):
+        interface = op_info[op.strip()]['classification']['interface']
+        return f"OP_{interface['属'][:-1]}2{interface['目'][:-1]}.{op}"
 
-        for root in parser.root['tree_mode']:
-            root_expr = parser.tree2str(root)
-            if (root_expr.startswith('D')) and (root_expr in subtree):
-                subtree = subtree.replace(root_expr, f'DARG_{num_record}')
-                data_record.append(root_expr)
-                num_record += 1
+    def replace_primities(self, rpn):
+        used_op = self.extract_op(rpn)
+        used_op = [i.strip() for i in used_op]
+        used_op = list(dict.fromkeys(used_op))
+        for op in used_op:
+            rpn = rpn.replace(op, self.add_op_class(op))
+        return rpn
 
-        for seed in parser.seed['tree_mode']:
-            seed_expr = parser.tree2str(seed)
-            if seed_expr.startswith('D') and (seed_expr in subtree):
-                subtree = subtree.replace(seed_expr, f'DARG_{num_record}')
-                data_record.append(seed_expr)
-                num_record += 1
+    def replace_D_tensor(self, rpn):
+        count = 0
+        pattern = r"D_tensor"
 
-        segment1 = data_record
-        segment2 = subtree
-        segment3 = parser.tree['abbreviation']
-        return [segment1, segment2, segment3]
+        def replacer(match):
+            nonlocal count  # 使用 nonlocal 关键字访问外部的 count 变量
+            current_count = count  # 保存当前计数
+            count += 1  # 计数器递增
+            return f"D_tensor{current_count}"  # 返回替换后的字符串 D_i
 
-    def toolbox4segment1(self):
-        self.pset1 = gp.PrimitiveSetTyped("MAIN", [TypeA] * 5, TypeA)
-        name = self.general_toolbox.input2
-        for i in range(len(name)):
-            self.pset1.renameArguments(**{f'ARG{i}': name[i]})
-
-        creator.create('segment1_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset1)
-
-        self.toolbox1 = base.Toolbox()
-        self.toolbox1.register("expr", gp.genHalfAndHalf, pset=self.pset1, min_=1, max_=10)
-        self.toolbox1.register('segment1_Compiler', tools.initIterate, getattr(creator, 'segment1_Compiler'),
-                               self.toolbox1.expr)
-        self.toolbox1.register("population", tools.initRepeat, list, getattr(self.toolbox1, 'segment1_Compiler'))
-        self.toolbox1.register("compile", gp.compile, pset=self.pset1)
-
-        for class_name in ['OP_A2A', 'OP_AA2A', 'OP_AG2A', 'OP_AAF2A', 'OP_AF2A']:
-            self.add_primitive_byclass(class_name, 'pset1')
-
-        self.pset1.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset1.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
-
-        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
-            self.pset1.addTerminal(constant_value, TypeF)
-
-        for constant_value in [0.05, 0.1]:
-            self.pset1.addTerminal(constant_value, TypeG)
-
-    def toolbox4segment2(self, ARG_name):
-        self.pset2 = gp.PrimitiveSetTyped("MAIN", [TypeB] * 5 + [TypeD] + [TypeA] * len(ARG_name), TypeA)
-        name = self.general_toolbox.input1 + self.general_toolbox.input4 + [f'DARG_{i}' for i in range(len(ARG_name))]
-        for i in range(len(name)):
-            self.pset2.renameArguments(**{f'ARG{i}': name[i]})
-
-        creator.create('segment2_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset2)
-
-        self.toolbox2 = base.Toolbox()
-        self.toolbox2.register("expr", gp.genHalfAndHalf, pset=self.pset2, min_=1, max_=10)
-        self.toolbox2.register('segment2_Compiler', tools.initIterate, getattr(creator, 'segment2_Compiler'),
-                               self.toolbox2.expr)
-        self.toolbox2.register("population", tools.initRepeat, list, getattr(self.toolbox2, 'segment2_Compiler'))
-        self.toolbox2.register("compile", gp.compile, pset=self.pset2)
-
-        for class_name in ['OP_B2B', 'OP_BB2B', 'OP_BA2B', 'OP_BG2B', 'OP_BF2B', 'OP_B2D', 'OP_BF2D', 'OP_BA2D',
-                           'OP_DD2D', 'OP_B2A', 'OP_BB2A', 'OP_BD2A', 'OP_BBD2A']:
-            self.add_primitive_byclass(class_name, 'pset2')
-
-        self.pset2.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset2.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
-        self.pset2.addPrimitive(OP_Closure.id_tensor, [TypeA], TypeA, name='id_tensor')
-
-        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
-            self.pset2.addTerminal(constant_value, TypeF)
-
-        for constant_value in [0.05, 0.1]:
-            self.pset2.addTerminal(constant_value, TypeG)
-
-    def toolbox4segment3(self):
-        self.pset3 = gp.PrimitiveSetTyped("MAIN", [TypeE] + [TypeC] + [TypeA], TypeA)
-        self.pset3.renameArguments(**{f'ARG{0}': 'industry'})
-        self.pset3.renameArguments(**{f'ARG{1}': 'TypeC_data'})
-        self.pset3.renameArguments(**{f'ARG{2}': 'subtree_ARG0'})
-        creator.create('segment3_Compiler', gp.PrimitiveTree, fitness=creator.FitnessMax, pset=self.pset3)
-
-        self.toolbox3 = base.Toolbox()
-        self.toolbox3.register("expr", gp.genHalfAndHalf, pset=self.pset3, min_=1, max_=10)
-        self.toolbox3.register('segment3_Compiler', tools.initIterate, getattr(creator, 'segment3_Compiler'),
-                               self.toolbox3.expr)
-        self.toolbox3.register("population", tools.initRepeat, list, getattr(self.toolbox3, 'segment3_Compiler'))
-        self.toolbox3.register("compile", gp.compile, pset=self.pset3)
-
-        for type in ['A', 'C']:
-            class_list = globals()[f"OPclass_name_2{type}"]
-            for class_name in class_list:
-                self.add_primitive_byclass(class_name, 'pset3')
-
-        self.pset3.addPrimitive(OP_Closure.id_int, [TypeF], TypeF, name='id_int')
-        self.pset3.addPrimitive(OP_Closure.id_industry, [TypeE], TypeE, name='id_industry')
-        self.pset3.addPrimitive(OP_Closure.id_float, [TypeG], TypeG, name='id_float')
-
-        for constant_value in [int(i) for i in [1, 2, 3, 5, 10, 20, 30, 60]]:
-            self.pset3.addTerminal(constant_value, TypeF)
-
-        for constant_value in [0.05, 0.1]:
-            self.pset3.addTerminal(constant_value, TypeG)
-
-    def compile_segment1(self, individual):
-        compiled_func = self.toolbox1.compile(expr=individual)
-        result = compiled_func(*self.Day_data[:])
+        result = re.sub(pattern, replacer, rpn)
         return result
 
-    def compile_segment2(self, individual, segment1_data):
-        TypeD_data = OP_B2D.Mmask_1h_after_open(self.data_reader.get_Minute_data_daily(self.day_list[0])[0])
+    def compile_module1(self, rpn, D_tensor: [torch.Tensor]):
+        rpn = self.replace_D_tensor(rpn)
+        rpn = self.replace_primities(rpn)
 
-        template = torch.full_like(self.Day_data[0], float('nan'))
+        for i in range(len(D_tensor)):
+            locals()[f'D_tensor{i}'] = D_tensor[i].to(self.device)
+
+        return eval(rpn)
+
+    def compile_module2(self, rpn, D_tensor: [torch.Tensor]):
+
+        rpn = self.replace_D_tensor(rpn)
+        rpn = self.replace_primities(rpn)
+
+        for i in range(len(D_tensor)):
+            locals()[f'D_tensor_all{i}'] = D_tensor[i]
+
+        template = torch.full((len(self.day_list), len(self.data_reader.DailyDataReader.StockCodes)), float('nan'))
         for i, day in tqdm(enumerate(self.day_list)):
-            curr_Min_data = self.data_reader.get_Minute_data_daily(day)
-            curr_Min_data=[i.to(self.device) for i in curr_Min_data]
-            curr_Day_data = [data[i].unsqueeze(0) for data in segment1_data]
-            curr_data = curr_Min_data + [TypeD_data] + curr_Day_data
-            compiled_func = self.toolbox2.compile(expr=individual)
-            result = compiled_func(*curr_data[:])
-            template[i] = result
+            M_O, M_H, M_L, M_C, M_V = self.data_reader.get_Minute_data_daily(day)
+            M_O, M_H, M_L, M_C, M_V = [i.to(self.device) for i in [M_O, M_H, M_L, M_C, M_V]]
+            for j in range(len(D_tensor)):
+                locals()[f'D_tensor{j}'] = locals()[f'D_tensor_all{j}'][i].to(self.device)
+            template[i] = eval(rpn)
+
         return template
 
-    def compile_segment3(self, individual, segment2_data):
-        compiled_func = self.toolbox3.compile(expr=individual)
-        data = self.industry_data + self.TypeC_data + [segment2_data]
-        result = compiled_func(*data[:])
-        return result
+    def adjust_memorizer(self, deap_primitive, string_memorizer):
+        expr = f"{deap_primitive.name}({', '.join(string_memorizer[:deap_primitive.arity])})"
+        string_memorizer = string_memorizer[deap_primitive.arity:]
+        string_memorizer.insert(0, expr)
+        return string_memorizer
 
-    def compile_tree(self, rpn):
-        segment1, segment2, segment3 = self.split_segment(rpn)
+    def compile(self, rpn):
+        name = general_pset.input1 + general_pset.input2 + general_pset.input3 + general_pset.input4 + general_pset.input5
+        deap_code = gp.PrimitiveTree.from_string(rpn, self.general_pset)
+        deap_code.reverse()
+        D_tensor_memorizer = []
+        string_memorizer = []
+        for code in deap_code:
+            if isinstance(code, gp.Terminal):
 
-        self.toolbox4segment1()
-        self.toolbox4segment2(segment1)
-        self.toolbox4segment3()
+                if code.name.startswith('ARG') and int(code.name[3:]) >= 5:
+                    D_tensor_memorizer.insert(0, getattr(self, name[int(code.name[3:])]))
+                    string_memorizer.insert(0, 'D_tensor')
 
-        day_data = []
-        for segment1 in segment1:
-            day_data.append(self.compile_segment1(segment1))
+                elif code.name.startswith('ARG') and int(code.name[3:]) < 5:
+                    string_memorizer.insert(0, name[int(code.name[3:])])
 
-        subtree = self.compile_segment2(segment2, day_data)
-        tree = self.compile_segment3(segment3, subtree)
-        return tree
+                else:
+                    string_memorizer.insert(0, code.name)
+
+            if isinstance(code, gp.Primitive):
+                if code.name.startswith('D'):
+                    string_memorizer = self.adjust_memorizer(code, string_memorizer)
+                    flag = any(item in string_memorizer[0] for item in name[:5])
+
+                    if flag == 0:
+                        count = string_memorizer[0].count("D_tensor")
+                        result = self.compile_module1(string_memorizer[0], D_tensor_memorizer[:count])
+                        D_tensor_memorizer = D_tensor_memorizer[count:]
+                        D_tensor_memorizer.insert(0, result)
+                        string_memorizer[0] = 'D_tensor'
+
+                    elif flag == 1:
+                        count = string_memorizer[0].count("D_tensor")
+                        result = self.compile_module2(string_memorizer[0], D_tensor_memorizer[:count])
+                        D_tensor_memorizer = D_tensor_memorizer[count:]
+                        D_tensor_memorizer.insert(0, result)
+                        string_memorizer[0] = 'D_tensor'
+
+                elif code.name.startswith('M'):
+                    string_memorizer = self.adjust_memorizer(code, string_memorizer)
+
+        return D_tensor_memorizer[0]
 
 
 if __name__ == "__main__":

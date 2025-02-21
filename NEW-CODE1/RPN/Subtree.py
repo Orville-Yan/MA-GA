@@ -5,89 +5,37 @@ parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
 
 
-from ToolsGA.GA_tools import *
-from OP import *
-from GA.Config import Subtree_Config as Config
+from OrganAbstractClass import *
 
-class SubtreeBase:
-
-    def generate_toolbox(self, class_name, pset):
-        if not hasattr(creator, "FitnessMax"):
-            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        individual_class_name = f"Subtree_{class_name}"
-        if not hasattr(creator, individual_class_name):
-            creator.create(individual_class_name, gp.PrimitiveTree, fitness=creator.FitnessMax, pset=pset)
-
-        self.toolbox = base.Toolbox()
-        self.toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=Config.min_depth, max_=Config.max_depth)
-        self.toolbox.register("individual", tools.initIterate, getattr(creator, individual_class_name), self.toolbox.expr)
-        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
-
-    def generate_population(self):
-        self.individuals_code = self.toolbox.population(n=self.population_size)
-
-    def add_primitive(self):
-        raise NotImplementedError
-
-    def run(self):
-        self.add_primitive()
-        self.generate_population()
-
-class SubtreeWithMask(SubtreeBase):
-    def __init__(self, input1, input2, population_size=10):
-        self.input1 = input1
-        self.input2 = input2
-        self.population_size = population_size
+class SubtreeWithMask(Organ):
+    def __init__(self, trunk:list[str], branch:list[str]):
+        self.input1 = trunk
+        self.input2 = branch
+        self.input=self.input1+self.input2
+        self.config = globals()[f'{self.__class__.__name__[:7]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
 
 
-    def add_primitive(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN_with_mask", [TypeB]*len(self.input1) + [TypeD]*len(self.input2), TypeA)
-
-        for func_name in Config.OP_BD2A_func_list:
-            func = getattr(OP_BD2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeD], TypeA, name=func_name)
-
-        for func_name in Config.OP_BBD2A_func_list:
-            func = getattr(OP_BBD2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB, TypeD], TypeA, name=func_name)
-
-        self.generate_toolbox("with_mask", self.pset)
-
-    def generate_population(self):
-        super().generate_population()
-        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input1 + self.input2)
+    def generate_pset(self):
+        self.pset=gp.PrimitiveSetTyped('Main',[TypeB]*len(self.input1)+[TypeD]*len(self.input2),TypeA)
+        self.pset=self.add_primitive_byfunclist(self.config.OP_BD2A_func_list,'OP_BD2A',self.pset)
+        self.pset = self.add_primitive_byfunclist(self.config.OP_BBD2A_func_list, 'OP_BBD2A',self.pset)
 
 
-class SubtreeNoMask(SubtreeBase):
-    def __init__(self, input_data, population_size=10):
-        self.input = input_data
-        self.population_size = population_size
 
-    def add_primitive(self):
-        self.pset = gp.PrimitiveSetTyped("MAIN_no_mask", [TypeB]*len(self.input), TypeA)
+class SubtreeNoMask(Organ):
+    def __init__(self, trunk):
+        self.input = trunk
+        self.config = globals()[f'{self.__class__.__name__[:7]}_Config']
+        self.population_size = self.config.population_size
+        self.min_depth, self.max_depth = self.config.depth_range
 
-        for func_name in Config.OP_B2A_func_list:
-            func = getattr(OP_B2A, func_name)
-            self.pset.addPrimitive(func, [TypeB], TypeA, name=func_name)
-
-        for func_name in Config.OP_BB2A_func_list :
-            func = getattr(OP_BB2A, func_name)
-            self.pset.addPrimitive(func, [TypeB, TypeB], TypeA, name=func_name)
-
-        self.generate_toolbox("no_mask", self.pset)
-
-    def generate_population(self):
-        super().generate_population()
-        self.individuals_code, self.individuals_str = change_name(self.individuals_code, self.input)
+    def generate_pset(self):
+        self.pset = gp.PrimitiveSetTyped('Main', [TypeB] * len(self.input), TypeA)
+        self.pset = self.add_primitive_byfunclist(self.config.OP_B2A_func_list, 'OP_B2A', self.pset)
+        self.pset = self.add_primitive_byfunclist(self.config.OP_BB2A_func_list, 'OP_BB2A', self.pset)
 
 if __name__ == "__main__":
-    input_data = ['open','high']
-    mask = ['low']
+    pass
 
-    subtree_with_mask = SubtreeWithMask(input_data, mask, population_size=10)
-    subtree_with_mask.run()
-    print("With Mask:", subtree_with_mask.individuals_str)
-
-    subtree_no_mask = SubtreeNoMask(input_data, population_size=10)
-    subtree_no_mask.run()
-    print("No Mask:", subtree_no_mask.individuals_str)
