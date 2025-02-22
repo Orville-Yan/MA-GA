@@ -155,7 +155,7 @@ class ParquetReader(BasicReader):
         return [self.read_data_by_col(col, year_lst) for col in self.M_name]
     
     
-    def get_barra(self, year_lst):
+    def get_Barra(self, year_lst):
         barra = torch.load(os.path.join(Config.DATA_PATH,'barra.pt'), weights_only=True)
         dict = torch.load(os.path.join(Config.DATA_PATH,'dict.pt'), weights_only=False)
         s = [pd.to_datetime(dict['index']).year.isin(year_lst)]
