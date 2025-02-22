@@ -226,6 +226,7 @@ Data
 
 
 ## DataReader模块
+- 读取方式：选择阅读器，用ParquetReader/MmapReader实例化，再get_Day_Data,get_Minute_Data,get_Barra即可
 - Interface类存储了一系列静态方法，不用实例化直接调用即可
     - `get_daylist(trading_dates,year_lst)`：返回对应年份的交易日列表
     - `get_index(trading_dates, year_lst)`：返回tradingdates中对应年份的index，只要是index与tradingdate相同的数据都可用该函数筛选
