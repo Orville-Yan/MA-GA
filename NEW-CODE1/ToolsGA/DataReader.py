@@ -162,7 +162,7 @@ class ParquetReader(BasicReader):
         return [self.read_data_by_col(col, year_lst) for col in self.M_name]
     
     
-    def get_barra(self, year_lst):
+    def get_Barra(self, year_lst):
         barra = torch.load(os.path.join(Config.DATA_PATH,'barra.pt'), weights_only=True)
         dict = torch.load(os.path.join(Config.DATA_PATH,'dict.pt'), weights_only=False)
         s = [pd.to_datetime(dict['index']).year.isin(year_lst)]
@@ -303,5 +303,10 @@ class MmapReader(BasicReader):
             
 if __name__ == '__main__':
     reader = MmapReader()
+<<<<<<< HEAD
     M_O, M_H, M_L, M_C, M_V = reader.get_Minute_data([2016])
     print(M_H)
+=======
+    df = Interface.tensor2df(reader.clean ,reader.TradingDate, [2016], reader.StockCodes)
+    tensor_from_df = Interface.df2tensor(df)
+>>>>>>> 68c51e71e110396addd2dcc37cb4fd58def98ee9
