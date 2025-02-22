@@ -303,10 +303,6 @@ class MmapReader(BasicReader):
             
 if __name__ == '__main__':
     reader = MmapReader()
-<<<<<<< HEAD
     M_O, M_H, M_L, M_C, M_V = reader.get_Minute_data([2016])
     print(M_H)
-=======
-    df = Interface.tensor2df(reader.clean ,reader.TradingDate, [2016], reader.StockCodes)
-    tensor_from_df = Interface.df2tensor(df)
->>>>>>> 68c51e71e110396addd2dcc37cb4fd58def98ee9
+
