@@ -19,9 +19,11 @@ class Interface():
     @staticmethod
     def get_daylist(trading_dates,year_lst:list[int]):
         return list(trading_dates[trading_dates.dt.year.isin(year_lst)])
+    
     @staticmethod
     def get_index(trading_dates, year_lst)->list:
         return [(trading_dates.index[trading_dates.dt.year.isin(year_lst)])]
+    
     @staticmethod
     def tensor2df(tensor, trading_dates,year_list, stocks):
         day_list = Interface.get_daylist(trading_dates
@@ -30,6 +32,7 @@ class Interface():
         tensor = tensor[idx]
         df = pd.DataFrame(np.asarray(tensor), index=day_list, columns=stocks)
         return df
+    
     @staticmethod
     def df2tensor(df):
         df = df.astype(np.float32)
@@ -43,12 +46,14 @@ class Interface():
             day_data.append(group.values)
         tensor = torch.tensor(np.array(day_data, dtype=np.float32), dtype=torch.float32)
         return tensor.permute(0,2,1)
+    
     @staticmethod
     def generate_trading_time(date):
         date = pd.to_datetime(date)
         morning_times = pd.date_range(date + pd.Timedelta("09:30:00"), date + pd.Timedelta("11:30:00"), freq="min")
         afternoon_times = pd.date_range(date + pd.Timedelta("13:00:00"), date + pd.Timedelta("15:00:00"), freq="min")
         return morning_times.union(afternoon_times).sort_values()
+    
     @staticmethod
     def fill_full_day(day_data:pd.DataFrame)->pd.DataFrame:
         date = day_data.index[0].date()
@@ -61,6 +66,7 @@ class Interface():
         tensor = torch.tensor(array, dtype=torch.float32, device=device)[index]
         tensor = torch.where(clean | (tensor < 1e-5), float('nan'), tensor)
         return tensor
+    
     @staticmethod
     def get_pct_change(close:torch.tensor)-> torch.tensor:
         p = close / close.shift(1)
@@ -74,9 +80,6 @@ class Interface():
         open = OP_AF2A.D_ts_delay(d_o, -1)
         close = OP_AF2A.D_ts_delay(d_c, -freq)
         return close / open - 1
-
-
-
 
 
 
@@ -98,8 +101,10 @@ class BasicReader():
     def _StockCodes(self):
         code = loadmat(os.path.join(self.daily_data_path, 'AllStockCode.mat'))['AllStockCode']
         return pd.Series([code[0][i].tolist()[0] for i in range(len(code[0]))]).loc[self.MutualStockCodes].reset_index(drop=True)
+    
     def _ListedDate(self):
         return loadmat(os.path.join(self.daily_data_path, 'AllStock_DailyListedDate.mat'))['AllStock_DailyListedDate'][:, self.MutualStockCodes]
+    
     def _Status(self):
         return loadmat(os.path.join(self.daily_data_path, 'AllStock_DailyStatus.mat'))['AllStock_DailyStatus_use'][:, self.MutualStockCodes]
 
@@ -132,8 +137,10 @@ class ParquetReader(BasicReader):
         low = loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyLow_dividend.mat'))['AllStock_DailyLow_dividend'][:, self.MutualStockCodes]
         close = loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyClose_dividend.mat'))['AllStock_DailyClose_dividend'][:, self.MutualStockCodes]
         return [open, high, low, close]
+    
     def GetVolume(self):
         return loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyVolume.mat'))['AllStock_DailyVolume'][:, self.MutualStockCodes]
+    
     def get_Day_data(self,year_lst: list[int])-> list[torch.Tensor]:
         index = Interface.get_index(self.TradingDate,year_lst)
         clean = self.clean[index]
@@ -164,7 +171,6 @@ class ParquetReader(BasicReader):
     
 class MmapReader(BasicReader):
     def __init__(self,  download = False, DailyDataPath: str = Config.MMAP_Daily_PATH, MinuteDataPath: str = Config.MMAP_Minute_PATH, BarraPath: str = Config.MMAP_BARRA_PATH, DictPath: str = Config.PARQUET_DICT_PATH, device: str = 'cpu'):
-        super().__init__()
         if download:
             self.parquetreader = ParquetReader()
         self.mmap_DailyDataPath = DailyDataPath
@@ -246,7 +252,7 @@ class MmapReader(BasicReader):
 
     def get_Barra(self, year_lst):
         num_stock = self.data_shape[str(year_lst[0])][1]
-        day_list = Interface.get_daylist(self.TradingDate,year_lst)
+        day_list = Interface.get_daylist(self._TradingDate,year_lst)
         barra = torch.full((len(day_list), num_stock, 41), float('nan'))
         for i, day in enumerate(day_list):
             barra[i] = self.get_Barra_daily(day)
@@ -270,7 +276,7 @@ class MmapReader(BasicReader):
                 mmap[:] = data[0] 
 
     def save_minute_data(self):
-        trading_dates = self.TradingDate
+        trading_dates = self._TradingDate
         for year in range(2016, 2025):
             day_list = Interface.get_daylist(trading_dates, [year])
             M_O, M_H, M_L, M_C, M_V = self.parquetreader.get_Minute_data([year])
@@ -286,7 +292,7 @@ class MmapReader(BasicReader):
     def save_barra_data(self):
         year_list = list(range(2016, 2024))
         barra = self.parquetreader.get_barra(year_list)
-        day_list = Interface.get_daylist(self.TradingDate,year_list)
+        day_list = Interface.get_daylist(self._TradingDate,year_list)
 
         for i, day in enumerate(day_list):
             curr_data = barra[i]
@@ -294,7 +300,8 @@ class MmapReader(BasicReader):
                              mode='w+',
                              shape=curr_data.shape)
             mmap[:] = curr_data
+            
 if __name__ == '__main__':
     reader = MmapReader()
-    df = Interface.tensor2df(reader.clean ,reader.TradingDate, [2016], reader.StockCodes)
-    tensor_from_df = Interface.df2tensor(df)
+    M_O, M_H, M_L, M_C, M_V = reader.get_Minute_data([2016])
+    print(M_H)
