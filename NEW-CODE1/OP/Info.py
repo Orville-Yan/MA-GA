@@ -113,7 +113,7 @@ Abstraction_Action_Group={
 
 op_info = {
     'D_at_abs': {
-        'description': '计算输入张量的绝对值',
+        'description': '输入一个A类型的张量，计算并返回其绝对值。此操作用于消除负号的影响，保留数值的大小。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -125,86 +125,34 @@ op_info = {
             }
         }
     },
-    'D_cs_rank': {
-        'description': '计算输入张量的截面分位数，忽略 NaN 值',
+    'D_cs_demean_industry': {
+        'description': '输入一个A类型的张量和一个E类型的行业哑变量矩阵。计算每个行业的均值，并对每个股票的日频数据进行去均值处理，返回绝对值。此操作有助于消除行业间的系统性差异。',
         'classification': {
             'interface': {
                 '目': 'A目',
                 '科': '同频科',
-                '属': 'A属'
-            },
-            'action': {
-                '共轭'
-            }
-        }
-    },
-    'D_cs_scale': {
-        'description': '对输入张量进行截面标准化，标准化到 [0, 1] 区间',
-        'classification': {
-            'interface': {
-                '目': 'A目',
-                '科': '同频科',
-                '属': 'A属'
-            },
-            'action': {
-                '共轭'
-            }
-        }
-    },
-    'D_cs_zscore': {
-        'description': '对输入张量进行截面 z-score 标准化',
-        'classification': {
-            'interface': {
-                '目': 'A目',
-                '科': '同频科',
-                '属': 'A属'
-            },
-            'action': {
-                '共轭'
-            }
-        }
-    },
-    'D_cs_harmonic_mean': {
-        'description': '计算输入张量的截面调和平均值，忽略 NaN 和 0 值',
-        'classification': {
-            'interface': {
-                '目': 'A目',
-                '科': '同频科',
-                '属': 'A属'
-            },
-            'action': {
-                '描述'
-            }
-        }
-    },
-    'D_cs_demean': {
-        'description': '对输入张量进行截面去均值处理，并取绝对值',
-        'classification': {
-            'interface': {
-                '目': 'A目',
-                '科': '同频科',
-                '属': 'A属'
+                '属': 'AE属'
             },
             'action': {
                 '剥离'
             }
         }
     },
-    'D_cs_winsor': {
-        'description': '对输入张量进行尾部磨平处理，将分位数小于 limit[0] 或大于 limit[1] 的部分替换为对应分位数的值',
+    'D_cs_industry_neutra': {
+        'description': '输入一个A类型的张量和一个E类型的行业哑变量矩阵。对每个股票的日频数据进行行业中性化处理，去除行业均值的影响，使得数据更具可比性。',
         'classification': {
             'interface': {
                 '目': 'A目',
                 '科': '同频科',
-                '属': 'A属'
+                '属': 'AE属'
             },
             'action': {
-                '扭曲'
+                '剥离'
             }
         }
     },
     'D_cs_norm_spread': {
-        'description': '计算 (x - y) / (|x| + |y|)',
+        'description': '输入两个A类型的张量x和y。计算 (x - y) / (|x| + |y|)，用于衡量两个变量之间的相对差异，避免因绝对值大小不同而导致的偏差。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -217,7 +165,7 @@ op_info = {
         }
     },
     'D_cs_cut': {
-        'description': '根据 x 的符号对 y 进行截断处理',
+        'description': '输入两个A类型的张量x和y。根据x的符号对y进行截断处理，x为正则保留y的值，为负则将y置为0。此操作用于根据x的变化方向调整y的值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -230,7 +178,7 @@ op_info = {
         }
     },
     'D_cs_regress_res': {
-        'description': '对 x 和 y 进行截面回归，返回残差',
+        'description': '输入两个A类型的张量x和y。对x和y进行截面回归，返回残差。此操作用于去除线性趋势，保留数据的非线性部分。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -243,20 +191,7 @@ op_info = {
         }
     },
     'D_at_add': {
-        'description': '对 x 和 y 进行逐元素相加',
-        'classification': {
-            'interface': {
-                '目': 'A目',
-                '科': '同频科',
-                '属': 'AA属'
-            },
-            'action': {
-                '混沌'
-            }
-        }
-    },
-    'D_at_div': {
-        'description': '对 x 和 y 进行逐元素相除，y 为 0 时返回 NaN',
+        'description': '输入两个A类型的张量x和y。逐元素相加，返回结果。此操作用于合并两个张量的数值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -269,7 +204,20 @@ op_info = {
         }
     },
     'D_at_sub': {
-        'description': '对 x 和 y 进行逐元素相减',
+        'description': '输入两个A类型的张量x和y。逐元素相减，返回结果。此操作用于计算两个张量之间的差异。',
+        'classification': {
+            'interface': {
+                '目': 'A目',
+                '科': '同频科',
+                '属': 'AA属'
+            },
+            'action': {
+                '混沌'
+            }
+        }
+    },
+    'D_at_div': {
+        'description': '输入两个A类型的张量x和y。逐元素相除，y为0时返回NaN。此操作用于计算两个张量的比值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -282,7 +230,7 @@ op_info = {
         }
     },
     'D_at_prod': {
-        'description': '对 x 和 y 进行逐元素相乘',
+        'description': '输入两个A类型的张量x和y。逐元素相乘，返回结果。此操作用于计算两个张量的乘积。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -295,7 +243,7 @@ op_info = {
         }
     },
     'D_at_mean': {
-        'description': '计算 x 和 y 的逐元素均值',
+        'description': '输入两个A类型的张量x和y。计算逐元素均值，返回结果。此操作用于平滑两个张量的数值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -308,7 +256,7 @@ op_info = {
         }
     },
     'D_cs_edge_flip': {
-        'description': '根据阈值 thresh 对 x 的边缘部分进行翻转处理',
+        'description': '输入一个A类型的张量x和一个G类型的阈值。对x的分位数处于阈值以外的部分取负号。此操作用于突出数据的极端值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -321,7 +269,7 @@ op_info = {
         }
     },
     'D_ts_corr': {
-        'description': '计算 x 和 y 在回溯 d 天内的时序相关性',
+        'description': '输入两个A类型的张量x和y，以及一个F类型的int参数d。计算x和y在回溯d天内的时序相关性，用于评估两个时间序列之间的线性关系。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -334,7 +282,7 @@ op_info = {
         }
     },
     'D_ts_rankcorr': {
-        'description': '计算 x 和 y 在回溯 d 天内的时序秩相关性',
+        'description': '输入两个A类型的张量x和y，以及一个F类型的int参数d。计算x和y在回溯d天内的时序秩相关性，适用于非线性关系的评估。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -347,7 +295,7 @@ op_info = {
         }
     },
     'D_ts_regress_res': {
-        'description': '对 x 和 y 进行时序回归，返回残差',
+        'description': '输入两个A类型的张量x和y，以及一个F类型的int参数d。对x和y进行时序回归，返回残差。此操作用于去除时间序列中的线性趋势。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -360,7 +308,7 @@ op_info = {
         }
     },
     'D_ts_weight_mean': {
-        'description': '以 y 为权重，计算 x 在回溯 lookback 天内的加权平均值',
+        'description': '输入两个A类型的张量x和y，以及一个F类型的int参数d。以y为权重，计算x在回溯d天内的加权平均值，适用于强调某些数据点的重要性。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -373,7 +321,7 @@ op_info = {
         }
     },
     'D_ts_max': {
-        'description': '计算 x 在回溯 lookback 天内的最大值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算x在回溯d天内的最大值，用于识别时间序列中的峰值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -386,7 +334,7 @@ op_info = {
         }
     },
     'D_ts_min': {
-        'description': '计算 x 在回溯 lookback 天内的最小值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算x在回溯d天内的最小值，用于识别时间序列中的谷值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -399,7 +347,7 @@ op_info = {
         }
     },
     'D_ts_delay': {
-        'description': '对输入张量进行 d 天的延迟处理',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。对输入张量进行d天的延迟处理，常用于构建滞后变量。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -412,7 +360,7 @@ op_info = {
         }
     },
     'D_ts_delta': {
-        'description': '计算输入张量与 d 天前的差值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算输入张量与d天前的差值，用于衡量时间序列的变化幅度。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -425,7 +373,7 @@ op_info = {
         }
     },
     'D_ts_pctchg': {
-        'description': '计算输入张量在回溯 lookback 天内的涨跌幅',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算输入张量在回溯d天内的涨跌幅，适用于分析时间序列的相对变化。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -438,7 +386,7 @@ op_info = {
         }
     },
     'D_ts_mean': {
-        'description': '计算输入张量在回溯 lookback 天内的均值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算输入张量在回溯d天内的均值，用于平滑时间序列。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -451,7 +399,7 @@ op_info = {
         }
     },
     'D_ts_harmonic_mean': {
-        'description': '计算输入张量在回溯 lookback 天内的调和平均值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算输入张量在回溯d天内的调和平均值，用于平滑时间序列中的极端值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -464,7 +412,7 @@ op_info = {
         }
     },
     'D_ts_std': {
-        'description': '计算输入张量在回溯 lookback 天内的标准差',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算输入张量在回溯d天内的标准差，用于评估时间序列的波动性。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -477,7 +425,7 @@ op_info = {
         }
     },
     'D_ts_to_max': {
-        'description': '计算 x 与回溯 lookback 天内的最大值的比值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算x与x回溯d天内的最大值的比值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -485,12 +433,12 @@ op_info = {
                 '属': 'AF属'
             },
             'action': {
-                '自适应','混沌'
+                '自适应'
             }
         }
     },
     'D_ts_to_min': {
-        'description': '计算 x 与回溯 lookback 天内的最小值的比值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算x与x回溯d天内的最小值的比值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -498,12 +446,12 @@ op_info = {
                 '属': 'AF属'
             },
             'action': {
-                '自适应','混沌'
+                '自适应'
             }
         }
     },
     'D_ts_to_mean': {
-        'description': '计算 x 与回溯 lookback 天内的均值的比值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算x与x回溯d天内的均值的比值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -511,12 +459,12 @@ op_info = {
                 '属': 'AF属'
             },
             'action': {
-                '自适应','混沌'
+                '自适应'
             }
         }
     },
     'D_ts_max_to_min': {
-        'description': '计算 x 与回溯 lookback 天内的最大值与最小值的差值的比值',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。计算x与x回溯d天内的最大值与最小值的差值的比值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -524,12 +472,12 @@ op_info = {
                 '属': 'AF属'
             },
             'action': {
-                '自适应','混沌'
+                '自适应'
             }
         }
     },
     'D_ts_maxmin_norm': {
-        'description': '对 x 进行回溯 lookback 天内的最大最小值归一化',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。对x回溯d天，做最大最小值归一化。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -537,12 +485,12 @@ op_info = {
                 '属': 'AF属'
             },
             'action': {
-                '描述','共轭'
+                '自适应'
             }
         }
     },
     'D_ts_norm': {
-        'description': '对 x 进行回溯 lookback 天内的 z-score 标准化',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。对x进行回溯d天内的z-score标准化。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -550,12 +498,12 @@ op_info = {
                 '属': 'AF属'
             },
             'action': {
-                '描述','共轭'
+                '自适应'
             }
         }
     },
     'D_ts_detrend': {
-        'description': '去除 x 在回溯 lookback 天内的趋势',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。去除x在回溯d天内的趋势，返回残差。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -563,12 +511,12 @@ op_info = {
                 '属': 'AF属'
             },
             'action': {
-                '描述','剥离'
+                '剥离'
             }
         }
     },
     'D_ts_mask_mean': {
-        'description': '对 mask 为 True 的部分计算 x 的均值',
+        'description': '输入A类型的张量x和C类型的mask。对mask为True的部分计算x的均值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -576,12 +524,12 @@ op_info = {
                 '属': 'AC属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_ts_mask_std': {
-        'description': '对 mask 为 True 的部分计算 x 的标准差',
+        'description': '输入A类型的张量x和C类型的mask。对mask为True的部分计算x的标准差。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -589,12 +537,12 @@ op_info = {
                 '属': 'AC属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_ts_mask_sum': {
-        'description': '对日频时序数据中 mask 为 True 的部分计算 x 的和',
+        'description': '输入A类型的张量x和C类型的mask。对mask为True的部分计算x的和。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -602,12 +550,12 @@ op_info = {
                 '属': 'AC属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_ts_mask_prod': {
-        'description': '对日频时序数据中 mask 为 True 的部分计算 x 的乘积',
+        'description': '输入A类型的张量x和C类型的mask。对mask为True的部分计算x的乘积。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -615,12 +563,12 @@ op_info = {
                 '属': 'AC属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_Minute_area_mean': {
-        'description': '对 日内数据 mask 为 True 的部分计算 x 的均值',
+        'description': '输入B类型的张量x和D类型的mask。对mask为True的部分计算x的均值。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -628,12 +576,12 @@ op_info = {
                 '属': 'BD属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_Minute_area_std': {
-        'description': '对 日内数据 mask 为 True 的部分计算 x 的标准差',
+        'description': '输入B类型的张量x和D类型的mask。对mask为True的部分计算x的标准差。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -641,12 +589,12 @@ op_info = {
                 '属': 'BD属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_Minute_area_sum': {
-        'description': '对 日内数据 mask 为 True 的部分计算 x 的和',
+        'description': '输入B类型的张量x和D类型的mask。对mask为True的部分计算x的和。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -654,12 +602,12 @@ op_info = {
                 '属': 'BD属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_Minute_area_prod': {
-        'description': '对 日内数据 mask 为 True 的部分计算 x 的乘积',
+        'description': '输入B类型的张量x和D类型的mask。对mask为True的部分计算x的乘积。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -667,16 +615,16 @@ op_info = {
                 '属': 'BD属'
             },
             'action': {
-                '描述','提纯'
+                '提纯'
             }
         }
     },
     'D_Minute_std': {
-        'description': '计算日内数据的标准差',
+        'description': '输入B类型的张量。计算日内分钟数据的标准差。',
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '同频科',
+                '科': '混频科',
                 '属': 'B属'
             },
             'action': {
@@ -685,11 +633,11 @@ op_info = {
         }
     },
     'D_Minute_mean': {
-        'description': '计算日内数据的均值',
+        'description': '输入B类型的张量。计算日内分钟数据的均值。',
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '同频科',
+                '科': '混频科',
                 '属': 'B属'
             },
             'action': {
@@ -698,11 +646,11 @@ op_info = {
         }
     },
     'D_Minute_trend': {
-        'description': '计算日内数据的变化趋势',
+        'description': '输入B类型的张量。计算日内数据的变化趋势。',
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '同频科',
+                '科': '混频科',
                 '属': 'B属'
             },
             'action': {
@@ -711,7 +659,7 @@ op_info = {
         }
     },
     'D_Minute_area_weight_mean': {
-        'description': '对 日内数据 mask 为 True 的部分，以 weight 为权重计算 x 的加权均值',
+        'description': '对 日内数据 mask 为 True 的部分，以 weight 为权重计算 x 的加权均值，用于在掩码条件下的加权分析。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -724,7 +672,7 @@ op_info = {
         }
     },
     'D_Minute_area_corr': {
-        'description': '对 日内数据 mask 为 True 的部分计算 x 和 y 的相关性',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 和 y 的相关性，用于在掩码条件下的相关性分析。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -737,7 +685,7 @@ op_info = {
         }
     },
     'D_Minute_area_rankcorr': {
-        'description': '对 日内数据 mask 为 True 的部分计算 x 和 y 的秩相关性',
+        'description': '对 日内数据 mask 为 True 的部分计算 x 和 y 的秩相关性，用于在掩码条件下的秩相关性分析。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -750,7 +698,7 @@ op_info = {
         }
     },
     'D_Minute_area_bifurcate_mean': {
-        'description': '根据 m_tensor_y 的均值将 m_tensor_x 分为两部分，分别计算均值并相减',
+        'description': '根据 m_tensor_y 的均值将 m_tensor_x 分为两部分，分别计算均值并相减，用于分析日内数据的分叉特性。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -758,12 +706,12 @@ op_info = {
                 '属': 'BBD属'
             },
             'action': {
-                '描述','提纯','混沌'
+                '描述','提纯'
             }
         }
     },
     'D_Minute_area_bifurcate_std': {
-        'description': '根据 m_tensor_y 的均值将 m_tensor_x 分为两部分，分别计算标准差并相减',
+        'description': '根据 m_tensor_y 的均值将 m_tensor_x 分为两部分，分别计算标准差并相减，用于分析日内数据的分叉波动性。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -771,12 +719,12 @@ op_info = {
                 '属': 'BBD属'
             },
             'action': {
-                '描述','提纯','混沌'
+                '描述','提纯'
             }
         }
     },
     'D_Minute_corr': {
-        'description': '计算 x 和 y 的相关性',
+        'description': '计算日内数据 x 和 y 的相关性，用于评估日内数据的线性关系。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -789,7 +737,7 @@ op_info = {
         }
     },
     'D_Minute_weight_mean': {
-        'description': '以 weight 为权重计算 x 的加权均值',
+        'description': '以 weight 为权重计算日内数据 x 的加权均值，用于强调某些时间点的重要性。',
         'classification': {
             'interface': {
                 '目': 'A目',
@@ -802,11 +750,11 @@ op_info = {
         }
     },
     'D_Minute_abnormal_point_count': {
-        'description': '计算 mask 中异常点的数量',
+        'description': '输入D类型的mask。计算mask中标记为True的数量。',
         'classification': {
             'interface': {
                 '目': 'A目',
-                '科': '同频科',
+                '科': '混频科',
                 '属': 'D属'
             },
             'action': {
@@ -815,7 +763,7 @@ op_info = {
         }
     },
     'M_ignore_wobble': {
-        'description': '将开盘前 window_size 分钟和收盘前 window_size 分钟的数据设置为 NaN',
+        'description': '输入B类型的张量。将开盘后5分钟和收盘前5分钟的数据设置为NaN。',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -823,12 +771,12 @@ op_info = {
                 '属': 'B属'
             },
             'action': {
-                '扭曲'
+                '提纯'
             }
         }
     },
     'M_cs_zscore': {
-        'description': '对每个股票的每日数据进行 z-score 标准化',
+        'description': '输入B类型的张量。对每个股票的每日数据进行z-score标准化。',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -836,12 +784,12 @@ op_info = {
                 '属': 'B属'
             },
             'action': {
-                '共轭'
+                '描述'
             }
         }
     },
     'M_cs_rank': {
-        'description': '对每个股票的每日数据进行排名标准化，范围为 [0, 1]',
+        'description': '输入B类型的张量。计算每一分钟数据在日内的分位数。',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -849,12 +797,12 @@ op_info = {
                 '属': 'B属'
             },
             'action': {
-                '共轭'
+                '描述'
             }
         }
     },
     'M_cs_scale': {
-        'description': '对每个股票的每日数据进行最大值最小值标准化，范围为 [0, 1]',
+        'description': '输入B类型的张量。对每个股票的每日数据进行最大值最小值标准化。',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -862,12 +810,12 @@ op_info = {
                 '属': 'B属'
             },
             'action': {
-                '共轭'
+                '描述'
             }
         }
     },
     'M_cs_demean': {
-        'description': '对每个股票的每日数据减去其均值',
+        'description': '输入B类型的张量。对每个股票的每日数据减去其均值。',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -875,12 +823,25 @@ op_info = {
                 '属': 'B属'
             },
             'action': {
-                '共轭'
+                '剥离'
             }
         }
     },
     'M_cs_winsor': {
-        'description': '对每个股票的每日数据进行 Winsor 处理，将超出百分位数的值替换为对应百分位数的值',
+        'description': '输入B类型的张量。对每个股票的每日数据进行Winsor处理。',
+        'classification': {
+            'interface': {
+                '目': 'B目',
+                '科': '同频科',
+                '属': 'B属'
+            },
+            'action': {
+                '剥离'
+            }
+        }
+    },
+    'M_at_abs': {
+        'description': '输入B类型的张量。计算输入张量的绝对值。',
         'classification': {
             'interface': {
                 '目': 'B目',
@@ -892,26 +853,13 @@ op_info = {
             }
         }
     },
-    'M_at_abs': {
-        'description': '计算输入张量的绝对值',
-        'classification': {
-            'interface': {
-                '目': 'B目',
-                '科': '同频科',
-                '属': 'B属'
-            },
-            'action': {
-                '共轭'
-            }
-        }
-    },
     'M_ts_delay': {
-        'description': '对输入张量进行 d 天的延迟处理',
+        'description': '输入B类型的张量。获得1分钟之前的数据。',
         'classification': {
             'interface': {
                 '目': 'B目',
                 '科': '同频科',
-                '属': 'B属'
+                '属': 'BF属'
             },
             'action': {
                 '混沌'
@@ -924,7 +872,7 @@ op_info = {
             'interface': {
                 '目': 'B目',
                 '科': '同频科',
-                '属': 'B属'
+                '属': 'BF属'
             },
             'action': {
                 '描述'
@@ -976,7 +924,7 @@ op_info = {
             'interface': {
                 '目': 'B目',
                 '科': '同频科',
-                '属': 'BB属'
+                '属': 'B属'
             },
             'action': {
                 '共轭'
@@ -1192,7 +1140,7 @@ op_info = {
         }
     },
     'Dmask_min': {
-        'description': '对 x 进行 unfold 操作，回溯 lookback 天的数据，取最小的 1/4 天作为掩码',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。将x展开成一个三维的张量，第三维的长度为d。将第三维中数值最小的1/4标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'C目',
@@ -1205,7 +1153,7 @@ op_info = {
         }
     },
     'Dmask_max': {
-        'description': '对 x 进行 unfold 操作，回溯 lookback 天的数据，取最大的 1/4 天作为掩码',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。将x展开成一个三维的张量，第三维的长度为d。将第三维中数值最大的1/4标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'C目',
@@ -1218,7 +1166,7 @@ op_info = {
         }
     },
     'Dmask_middle': {
-        'description': '对 x 进行 unfold 操作，回溯 lookback 天的数据，取中间的 1/2 天作为掩码',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。将x展开成一个三维的张量，第三维的长度为d。将第三维中数值位于中间1/2的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'C目',
@@ -1231,7 +1179,7 @@ op_info = {
         }
     },
     'Dmask_mean_plus_std': {
-        'description': '对 x 进行 unfold 操作，回溯 lookback 天的数据，进行标准化处理，取大于均值 + 标准差的部分作为掩码',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。将x展开成一个三维的张量，第三维的长度为d。将第三维中数值大于均值加上一个标准差的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'C目',
@@ -1244,7 +1192,7 @@ op_info = {
         }
     },
     'Dmask_mean_sub_std': {
-        'description': '对 x 进行 unfold 操作，回溯 lookback 天的数据，进行标准化处理，取小于均值 - 标准差的部分作为掩码',
+        'description': '输入一个A类型的张量x和一个F类型的int参数d。将x展开成一个三维的张量，第三维的长度为d。将第三维中数值小于均值减去一个标准差的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'C目',
@@ -1257,7 +1205,7 @@ op_info = {
         }
     },
     'Mmask_min': {
-        'description': '返回日内数据的最小 1/4 部分作为掩码',
+        'description': '输入一个B类型的张量。将日内数值最小的1/4标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1270,7 +1218,7 @@ op_info = {
         }
     },
     'Mmask_max': {
-        'description': '返回日内数据的最大 1/4 部分作为掩码',
+        'description': '输入一个B类型的张量。将日内数值最大的1/4标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1283,7 +1231,7 @@ op_info = {
         }
     },
     'Mmask_middle': {
-        'description': '返回日内数据的中间 1/2 部分作为掩码',
+        'description': '输入一个B类型的张量。将日内数值大小位于中间1/2的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1296,7 +1244,7 @@ op_info = {
         }
     },
     'Mmask_min_to_max': {
-        'description': '返回日内数据的最小值和最大值之间的部分作为掩码',
+        'description': '输入一个B类型的张量。标记日内最大值和最小值之间的所有分钟为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1309,7 +1257,7 @@ op_info = {
         }
     },
     'Mmask_mean_plus_std': {
-        'description': '返回日内数据标准化后大于均值 + 标准差的部分作为掩码',
+        'description': '输入一个B类型的张量。将日内数值大于均值加上一个标准差的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1322,7 +1270,7 @@ op_info = {
         }
     },
     'Mmask_mean_sub_std': {
-        'description': '返回日内数据标准化后小于均值 - 标准差的部分作为掩码',
+        'description': '输入一个B类型的张量。将日内数值小于均值减去一个标准差的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1335,7 +1283,7 @@ op_info = {
         }
     },
     'Mmask_1h_after_open': {
-        'description': '返回开盘后第 1 个小时的数据',
+        'description': '输入一个B类型的张量。将每一天开盘后的第一个小时标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1348,7 +1296,7 @@ op_info = {
         }
     },
     'Mmask_1h_before_close': {
-        'description': '返回收盘前第 1 个小时的数据',
+        'description': '输入一个B类型的张量。将每一天收盘前的最后一个小时标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1361,7 +1309,7 @@ op_info = {
         }
     },
     'Mmask_2h_middle': {
-        'description': '返回中间 2 个小时的数据',
+        'description': '输入一个B类型的张量。将每一天的中间两个小时标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1374,7 +1322,7 @@ op_info = {
         }
     },
     'Mmask_morning': {
-        'description': '返回早上 2 个小时的数据',
+        'description': '输入一个B类型的张量。将每一天的早上两个小时标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1387,7 +1335,7 @@ op_info = {
         }
     },
     'Mmask_afternoon': {
-        'description': '返回下午 2 个小时的数据',
+        'description': '输入一个B类型的张量。将每一天的下午两个小时标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1400,7 +1348,7 @@ op_info = {
         }
     },
     'Mmask_day_plus': {
-        'description': '返回大于日频数据的部分作为掩码',
+        'description': '输入一个B类型的张量x和一个A类型的张量y。x某天的分钟数据，以y那一天的数据为基准，若大于则标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1413,7 +1361,7 @@ op_info = {
         }
     },
     'Mmask_day_sub': {
-        'description': '返回小于日频数据的部分作为掩码',
+        'description': '输入一个B类型的张量x和一个A类型的张量y。x某天的分钟数据，以y那一天的数据为基准，若小于则标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1426,7 +1374,7 @@ op_info = {
         }
     },
     'Mmask_rolling_plus': {
-        'description': '以日内数据最大 1/4 部分的均值作为日较大值，返回大于 lookback 期内最大日较大值的部分作为掩码',
+        'description': '输入一个B类型的张量x和一个F类型的int参数d。以日内数据最大1/4部分的均值作为日较大值，回溯d天，取d个较大值中的最大值，将大于最大值的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1439,7 +1387,7 @@ op_info = {
         }
     },
     'Mmask_rolling_sub': {
-        'description': '以日内数据最小 1/4 部分的均值作为日较大值，返回小于 lookback 期内最小日较大值的部分作为掩码',
+        'description': '输入一个B类型的张量x和一个F类型的int参数d。以日内数据最小1/4部分的均值作为日较小值，回溯d天，取d个较小值中的最小值，将小于最小值的部分标记为True，其余为False。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1452,7 +1400,7 @@ op_info = {
         }
     },
     'Mmask_and': {
-        'description': 'minute_mask内部的并运算',
+        'description': '输入两个D类型的mask。对两个mask进行逐元素的逻辑与运算，只有当两个mask均为True时，结果为True。',
         'classification': {
             'interface': {
                 '目': 'D目',
@@ -1465,7 +1413,7 @@ op_info = {
         }
     },
     'Mmask_or': {
-        'description': 'minute_mask内部的和运算',
+        'description': '输入两个D类型的mask。对两个mask进行逐元素的逻辑或运算，只要有一个mask为True，结果为True。',
         'classification': {
             'interface': {
                 '目': 'D目',

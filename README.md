@@ -223,79 +223,37 @@ Data
 ## Tree模块
 - 添加OP_AF2A
 # ToolsGA包
-## Data_tools模块
-### DailyDataReader
-#### 初始化
-```python
-__init__(
-    daily_data_path: str = "../Data/DailyData",  # 日频数据路径
-)
-```
-#### 方法一览
-- `__init__(self, daily_data_path: str="../Data/DailyData")`：初始化数据路径和相关信息。
-- `GetOHLC(self)`：返回 OHLC 数据。
-- `GetVolume(self)`：返回成交量数据。
-- `get_df_ohlcv(self, ...)`：获取包含 OHLCV 数据的 `DataFrame`。
-- `get_clean(self)`：返回清洗过的股票数据。
-
-### MinuteDataReader
-#### 初始化
-```python
-__init__(
-    minute_data_path: str="../Data/MinuteData", # 分钟频数据路径
-    device: str='cpu' # 设备类型
-    )
-```
-
-#### 方法一览
-- `dataframe_to_tensor(self, df: pd.DataFrame, minute_len=242)`：将 `DataFrame` 转换为 Tensor 格式，适用于按分钟粒度的数据。
-- `read_data_by_col(self, col: str, year_lst: list[int])`：按列和年份列表读取数据，并转换为 tensor 格式。
-- `get_Minute_data(self, year_lst: list[int])`：返回多个列的分钟线数据。
-
-- `generate_trading_time(date: str) -> pd.DatetimeIndex`：根据日期生成该日期的交易时间（早盘 + 午盘）。
-- `fill_full_day(day_data: pd.DataFrame) -> pd.DataFrame`：填充缺失的分钟数据，确保数据完整。
-- `get_first_day(df: pd.DataFrame)`：获取每个月的第一天。
-- `get_last_day(df: pd.DataFrame)`：获取每个月的最后一天。
 
 
 ## DataReader模块
+- Interface类存储了一系列静态方法，不用实例化直接调用即可
+    - `get_daylist(trading_dates,year_lst)`：返回对应年份的交易日列表
+    - `get_index(trading_dates, year_lst)`：返回tradingdates中对应年份的index，只要是index与tradingdate相同的数据都可用该函数筛选
+    - `tensor2df(tensor, trading_dates,year_list, stocks)`：将形状为(TradingDate,StockCodes)的tensor转换为对应年份的dataframe
+    - `adjust(arr,index,clean,device='cpu')`：index筛选arr并根据clean清洗；
+    - `df2tensor(df)`：将index为任意date，column为任意stock的dataframe改为(day_num,stock_num,minute_len)形状的tensor
+    - `get_pct_change(close:torch.tensor)-> torch.tensor`：计算close的百分比变化，最终adjust
+    - `get_labels(d_o,d_c,index,clean, freq=5)`：计算给定freq的close与前日open比，为直接adjust
+    - `generate_trading_time(date)`：生成对应日期的交易时间
+    - `fill_full_day(day_data)->pd.DataFrame`：生成minute_len = 242的dataframe
 
-### ParquetReader
-#### 初始化
-```python
-__init__(
-    DailyDataPath: str = "../Data/DailyData",  # 日频数据路径
-    MinuteDataPath: str = "../Data/MinuteData", # 分钟数据路径
-    BarraPath: str = "../Data/barra.pt",       # 风险因子路径
-    DictPath: str = "../Data/dict.pt",         # 时间索引字典路径
-    device: str = 'cpu'                        # 数据加载设备
-)
-```
-#### 核心方法
+- DataBasic类为存储了各类基本信息
+    - `self.Mutual StockCodes`：array格式，形状为(5601,)的mask
+    - `self.TradingDate`：pd.Series格式，形状为(4917,)，从“2004-01-02”到“2024-03-29”
+    - `self.StockCodes`：pd.Series格式，形状为(5483,)
+    - `self.ListedDate`：array格式，形状为(TradingDate,StockCodes)
+    - `self.Status`：array格式，形状为(TradingDate,StockCodes)
+    - `self.ST`：array格式，形状为(TradingDate,StockCodes)
+    - `self.clean`：tensor格式，形状为(TradingDate,StockCodes),True为清洗
+    
 
-- `get_Minute_data(year_lst: list[int]) -> list[torch.Tensor]`: 根据年份列表读取所有分钟数据。
-- `get_Day_data(year_lst: list[int]) -> list[torch.Tensor]`: 根据年份列表读取日线数据（包括开盘价、最高价、最低价、收盘价和成交量）。
-- `get_barra(year_lst: list[int]) -> torch.Tensor`: 获取指定年份的Barra因子数据。
-- `get_labels(year_lst: list[int], freq: int=5) -> torch.Tensor`: 计算并返回基于开盘价和收盘价的标签数据。
+- ParquetReader类存储了从parquet文件读取日期，分钟，Barra数据的方法
+- MmapReader类存储了从mmap文件读取日期，分钟，Barra数据的方法，与parquetreader相比多了按日频读取Barra和mintue的方法；将参数download设置为True时，可进行mmap文件的保存
+  - `self.data_shape`存储每年的数据形状
+  
+- barra为tensor，形状为([4167, 5601, 41])，日期范围与tradingdate不一致，为[2006-12-29 到2024-02-23]，但重合部分一致，dict是保存barra的日期，股票代码与因子名的字典
 
 
-### MmapReader
-> 将高频访问数据转换为内存映射格式
-#### 初始化
-```python
-__init__()
-    years = range(2017,2018)  # 需要转换的年份
-    output_daily = '..'       # 日频mmap存储路径
-    output_minute = '..'      # 分钟频mmap存储路径
-```
-
-#### 核心方法
-- `save_daily_to_mmap(data, dtype=np.float32)`: 将日线数据保存为 `mmap` 格式的文件。
-- `save_minute_to_mmap(data, dtype=np.float32)`: 将分钟线数据保存为 `mmap` 格式的文件。
-- `save_daily()`: 将指定年份的日线数据转换并保存为 `mmap` 格式文件。
-- `save_minute()`: 将指定年份的分钟线数据转换并保存为 `mmap` 格式文件。
-- `mmap_readDaily(file_path)`: 从 `mmap` 文件中读取日线数据，并将其转换为 `torch.Tensor`。
-- `mmap_readMinute(file_path)`: 从 `mmap` 文件中读取分钟线数据，并将其转换为 `torch.Tensor`。
 
 
 

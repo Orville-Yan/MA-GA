@@ -3,6 +3,7 @@ class FIS_Config:
     storage_path = r'D:\运行文档\NFE遗传算法项目\MA-GA'
 
 import torch
+import os
 class RPNbuilder_Config:
     seed_size = 10
     root_size = 10
@@ -61,8 +62,16 @@ class BackTest_Config:
     default_year = [2016]
 
 class Data_Config:
-    DATA_PATH = "../Data"
     DEVICE = 'cpu'
     MINUTE_LEN = 242
-    COLS = ["open", "high", "low", "close", "volume"]
+    DATA_PATH = "../Data"
+    PARQUET_Minute_PATH = os.path.join(DATA_PATH, "Minute")
+    PARQUET_Daily_PATH = os.path.join(DATA_PATH, "Daily")
+    PARQUET_BARRA_PATH = os.path.join(DATA_PATH, "Barra.pt")
+    PARQUET_DICT_PATH = os.path.join(DATA_PATH, "dict.pt")
+    MMAP_PATH = os.path.join(DATA_PATH, "Mmap")
+    MMAP_Minute_PATH = os.path.join(MMAP_PATH, "Minute")
+    MMAP_Daily_PATH = os.path.join(MMAP_PATH, "Daily")
+    MMAP_BARRA_PATH = os.path.join(MMAP_PATH, "Barra")
+    MUTUAL_STOCK_CODES_PATH = os.path.join(DATA_PATH, "MutualStockCodes.parquet")
 
