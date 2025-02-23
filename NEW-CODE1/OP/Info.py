@@ -699,7 +699,7 @@ op_info = {
     'D_Minute_area_bifurcate_mean': {
         'description': '输入两个B类型的张量x和y，以及一个D类型的掩码mask。计算y在mask区域的均值,根据该均值将mask分成两部分，'
                        '记为mask1(mask为true 且 y大于该均值)和mask2(mask为true 且 y小于该均值)，分别计算x在mask1 和mask2的均值，'
-                       '再将两个均值做差。该算子意在以y在mask部分的值为基准，将mask分成两部分，再将x在这两部分的均值做对冲',
+                       '再输出两个均值的差。该算子意在以y在mask部分的值为基准，将mask分成两部分，再将x在这两部分的均值做对冲',
         'classification': {
             'interface': {
                 '目': 'A目',
