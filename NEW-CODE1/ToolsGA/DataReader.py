@@ -85,7 +85,6 @@ class Interface():
 
 class BasicReader():
     def __init__(self):
-        self.daily_data_path = Config.PARQUET_Daily_PATH
         self.MutualStockCodes = pd.read_parquet(Config.MUTUAL_STOCK_CODES_PATH)["Mutual"].values
         self.TradingDate = self._TradingDate()
         self.StockCodes = self._StockCodes()
@@ -95,21 +94,21 @@ class BasicReader():
         self.clean = self._clean_data()
 
     def _TradingDate(self):
-        trading_date = loadmat(os.path.join(self.daily_data_path, 'TradingDate_Daily.mat'))['TradingDate_Daily']
+        trading_date = loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'TradingDate_Daily.mat'))['TradingDate_Daily']
         return pd.Series([datetime.strptime(str(d[0]), '%Y%m%d') for d in trading_date])
 
     def _StockCodes(self):
-        code = loadmat(os.path.join(self.daily_data_path, 'AllStockCode.mat'))['AllStockCode']
+        code = loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStockCode.mat'))['AllStockCode']
         return pd.Series([code[0][i].tolist()[0] for i in range(len(code[0]))]).loc[self.MutualStockCodes].reset_index(drop=True)
     
     def _ListedDate(self):
-        return loadmat(os.path.join(self.daily_data_path, 'AllStock_DailyListedDate.mat'))['AllStock_DailyListedDate'][:, self.MutualStockCodes]
+        return loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStock_DailyListedDate.mat'))['AllStock_DailyListedDate'][:, self.MutualStockCodes]
     
     def _Status(self):
-        return loadmat(os.path.join(self.daily_data_path, 'AllStock_DailyStatus.mat'))['AllStock_DailyStatus_use'][:, self.MutualStockCodes]
+        return loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStock_DailyStatus.mat'))['AllStock_DailyStatus_use'][:, self.MutualStockCodes]
 
     def _ST(self):
-        return loadmat(os.path.join(self.daily_data_path, 'AllStock_DailyST.mat'))['AllStock_DailyST'][:, self.MutualStockCodes]
+        return loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStock_DailyST.mat'))['AllStock_DailyST'][:, self.MutualStockCodes]
 
     def _clean_data(self) -> pd.DataFrame:
         status20 = OP_AF2A.D_ts_mean(torch.from_numpy((1 - self.ST) * (self.Status)), 20) > 0.5
@@ -252,7 +251,7 @@ class MmapReader(BasicReader):
 
     def get_Barra(self, year_lst):
         num_stock = self.data_shape[str(year_lst[0])][1]
-        day_list = Interface.get_daylist(self._TradingDate,year_lst)
+        day_list = Interface.get_daylist(self._TradingDate(),year_lst)
         barra = torch.full((len(day_list), num_stock, 41), float('nan'))
         for i, day in enumerate(day_list):
             barra[i] = self.get_Barra_daily(day)
@@ -276,8 +275,8 @@ class MmapReader(BasicReader):
                 mmap[:] = data[0] 
 
     def save_minute_data(self):
-        trading_dates = self._TradingDate
-        for year in range(2016, 2025):
+        trading_dates = self._TradingDate()
+        for year in range(2016,2025):
             day_list = Interface.get_daylist(trading_dates, [year])
             M_O, M_H, M_L, M_C, M_V = self.parquetreader.get_Minute_data([year])
             for i, data in enumerate([M_O, M_H, M_L, M_C, M_V]):
@@ -291,8 +290,8 @@ class MmapReader(BasicReader):
 
     def save_barra_data(self):
         year_list = list(range(2016, 2024))
-        barra = self.parquetreader.get_barra(year_list)
-        day_list = Interface.get_daylist(self._TradingDate,year_list)
+        barra = self.parquetreader.get_Barra(year_list)
+        day_list = Interface.get_daylist(self._TradingDate(),year_list)
 
         for i, day in enumerate(day_list):
             curr_data = barra[i]
@@ -302,7 +301,6 @@ class MmapReader(BasicReader):
             mmap[:] = curr_data
             
 if __name__ == '__main__':
-    reader = MmapReader()
-    M_O, M_H, M_L, M_C, M_V = reader.get_Minute_data([2016])
-    print(M_H)
+    reader = MmapReader(download=True)
+    reader.save_daily_data()
 
