@@ -110,7 +110,7 @@ class BasicReader():
     def _ST(self):
         return loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStock_DailyST.mat'))['AllStock_DailyST'][:, self.MutualStockCodes]
 
-    def _clean_data(self) -> pd.DataFrame:
+    def _clean_data(self) -> torch.tensor:
         status20 = OP_AF2A.D_ts_mean(torch.from_numpy((1 - self.ST) * (self.Status)), 20) > 0.5
         listed = torch.from_numpy(self.ListedDate >= 60)
         clean = ~(listed * status20)
