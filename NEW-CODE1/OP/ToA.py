@@ -87,25 +87,25 @@ class OP_AE2A:
         self.func_list = ['D_cs_demean_industry', 'D_cs_industry_neutra']
 
     @staticmethod
-    def D_cs_demean_industry(day_OHLCV, industry):  # 行业均值计算
-        day_len, num_stock = day_OHLCV.shape
-        _, _, industry_num = industry.shape
-        industry = industry.float()   
-        industry_sums = torch.bmm(industry.permute(0, 2, 1), day_OHLCV.unsqueeze(-1))
-        industry_counts = industry.sum(dim=1).unsqueeze(-1)
+    def D_cs_demean_industry(x, y):  # 行业均值计算
+        day_len, num_stock = x.shape
+        _, _, industry_num = y.shape
+        y = y.float()   
+        industry_sums = torch.bmm(y.permute(0, 2, 1), x.unsqueeze(-1))
+        industry_counts = y.sum(dim=1).unsqueeze(-1)
         industry_means = industry_sums / industry_counts
-        weighted_industry_means = torch.bmm(industry, industry_means)
-        num_industries_per_stock = industry.sum(dim=2).unsqueeze(-1)
+        weighted_industry_means = torch.bmm(y, industry_means)
+        num_industries_per_stock = y.sum(dim=2).unsqueeze(-1)
         valid_mask = (num_industries_per_stock > 0)
         industry_means_final = torch.where(valid_mask, weighted_industry_means / num_industries_per_stock,
-                                           torch.tensor(0.0, device=day_OHLCV.device))
-        demeaned_abs = torch.abs(day_OHLCV - industry_means_final.squeeze(-1))
+                                           torch.tensor(0.0, device=x.device))
+        demeaned_abs = torch.abs(x - industry_means_final.squeeze(-1))
 
         return demeaned_abs
 
     @staticmethod
-    def D_cs_industry_neutra(day_OHLCV, industry):  # 行业中性化
-        return OP_AE2A.D_cs_demean_industry(day_OHLCV, industry)
+    def D_cs_industry_neutra(x, y):  # 行业中性化
+        return OP_AE2A.D_cs_demean_industry(x, y)
 
 
 class OP_AA2A:
@@ -139,7 +139,7 @@ class OP_AA2A:
         return torch.add(x, y)
 
     @staticmethod
-    def D_at_div(x, y):  # 乘，有0的替换为nan
+    def D_at_div(x, y):  # 除
         zero_mask = y == 0
         result = torch.div(x, y)
         result[zero_mask] = torch.nan
@@ -150,10 +150,9 @@ class OP_AA2A:
         return torch.sub(x, y)
 
     @staticmethod
-    def D_at_prod(d_tensor_x, d_tensor_y):  # 除
-        mask = ~((d_tensor_y == 0) | torch.isnan(d_tensor_y))
-        result = torch.full_like(d_tensor_x, float('nan'), device=d_tensor_x.device)
-        result[mask] = torch.div(d_tensor_x[mask], d_tensor_y[mask])
+    def D_at_prod(x, y):  # 乘法
+
+        result = torch.prod(x, y)
 
         return result
 
@@ -193,10 +192,10 @@ class OP_AAF2A:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def D_ts_rankcorr(x, y, d):  # 回溯d天，d_tensor_x 和 d_tensor_y的秩相关性
-        nan_fill = torch.full((d - 1, x.shape[1]), float('nan'),device=x.device)
-        x = x.unfold(0, d, 1)
-        y = y.unfold(0, d, 1)
+    def D_ts_rankcorr(x, y, lookback):  # 回溯lookback天，x 和 y的秩相关性
+        nan_fill = torch.full((lookback - 1, x.shape[1]), float('nan'),device=x.device)
+        x = x.unfold(0, lookback, 1)
+        y = y.unfold(0, lookback, 1)
         correlation = OP_Basic.rank_corrwith(x, y, dim=-1)
         s = torch.cat([nan_fill, correlation], dim=0)
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
@@ -479,21 +478,21 @@ class OP_B2A:
         self.func_list = ['D_Minute_std', 'D_Minute_mean', 'D_Minute_trend']
 
     @staticmethod
-    def D_Minute_std(m_tensor):
+    def D_Minute_std(x):
         # 计算日内标准差。
-        return OP_Basic.nanstd(m_tensor, dim=-1)
+        return OP_Basic.nanstd(x, dim=-1)
 
     @staticmethod
-    def D_Minute_mean(m_tensor):
+    def D_Minute_mean(x):
         # 计算日内均值。
-        return OP_Basic.nanmean(m_tensor, dim=-1)
+        return OP_Basic.nanmean(x, dim=-1)
 
     @staticmethod
-    def D_Minute_trend(m_tensor):
+    def D_Minute_trend(x):
         # 计算日内数据的变化趋势。
-        time_index = torch.arange(m_tensor.shape[-1], dtype=torch.float32,device=m_tensor.device)
-        time_index = time_index.unsqueeze(0).expand_as(m_tensor)
-        slopes, _, _ = OP_Basic.regress(m_tensor, time_index, dim=-1)
+        time_index = torch.arange(x.shape[-1], dtype=torch.float32, device=x.device)
+        time_index = time_index.unsqueeze(0).expand_as(x)
+        slopes, _, _ = OP_Basic.regress(x, time_index, dim=-1)
         return slopes.squeeze(-1)
 
 
@@ -522,22 +521,20 @@ class OP_BBD2A:
         return torch.where((corr == torch.inf) | (corr == -torch.inf), float('nan'), corr)
 
     @staticmethod
-    def D_Minute_area_bifurcate_mean(m_tensor_x, m_tensor_y, mask):
-        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1,
-                                                                                         242)  # (day_len, num_stock, minute_len)
-        maskplus = day_expanded < m_tensor_y
-        masksub = day_expanded > m_tensor_y
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(m_tensor_x, maskplus),
-                                OP_BD2A.D_Minute_area_mean(m_tensor_x, masksub))
+    def D_Minute_area_bifurcate_mean(x, y, mask):
+        day_expanded = OP_BD2A.D_Minute_area_mean(y, mask).unsqueeze(-1).repeat(1, 1, 242)  # (day_len, num_stock, minute_len)
+        maskplus = day_expanded < y
+        masksub = day_expanded > y
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_mean(x, maskplus),
+                                OP_BD2A.D_Minute_area_mean(x, masksub))
 
     @staticmethod
-    def D_Minute_area_bifurcate_std(m_tensor_x, m_tensor_y, mask):
-        day_expanded = OP_BD2A.D_Minute_area_mean(m_tensor_y, mask).unsqueeze(-1).repeat(1, 1,
-                                                                                         242)  # (day_len, num_stock, minute_len)
-        maskplus = day_expanded < m_tensor_y
-        masksub = day_expanded > m_tensor_y
-        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(m_tensor_x, maskplus),
-                                OP_BD2A.D_Minute_area_std(m_tensor_x, masksub))
+    def D_Minute_area_bifurcate_std(x, y, mask):
+        day_expanded = OP_BD2A.D_Minute_area_mean(y, mask).unsqueeze(-1).repeat(1, 1, 242)  # (day_len, num_stock, minute_len)
+        maskplus = day_expanded < y
+        masksub = day_expanded > y
+        return OP_AA2A.D_at_sub(OP_BD2A.D_Minute_area_std(x, maskplus),
+                                OP_BD2A.D_Minute_area_std(x, masksub))
 
 
 class OP_BB2A:
@@ -653,3 +650,4 @@ if __name__ == '__main__':
     for class_type in classes:
         results = test_class(class_type)
         # print_results(results, class_type.__name__)
+
