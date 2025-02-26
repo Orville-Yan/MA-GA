@@ -26,171 +26,171 @@ class OP_B2D:
         ]
 
     @staticmethod
-    def Mmask_min(m_tensor):
+    def Mmask_min(x):
         """
         description: 返回日内的最小1/4部分 
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        q1 = torch.nanmean(m_tensor, dim=-1, keepdim=True) - 0.675 * OP_Basic.nanstd(m_tensor, dim=-1).unsqueeze(-1)
-        mask = m_tensor <= q1
+        q1 = torch.nanmean(x, dim=-1, keepdim=True) - 0.675 * OP_Basic.nanstd(x, dim=-1).unsqueeze(-1)
+        mask = x <= q1
         return mask
 
     @staticmethod
-    def Mmask_max(m_tensor):
+    def Mmask_max(x):
         """
         description: 返回日内的最大1/4部分
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        q3 = torch.nanmean(m_tensor, dim=-1, keepdim=True) + 0.675 * OP_Basic.nanstd(m_tensor, dim=-1).unsqueeze(-1)
-        mask = m_tensor >= q3
+        q3 = torch.nanmean(x, dim=-1, keepdim=True) + 0.675 * OP_Basic.nanstd(x, dim=-1).unsqueeze(-1)
+        mask = x >= q3
         return mask
 
     @staticmethod
-    def Mmask_middle(m_tensor):
+    def Mmask_middle(x):
         """
         description: 返回日内的中间1/2部分
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        q1 = torch.nanmean(m_tensor, dim=-1, keepdim=True) - 0.675 * OP_Basic.nanstd(m_tensor, dim=-1).unsqueeze(-1)
-        q3 = torch.nanmean(m_tensor, dim=-1, keepdim=True) + 0.675 * OP_Basic.nanstd(m_tensor, dim=-1).unsqueeze(-1)
-        mask = (m_tensor > q1) & (m_tensor < q3)
+        q1 = torch.nanmean(x, dim=-1, keepdim=True) - 0.675 * OP_Basic.nanstd(x, dim=-1).unsqueeze(-1)
+        q3 = torch.nanmean(x, dim=-1, keepdim=True) + 0.675 * OP_Basic.nanstd(x, dim=-1).unsqueeze(-1)
+        mask = (x > q1) & (x < q3)
         return mask
 
     @staticmethod
-    def Mmask_min_to_max(m_tensor):
+    def Mmask_min_to_max(x):
         """
         description: 返回日内最大值和最小值中间的部分
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟频率分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        x_filled = m_tensor.nan_to_num(nan=0)
+        x_filled = x.nan_to_num(nan=0)
         min_tensor = torch.min(x_filled, dim=-1, keepdim=True).values
         max_tensor = torch.max(x_filled, dim=-1, keepdim=True).values
-        mask = (m_tensor > min_tensor) & (m_tensor < max_tensor)
+        mask = (x > min_tensor) & (x < max_tensor)
         return mask
 
     @staticmethod
-    def Mmask_mean_plus_std(m_tensor):
+    def Mmask_mean_plus_std(x):
         """
         description: 生成大于均值加1倍标准差的掩码。
 
         Args:
-            m_tensor(torch.Tensor): 输入数据张量，形状为 (num_stock, day_len, minute_len)。
+            x(torch.Tensor): 输入数据张量，形状为 (num_stock, day_len, minute_len)。
 
         Returns:
             torch.Tensor: 掩码张量，True 表示对应位置大于均值加1倍标准差。
         """
-        x_mean = torch.nanmean(m_tensor, dim=-1, keepdim=True)
-        x_std = OP_Basic.nanstd(m_tensor, dim=-1).unsqueeze(-1)
-        mask = m_tensor > (x_mean + x_std)
+        x_mean = torch.nanmean(x, dim=-1, keepdim=True)
+        x_std = OP_Basic.nanstd(x, dim=-1).unsqueeze(-1)
+        mask = x > (x_mean + x_std)
         return mask
 
     @staticmethod
-    def Mmask_mean_sub_std(m_tensor):
+    def Mmask_mean_sub_std(x):
         """
         description: 生成小于均值减1倍标准差的掩码。
 
         Args:
-            m_tensor(torch.Tensor): 输入数据张量，形状为 (num_stock, day_len, minute_len)。
+            x(torch.Tensor): 输入数据张量，形状为 (num_stock, day_len, minute_len)。
 
         Returns:
             torch.Tensor: 掩码张量，True 表示对应位置小于均值减1倍标准差。
         """
-        x_mean = torch.nanmean(m_tensor, dim=-1, keepdim=True)
-        x_std = OP_Basic.nanstd(m_tensor, dim=-1).unsqueeze(-1)
-        mask = m_tensor < (x_mean - x_std)
+        x_mean = torch.nanmean(x, dim=-1, keepdim=True)
+        x_std = OP_Basic.nanstd(x, dim=-1).unsqueeze(-1)
+        mask = x < (x_mean - x_std)
         return mask
     @staticmethod
-    def Mmask_1h_after_open(m_tensor):
+    def Mmask_1h_after_open(x):
         """
         description: 取开盘后的第一个小时
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        mask = torch.zeros_like(m_tensor, dtype=torch.bool, device=m_tensor.device)
+        mask = torch.zeros_like(x, dtype=torch.bool, device=x.device)
         mask[..., :60] = True
         return mask
 
     @staticmethod
-    def Mmask_1h_before_close(m_tensor):
+    def Mmask_1h_before_close(x):
         """
         description: 功能简介: 取收盘前的第一个小时
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        mask = torch.zeros_like(m_tensor, dtype=torch.bool, device=m_tensor.device)
+        mask = torch.zeros_like(x, dtype=torch.bool, device=x.device)
         mask[..., 181:] = True
         return mask
 
     @staticmethod
-    def Mmask_2h_middle(m_tensor):
+    def Mmask_2h_middle(x):
         """
         description: 功能简介: 取中间的两个小时，返回一个布尔掩码。
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        mask = torch.zeros_like(m_tensor, dtype=torch.bool, device=m_tensor.device)
+        mask = torch.zeros_like(x, dtype=torch.bool, device=x.device)
         mask[..., 60:181] = True
         return mask
 
     @staticmethod
-    def Mmask_morning(m_tensor):
+    def Mmask_morning(x):
         """
         description: 取早上的两个小时
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        mask = torch.zeros_like(m_tensor, dtype=torch.bool, device=m_tensor.device)
+        mask = torch.zeros_like(x, dtype=torch.bool, device=x.device)
         mask[..., :121] = True
         return mask
 
     @staticmethod
-    def Mmask_afternoon(m_tensor):
+    def Mmask_afternoon(x):
         """
         description: 取下午的两个小时
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        mask = torch.zeros_like(m_tensor, dtype=torch.bool, device=m_tensor.device)
+        mask = torch.zeros_like(x, dtype=torch.bool, device=x.device)
         mask[..., 121:] = True
         return mask
 
@@ -245,37 +245,37 @@ class OP_BF2D:
         ]
 
     @staticmethod
-    def Mmask_rolling_plus(m_tensor, lookback):
+    def Mmask_rolling_plus(x, lookback):
         """
         description: 返回大于lookback期内最大的日平均较大值的部分 
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
             lookback (int): 滚动窗口大小。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        d_max_mean = OP_BD2A.D_Minute_area_mean(m_tensor, OP_B2D.Mmask_max(m_tensor))
+        d_max_mean = OP_BD2A.D_Minute_area_mean(x, OP_B2D.Mmask_max(x))
         rolling_max = OP_AF2A.D_ts_max(d_max_mean, lookback)
-        result = OP_BA2D.Mmask_day_plus(m_tensor, rolling_max)
+        result = OP_BA2D.Mmask_day_plus(x, rolling_max)
         return result
 
     @staticmethod
-    def Mmask_rolling_sub(m_tensor, lookback):
+    def Mmask_rolling_sub(x, lookback):
         """
         description: 返回小于lookback期内最小的日平均较小值的部分 
 
         Args:
-            m_tensor (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
+            x (torch.Tensor): 分钟数据张量，形状为 (num_stock, day_len, minute_len=240)。
             lookback (int): 滚动窗口大小。
 
         Returns:
             minute_mask(torch.Tensor): 分钟数据掩码，形状为(num_stock, day_len, minute_len=240)
         """
-        d_min_mean = OP_BD2A.D_Minute_area_mean(m_tensor, OP_B2D.Mmask_min(m_tensor))
+        d_min_mean = OP_BD2A.D_Minute_area_mean(x, OP_B2D.Mmask_min(x))
         rolling_min = OP_AF2A.D_ts_min(d_min_mean, lookback)
-        result = OP_BA2D.Mmask_day_sub(m_tensor,rolling_min )
+        result = OP_BA2D.Mmask_day_sub(x, rolling_min)
         return result
 
 
