@@ -19,21 +19,31 @@ class OP_B2B:
                           ]
 
     @staticmethod
-    def M_ignore_wobble(M_tensor, window_size=5):
+                   'OP_BF2B']
+
+
+class OP_B2B:
+    def __init__(self):
+        self.func_list = ['M_ignore_wobble', 'M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_at_abs', 'M_cs_demean',
+                          'M_cs_winsor',
+                          ]
+
+    @staticmethod
+    def M_ignore_wobble(x, window_size=5):
         """
         将开盘前五分钟和收盘前五分钟的数据变成nan。
 
         参数:
-        M_tensor (torch.Tensor): 输入的张量，假设其形状为 (num_stock, day_len, minute_len)。
+        x (torch.Tensor): 输入的张量，假设其形状为 (num_stock, day_len, minute_len)。
         window_size (int): 忽略的窗口大小，单位为分钟。
 
         返回:
         torch.Tensor: 处理后的张量。
         """
-        num_stock, day_len, minute_len = M_tensor.shape
+        num_stock, day_len, minute_len = x.shape
 
-        # 创建一个与M_tensor形状相同的掩码，初始值为1
-        mask = torch.ones_like(M_tensor, dtype=torch.bool, device=M_tensor.device)
+        # 创建一个与x形状相同的掩码，初始值为1
+        mask = torch.ones_like(x, dtype=torch.bool, device=x.device)
 
         # 开盘前五分钟为nan
         mask[:, :, :window_size] = False
@@ -41,7 +51,12 @@ class OP_B2B:
         mask[:, :, -window_size:] = False
 
         # 将掩码为False的位置设置为nan
-        return torch.where(mask, M_tensor, torch.tensor(float('nan'), device=M_tensor.device))
+        return torch.where(mask, x, torch.tensor(float('nan'), device=x.device))
+
+    @staticmethod
+    def M_cs_zscore(x):
+        # 计算每个股票每天的均值和标准差
+        x_mean = OP_Basic.nanmean(x, dim=1).unsqueeze(1)
 
     @staticmethod
     def M_cs_zscore(x):
@@ -120,8 +135,8 @@ class OP_B2B:
         return x_with_nan
 
     @staticmethod
-    def M_at_abs(M_tensor):
-        return torch.abs(M_tensor)
+    def M_at_abs(x):
+        return torch.abs(x)
 
 
 class OP_BB2B:
@@ -157,8 +172,8 @@ class OP_BB2B:
         return torch.where((s == torch.inf) | (s == -torch.inf), float('nan'), s)
 
     @staticmethod
-    def M_at_prod(d_tensor_x, d_tensor_y):
-        return torch.mul(d_tensor_x, d_tensor_y)
+    def M_at_prod(x, y):
+        return torch.prod(x, y)
 
     @staticmethod
     def M_cs_norm_spread(x, y):
@@ -234,75 +249,75 @@ class OP_BF2B:  # B*F-B
         return x - OP_BF2B.M_ts_delay(x, lookback)
 
     @staticmethod
-    def M_ts_mean_right_neighbor(m_tensor, neighbor_range):
-        unfolded = m_tensor.unfold(dimension=-1, size=neighbor_range, step=1)
+    def M_ts_mean_right_neighbor(x, neighbor_range):
+        unfolded = x.unfold(dimension=-1, size=neighbor_range, step=1)
         window_mean = OP_Basic.nanmean(unfolded, dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'), device=m_tensor.device)
+        result_tensor = torch.full_like(x, float('nan'), device=x.device)
         result_tensor[..., neighbor_range - 1:] = window_mean
-        result_tensor = torch.where(torch.isnan(m_tensor), float('nan'), result_tensor)
+        result_tensor = torch.where(torch.isnan(x), float('nan'), result_tensor)
         return result_tensor
 
     @staticmethod
-    def M_ts_mean_left_neighbor(m_tensor, neighbor_range):
-        unfolded = m_tensor.unfold(dimension=-1, size=neighbor_range, step=1)
+    def M_ts_mean_left_neighbor(x, neighbor_range):
+        unfolded = x.unfold(dimension=-1, size=neighbor_range, step=1)
         window_mean = OP_Basic.nanmean(unfolded, dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'), device=m_tensor.device)
+        result_tensor = torch.full_like(x, float('nan'), device=x.device)
         result_tensor[..., neighbor_range - 1:] = window_mean
-        result_tensor = torch.where(torch.isnan(m_tensor), float('nan'), result_tensor)
+        result_tensor = torch.where(torch.isnan(x), float('nan'), result_tensor)
         return result_tensor
 
     @staticmethod
-    def M_ts_mean_mid_neighbor(m_tensor, neighbor_range):
-        result_tensor = OP_BF2B.M_ts_mean_right_neighbor(m_tensor, neighbor_range)
+    def M_ts_mean_mid_neighbor(x, neighbor_range):
+        result_tensor = OP_BF2B.M_ts_mean_right_neighbor(x, neighbor_range)
         result_tensor = OP_BF2B.M_ts_delay(result_tensor, neighbor_range // 2)
         return result_tensor
 
     @staticmethod
-    def M_ts_std_right_neighbor(m_tensor, neighbor_range):
-        unfolded = m_tensor.unfold(dimension=-1, size=neighbor_range, step=1)
-        window_std = OP_Basic.nanstd(unfolded,-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'), device=m_tensor.device)
+    def M_ts_std_right_neighbor(x, neighbor_range):
+        unfolded = x.unfold(dimension=-1, size=neighbor_range, step=1)
+        window_std = OP_Basic.nanstd(unfolded, -1)
+        result_tensor = torch.full_like(x, float('nan'), device=x.device)
         result_tensor[..., neighbor_range - 1:] = window_std
-        result_tensor = torch.where(torch.isnan(m_tensor), float('nan'), result_tensor)
+        result_tensor = torch.where(torch.isnan(x), float('nan'), result_tensor)
         return result_tensor
 
     @staticmethod
-    def M_ts_std_left_neighbor(m_tensor, neighbor_range):
-        unfolded = m_tensor.unfold(dimension=-1, size=neighbor_range, step=1)
-        window_std = OP_Basic.nanstd(unfolded,-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'), device=m_tensor.device)
+    def M_ts_std_left_neighbor(x, neighbor_range):
+        unfolded = x.unfold(dimension=-1, size=neighbor_range, step=1)
+        window_std = OP_Basic.nanstd(unfolded, -1)
+        result_tensor = torch.full_like(x, float('nan'), device=x.device)
         result_tensor[..., neighbor_range - 1:] = window_std
-        result_tensor = torch.where(torch.isnan(m_tensor), float('nan'), result_tensor)
+        result_tensor = torch.where(torch.isnan(x), float('nan'), result_tensor)
         return result_tensor
 
     @staticmethod
-    def M_ts_std_mid_neighbor(m_tensor, neighbor_range):
-        result_tensor = OP_BF2B.M_ts_std_right_neighbor(m_tensor, neighbor_range)
+    def M_ts_std_mid_neighbor(x, neighbor_range):
+        result_tensor = OP_BF2B.M_ts_std_right_neighbor(x, neighbor_range)
         result_tensor = OP_BF2B.M_ts_delay(result_tensor, neighbor_range // 2)
         return result_tensor
 
     @staticmethod
-    def M_ts_product_right_neighbor(m_tensor, neighbor_range):
-        unfolded = m_tensor.unfold(dimension=-1, size=neighbor_range, step=1)
+    def M_ts_product_right_neighbor(x, neighbor_range):
+        unfolded = x.unfold(dimension=-1, size=neighbor_range, step=1)
         window_prod = torch.prod(torch.where(torch.isnan(unfolded), 1, unfolded), dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'), device=m_tensor.device)
+        result_tensor = torch.full_like(x, float('nan'), device=x.device)
         result_tensor[..., :window_prod.size(-1)] = window_prod
-        result_tensor = torch.where(torch.isnan(m_tensor), float('nan'), result_tensor)
+        result_tensor = torch.where(torch.isnan(x), float('nan'), result_tensor)
         return result_tensor
 
     @staticmethod
-    def M_ts_product_left_neighbor(m_tensor, neighbor_range):
-        unfolded = m_tensor.unfold(dimension=-1, size=neighbor_range, step=1)
+    def M_ts_product_left_neighbor(x, neighbor_range):
+        unfolded = x.unfold(dimension=-1, size=neighbor_range, step=1)
         window_prod = torch.prod(torch.where(torch.isnan(unfolded), 1, unfolded), dim=-1)
-        result_tensor = torch.full_like(m_tensor, float('nan'),device=m_tensor.device)
-        result_tensor[..., neighbor_range-1:] = window_prod
-        result_tensor = torch.where(torch.isnan(m_tensor), float('nan'), result_tensor)
+        result_tensor = torch.full_like(x, float('nan'), device=x.device)
+        result_tensor[..., neighbor_range - 1:] = window_prod
+        result_tensor = torch.where(torch.isnan(x), float('nan'), result_tensor)
         return result_tensor
 
     @staticmethod
-    def M_ts_product_mid_neighbor(m_tensor, neighbor_range):
-        result_tensor=OP_BF2B.M_ts_product_right_neighbor(m_tensor, neighbor_range)
-        result_tensor=OP_BF2B.M_ts_delay(result_tensor,neighbor_range//2)
+    def M_ts_product_mid_neighbor(x, neighbor_range):
+        result_tensor = OP_BF2B.M_ts_product_right_neighbor(x, neighbor_range)
+        result_tensor = OP_BF2B.M_ts_delay(result_tensor, neighbor_range // 2)
         return result_tensor
 
 if __name__ == '__main__':
@@ -371,3 +386,4 @@ if __name__ == '__main__':
     for class_type in classes:
         results = test_class(class_type)
         # print_results(results, class_type.__name__)
+
