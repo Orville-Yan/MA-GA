@@ -11,7 +11,7 @@ paper_example = '''
 '''
 example = {}
 for i in range(10):
-    example[f'EX{i}'] = globals()[f'example{i}']
+    example[f'第{i}份研报分析'] = globals()[f'example{i}']
 
 system_prompt = (
     f'''
@@ -30,7 +30,11 @@ system_prompt = (
 第1份研报总结：{paper_example}，
 第2份研报总结：{paper_example}
 首先判断研报有没有群体量价行为，如果没有，则放弃输出；如果有，
-示例JSON输出为：{example}
+示例JSON输出为：{{"第1份研报分析":
+    {example["第1份研报分析"]},
+  "第2份研报分析":
+    {example["第2份研报分析"]}
+}}
 用户输入如下，请根据输入进行回答
 '''
 )
