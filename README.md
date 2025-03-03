@@ -1,8 +1,7 @@
 # 备注
 - 项目推进见飞书文档 https://x1rzpzd8gc3.feishu.cn/wiki/Flozw2hg9iXrzKkf1JLc3YQ1nKc
 - OLDCODE里面加了G3GP这个文件，是遗传算法的主要框架，大家可以从这里面看如何添加Terminal和Primitives。
-- 数据文件Data放在与MA-GA同一父目录下
-- 建议在MA-GA文件下运行，方便路径添加与同步
+
 
 - nan值采用float('nan')
 
@@ -25,8 +24,7 @@
 备注：生成方式为half-and-half
 需要手动设置的参数，如lookback，fun_lst都在代码上方，不用到class里面改
 
-## RPNbuilder模块
-### RPN_Producer
+## RPN_Producer
 >通过 producer.run()  执行完整生成流程
 
 | 阶段     | 方法              | 输出特征                                                 |
@@ -38,33 +36,65 @@
 | Subtree  | generate_subtree() | 选取代表性子集                                           |
 | Tree     | generate_tree()    | 构建统计量形成因子                                       |
 
-### RPN_Compiler
-- 
+## RPN_Parser
+### 核心功能：实现字符串与AcyclicTree结构的互相转化：
+- 初始化传入rpn字符串，可获得：
+  - 每部分的缩写与Acyclic_Tree：直接查询对应部分的属性可获得相应的字典
+  - 每部分的缩写：调用tree2dict_abbr()
+  - 每部分的全称：调用tree2dict_full()
+  - 打印树结构：plot.tree()
+- 初始化传入Acyclic_Tree:
+
+### 具体函数
+- `get_tree_structure(self)`：将rpn转换成Acyclic_Tree
+- `get_tree_depth(tree)`：获取Acyclic_Tree的深度
+- `get_abbrnsub(ac_tree, substr, flag=0, count=0)`：递归获取树的缩写，形如“['D_ts_std(subtree_ARG0, 5)']”，递归的前提是树的深度已知
+- `argnorm(seed_str)`：将seed的D_O替换为ARG
+
+- `tree2str`：获取深度后逐级获得树结构的缩写，
+- `tree2lst`：对传入的lst依元素获得缩写
+- `plot_tree`：根据self.tree_structure打印树的结构
+- `parse_tree()`：根据self.tree_structure生成各级类属性
+- `tree2dict_abbr`获取所有级属性的缩写
+- `tree2dict_full`获取所有级属性的全称
+
+## RPN_Compiler
+### 核心功能：依据数据年份编译输入的算子
+- 初始化compiler = RPN_Compiler(year_lst)后直接使用compiler.compile(tree)编译算子数
+
+### 具体方法
+-  `extract_op(self, expression)`：提取表达式中的op
+
+- `add_op_class(self, op)`：根据算子的名称返回op的类路径。
+
+- `replace_primities(self, rpn)`：替换rpn中的算子为类路径
+
+- `replace_D_tensor(self, rpn)`：替换rpn中的 `D_tensor`
+
+- `compile_module1(self, rpn, D_tensor: [torch.Tensor])`：日期数据的编译模块
+
+- `compile_module2(self, rpn, D_tensor: [torch.Tensor])`：分钟数据的编译模块
+
+-  `adjust_memorizer(self, deap_primitive, string_memorizer)`
+
+- `compile(self, rpn)`：编译算子
+  - 根据算子类型调整`string_memorizer`。
+  - 根据 `D_tensor` 调用 `compile_module1` 或 `compile_module2` 执行计算。
+- 返回最终的计算结果。
 
 
-### RPN_Parser
->核心函数：
-- `tree2str(tree)`：将树结构转换为字符串表示形式
-- `tree2dict()`：解析为字典，值为各个层次的缩写
-- `plot_tree(node=None, level=0)`：递归打印树结构，按层级显示节点标签。
-- `get_abbrnsub(ac_tree, substr, flag=0, count=0)`：递归获取树的缩写及子树，并返回缩写、子树和计数器。
-- `get_tree_depth(tree)`：获取树的深度，返回树的最大深度。
-
-- `get_tree_structure()`：生成并返回树的结构。
-- 
-- `parse_from_the_outside_in()`：占位函数，暂无实现。
-- `parse_from_the_inside_out()`：占位函数，暂无实现。
-- `parse_tree()`：解析并构建树的不同层次结构，存储到self.subtree等属性中
-- `argnorm(seed_str)`：将种子字符串中的参数名称转换为标准的“ARG”格式。
 
 
+# ToolsGA包
+## Acyclic_Tree
+### 核心功能：
+- 由rpn字符串创建Acyclic_Tree对象, self.node记载嵌套的Acyclic_Tree,self.root_node记载根部的primitive，self.abbreviation记载该树的缩写
+### 具体方法
+- `parse_deap_str(deap_str, pset)`：将DEAP字符串转换为Acyclic_Tree结构，并构建树的节点信息。
+- `build_tree(primitive_tree)`：递归构建Acyclic_Tree树
+- `extract_string(s)`：提取最外层括号内的字符串
 
-
-### Acyclic_Tree
-- `__init__(deap_str, pset)`：初始化Acyclic_Tree对象，解析DEAP字符串并构建树结构。
-- `parse_deap_str(deap_str, pset)`：将DEAP字符串转换为树结构，并构建树的节点信息。
-- `build_tree(primitive_tree)`：递归构建树，处理根节点和子树。
-- `extract_string(s)`：解析字符串，提取括号内的子树结构。
+## change_name方法:为population中的ARG terminal更名为前一树结构/日频分钟频数据
 
 ## OrganAbstractClass模块
 - Organ类为所有操作符的基类，定义了操作符的输入输出类型，以及操作符的参数
