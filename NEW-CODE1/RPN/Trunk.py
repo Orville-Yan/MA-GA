@@ -4,7 +4,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
 
-from OrganAbstractClass import *
+from RPN.OrganAbstractClass import *
 
 class Trunk(Organ):
     def __init__(self, M_Root: list[str], D_Root: list[str], TypeC: list[str],TypeD: list[str], ind_str: str):

@@ -5,7 +5,7 @@ parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 sys.path.append(parent_dir_path)
 
 
-from OrganAbstractClass import *
+from RPN.OrganAbstractClass import *
 
 class SubtreeWithMask(Organ):
     def __init__(self, trunk:list[str], branch:list[str]):

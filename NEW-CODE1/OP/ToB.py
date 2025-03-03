@@ -19,16 +19,6 @@ class OP_B2B:
                           ]
 
     @staticmethod
-                   'OP_BF2B']
-
-
-class OP_B2B:
-    def __init__(self):
-        self.func_list = ['M_ignore_wobble', 'M_cs_rank', 'M_cs_scale', 'M_cs_zscore', 'M_at_abs', 'M_cs_demean',
-                          'M_cs_winsor',
-                          ]
-
-    @staticmethod
     def M_ignore_wobble(x, window_size=5):
         """
         将开盘前五分钟和收盘前五分钟的数据变成nan。

@@ -19,19 +19,18 @@ class BK_Algo:  # Bron-Kerbosch Algo
 
 
 class FactorIntoStorage(RPN_Compiler):
-    def __init__(self, new_factor: list):
-        super().__init__()
+    def __init__(self, new_factor: list,year_lst:list):
+        super().__init__(year_lst)
         self.storage_path = Config.storage_path
         self.new_factor = new_factor
 
     def get_exist_factor(self):
-        if self.storage_path:
-            file_path = os.path.join(self.storage_path, 'factor_storage.xlsx')
-            file = pd.read_excel(file_path)
-            existing_factors = list(file['tree'])
+        if os.path.exists(self.storage_path):
+            self.factor_storage = pd.read_excel(self.storage_path)
+            self.exist_factor = list(self.factor_storage['tree'])
         else:
-            raise ValueError("存储路径未定义")
-        self.exist_factor = existing_factors
+            self.factor_storage = pd.DataFrame(columns = ['tree','in_sample','out_sample','annual_yield','trunk','root','seed','branch','subtree'])
+            self.exist_factor = []
 
     def greedy_algo(self):
         selected_factors = []
@@ -75,12 +74,7 @@ class FactorIntoStorage(RPN_Compiler):
 
     def store_factors(self):
         self.add_factor = self.bk_factor
-        # factor_storage = pd.DataFrame(columns = ['tree','in_sample','out_sample','annual_yield','trunk','root','seed','branch','subtree'])
-        if self.storage_path:
-            file_path = os.path.join(self.storage_path, 'factor_storage.xlsx')
-            factor_storage = pd.read_excel(file_path)
-        else:
-            raise ValueError("存储路径未定义")
+        factor_storage = self.factor_storage
 
         def tree2lst(tree):
             if type(tree) == list:
@@ -100,14 +94,14 @@ class FactorIntoStorage(RPN_Compiler):
             subtrees = tree2lst(parser.subtree['tree_mode'])
             factor_storage.loc[factor_storage.shape[0] + 1] = {'tree': tree, 'trunk': trunks, 'root': roots,
                                                                'seed': seeds, 'branch': branches, 'subtree': subtrees}
-        factor_storage.to_excel(file_path)
+        factor_storage.to_excel(self.storage_path)
 
 
 if __name__ == "__main__":
     producer = RPN_Producer()
     producer.run()
-    FIS = FactorIntoStorage(producer.tree)
+    FIS = FactorIntoStorage(producer.tree,[2016])
     FIS.get_exist_factor()
     FIS.bk_algo()
-    FIS.store_factors()
+    # FIS.store_factors()
 

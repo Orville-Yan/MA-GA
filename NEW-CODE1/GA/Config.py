@@ -1,6 +1,6 @@
 class FIS_Config:
     similarity_threhold = 0.6
-    storage_path = r'D:\运行文档\NFE遗传算法项目\MA-GA'
+    storage_path = r'D:\运行文档\NFE遗传算法项目\MA-GA\factor_storage.xlsx'
 
 import torch
 import os

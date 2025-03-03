@@ -1,15 +1,11 @@
 import sys
-import os
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
-sys.path.append(parent_dir_path)
-
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
 import os
 import pandas as pd
 import numpy as np
 import torch
-from datetime import datetime
+import datetime
 from OP import *
 from scipy.io import loadmat
 import json
@@ -51,16 +47,7 @@ class Interface():
         filtered_files = [file for file in files if pattern.search(file)]
         return sorted(filtered_files)
     
-    @staticmethod
-    def get_pct_change(close:torch.tensor)-> torch.tensor:
-        p = close / close.shift(1)
-        return p
 
-    @staticmethod
-    def get_labels(d_o,d_c, freq=5):
-        open = OP_AF2A.D_ts_delay(d_o, -1)
-        close = OP_AF2A.D_ts_delay(d_c, -freq)
-        return close / open - 1
 
 
 
@@ -72,13 +59,13 @@ class BasicReader():
 
     def _TradingDate(self):
         trading_date = loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'TradingDate_Daily.mat'))['TradingDate_Daily']
-        return pd.Series([datetime.strptime(str(d[0]), '%Y%m%d') for d in trading_date])
+        return pd.Series([datetime.datetime.strptime(str(d[0]), '%Y%m%d') for d in trading_date])
 
     def _StockCodes(self):
         code = pd.read_parquet(Config.MUTUAL_STOCK_CODES_PATH)
         return code["StockCodes"].loc[code["Mutual"]].values
     
-    def _clean_data(self) -> torch.tensor:
+    def clean_data(self) -> torch.tensor:
         ListedDate = loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStock_DailyListedDate.mat'))['AllStock_DailyListedDate'][:, self.MutualStockCodes]
         Status = loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStock_DailyStatus.mat'))['AllStock_DailyStatus_use'][:, self.MutualStockCodes]
         ST = loadmat(os.path.join(Config.PARQUET_Daily_PATH, 'AllStock_DailyST.mat'))['AllStock_DailyST'][:, self.MutualStockCodes]
@@ -88,28 +75,32 @@ class BasicReader():
         return clean
 
     def get_daylist(self,year_lst:list[int]) -> list[pd.Timestamp]:
-        trading_dates = self._TradingDate()
+        trading_dates = self.TradingDate
         return list(trading_dates[trading_dates.dt.year.isin(year_lst)])
     
     def get_index(self, year_lst:list[int])->pd.DatetimeIndex:
-        trading_dates = self._TradingDate()
+        trading_dates = self.TradingDate
         return (trading_dates.index[trading_dates.dt.year.isin(year_lst)])
+    def get_index_daily(self, day_lst:list[str])->pd.DatetimeIndex:
+        trading_dates = self.TradingDate
+        return (trading_dates.index[trading_dates.isin(day_lst)])
+    
 
     def tensor2df(self, tensor, year_list:list[int])->pd.DataFrame:
         day_list = self.get_daylist(year_list)
         stock_codes = self._StockCodes()
-        idx = self.get_index(year_list)
-        tensor = tensor[idx]
         df = pd.DataFrame(np.asarray(tensor), index=day_list, columns=stock_codes)
         return df   
 
     
     def adjust(self,data,year_lst,device='cpu')-> torch.Tensor:   
         index = self.get_index(year_lst)
-        clean = self._clean_data()[index]
+        clean = self.clean_data()[index]       
         tensor = torch.tensor(data, dtype=torch.float32, device=device)[index]
         tensor = torch.where(clean | (tensor < 1e-5), float('nan'), tensor)
         return tensor
+    
+
 
 
     
@@ -129,14 +120,11 @@ class ParquetReader(BasicReader):
         high = loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyHigh_dividend.mat'))['AllStock_DailyHigh_dividend'][:, self.MutualStockCodes]
         low = loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyLow_dividend.mat'))['AllStock_DailyLow_dividend'][:, self.MutualStockCodes]
         close = loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyClose_dividend.mat'))['AllStock_DailyClose_dividend'][:, self.MutualStockCodes]
-        return [open, high, low, close]
-    
-    def GetVolume(self):
-        return loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyVolume.mat'))['AllStock_DailyVolume'][:, self.MutualStockCodes]
+        volume = loadmat(os.path.join(self.parquet_DailyDataPath, 'AllStock_DailyVolume.mat'))['AllStock_DailyVolume'][:, self.MutualStockCodes]
+        return open, high, low, close, volume
     
     def get_Day_data(self,year_lst: list[int])-> list[torch.Tensor]:
-        D_O, D_H, D_L, D_C = self.GetOHLC()
-        D_V = self.GetVolume()
+        D_O, D_H, D_L, D_C, D_V = self.GetOHLC()
         return [self.adjust(D_O,year_lst), self.adjust(D_H, year_lst), self.adjust(D_L, year_lst), self.adjust(D_C, year_lst), self.adjust(D_V, year_lst)]
 
     def read_data_by_col(self, col: str, year_lst: list[int]) -> torch.Tensor:
@@ -158,7 +146,9 @@ class ParquetReader(BasicReader):
         dict = torch.load(os.path.join(Config.DATA_PATH,'dict.pt'), weights_only=False)
         w = pd.to_datetime(dict['index']).year.isin(year_lst)
         return barra[w][:, self.MutualStockCodes]
-    
+
+
+
 class MmapReader(BasicReader):
     def __init__(self,  download = False, DailyDataPath: str = Config.MMAP_Daily_PATH, MinuteDataPath: str = Config.MMAP_Minute_PATH, BarraPath: str = Config.MMAP_BARRA_PATH, DictPath: str = Config.PARQUET_DICT_PATH, device: str = 'cpu'):
         if download:
@@ -196,6 +186,7 @@ class MmapReader(BasicReader):
             start += tensor_read.shape[0]
 
         return D_O, D_H, D_L, D_C, D_V
+    
 
     def get_Minute_data(self, year_lst: list[int]):
         day_len = 0
@@ -286,6 +277,41 @@ class MmapReader(BasicReader):
                              mode='w+',
                              shape=curr_data.shape)
             mmap[:] = curr_data
+    def get_labels(self, time_lst, freq=5):
+        if type(time_lst[0]) == int:
+            d_o = self.get_Day_data(time_lst)[0]
+            d_c = self.get_Day_data(time_lst)[3]
+        elif type(time_lst[0]) == pd.Timestamp:
+            d_o = []
+            d_c = []
+            year_group = []
+            day_lst = []
+            first_year = time_lst[0].year
+            for day in time_lst:
+                if day.year == first_year:
+                    year_group.append(day)
+                else:
+                    day_lst.append(year_group)
+                    year_group = [day]
+                    first_year = day.year
+            day_lst.append(year_group)
+            for year_group in day_lst:
+                year = year_group[0].year
+                y_o = self.get_Day_data([year])[0]
+                y_c = self.get_Day_data([year])[3]
+                y_o_index = self.tensor2df(y_o,[year])
+                y_c_index = self.tensor2df(y_c,[year])
+                d_o_year = y_o_index.loc[year_group]
+                d_c_year = y_c_index.loc[year_group]
+                d_o.append(np.array(d_o_year)[0])
+                d_c.append(np.array(d_c_year)[0])
+            d_o = torch.tensor(np.array(d_o, dtype=np.float32), dtype=torch.float32)
+            d_c = torch.tensor(np.array(d_c, dtype=np.float32), dtype=torch.float32)
+        else:
+            raise ValueError("格式错误")
+        open = OP_AF2A.D_ts_delay(d_o, -1)
+        close = OP_AF2A.D_ts_delay(d_c, -freq)
+        return close/open - 1
             
 if __name__ == '__main__':
     # 测试df2tensor
@@ -303,29 +329,30 @@ if __name__ == '__main__':
     # print(f"Time taken: {end - start} seconds")
     # 测试
     reader1 = MmapReader()
+    time_lst = list(reader1.TradingDate[3000:-1000].sample(200))
+    print(reader1.get_labels(time_lst).shape)
     reader2 = ParquetReader()
-    print(reader1.data_shape)
-    # M_O1, M_H1, M_L1, M_C1, M_V1 = reader1.get_Minute_data([2020])
-    # M_O2, M_H2, M_L2, M_C2, M_V2 = reader2.get_Minute_data([2020])
+    M_O1, M_H1, M_L1, M_C1, M_V1 = reader1.get_Minute_data([2020])
+    M_O2, M_H2, M_L2, M_C2, M_V2 = reader2.get_Minute_data([2020])
 
-    # print((torch.nan_to_num(M_O1) == torch.nan_to_num(M_O2)).all())
-    # print((torch.nan_to_num(M_H1) == torch.nan_to_num(M_H2)).all())   
-    # print((torch.nan_to_num(M_L1) == torch.nan_to_num(M_L2)).all())
-    # print((torch.nan_to_num(M_C1) == torch.nan_to_num(M_C2)).all())
-    # print((torch.nan_to_num(M_V1) == torch.nan_to_num(M_V2)).all())
+    print((torch.nan_to_num(M_O1) == torch.nan_to_num(M_O2)).all())
+    print((torch.nan_to_num(M_H1) == torch.nan_to_num(M_H2)).all())   
+    print((torch.nan_to_num(M_L1) == torch.nan_to_num(M_L2)).all())
+    print((torch.nan_to_num(M_C1) == torch.nan_to_num(M_C2)).all())
+    print((torch.nan_to_num(M_V1) == torch.nan_to_num(M_V2)).all())
 
-    # D_O1, D_H1, D_L1, D_C1, D_V1 = reader1.get_Day_data([2020])
-    # D_O2, D_H2, D_L2, D_C2, D_V2 = reader2.get_Day_data([2020])
+    D_O1, D_H1, D_L1, D_C1, D_V1 = reader1.get_Day_data([2020])
+    D_O2, D_H2, D_L2, D_C2, D_V2 = reader2.get_Day_data([2020])
 
-    # print((torch.nan_to_num(D_O1) == torch.nan_to_num(D_O2)).all())
-    # print((torch.nan_to_num(D_H1) == torch.nan_to_num(D_H2)).all())
-    # print((torch.nan_to_num(D_L1) == torch.nan_to_num(D_L2)).all())
-    # print((torch.nan_to_num(D_C1) == torch.nan_to_num(D_C2)).all())
-    # print((torch.nan_to_num(D_V1) == torch.nan_to_num(D_V2)).all())
+    print((torch.nan_to_num(D_O1) == torch.nan_to_num(D_O2)).all())
+    print((torch.nan_to_num(D_H1) == torch.nan_to_num(D_H2)).all())
+    print((torch.nan_to_num(D_L1) == torch.nan_to_num(D_L2)).all())
+    print((torch.nan_to_num(D_C1) == torch.nan_to_num(D_C2)).all())
+    print((torch.nan_to_num(D_V1) == torch.nan_to_num(D_V2)).all())
 
 
-    # B1 = reader1.get_Barra([2020])
-    # B2 = reader2.get_Barra([2020])
+    B1 = reader1.get_Barra([2020])
+    B2 = reader2.get_Barra([2020])
 
-    # print((torch.nan_to_num(B1) == torch.nan_to_num(B2)).all())
+    print((torch.nan_to_num(B1) == torch.nan_to_num(B2)).all())
 

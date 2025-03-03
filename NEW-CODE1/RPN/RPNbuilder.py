@@ -1,16 +1,20 @@
 import sys
-import os
-import networkx as nx
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
-sys.path.append(parent_dir_path)
-
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
 import re
-from ToolsGA import *
-from RPN import *
+from RPN.Seed import *
+from RPN.Root import *
+from RPN.Branch import *
+from RPN.Trunk import *
+from RPN.Subtree import *
+from RPN.Tree import *
+from RPN.OrganAbstractClass import *
+from ToolsGA.DataReader import *
 from tqdm import tqdm
-from OrganAbstractClass import *
+import torch
+import networkx as nx
+from OP.Info import op_info
+import matplotlib.pyplot as plt
 
 
 class RPN_Producer:
@@ -108,14 +112,21 @@ class RPN_Producer:
 
 
 class RPN_Parser:
-    def __init__(self, RPN, pset=general_pset.pset):
-
-        self.rpn = RPN
-        self.pset = pset
-        self.deap_code = gp.PrimitiveTree.from_string(RPN, pset)
-        self.tree_structure = None
-        self.tree = None
-
+    def __init__(self, input, pset=general_pset.pset):
+        if type(input) == str:
+            self.rpn = input
+            self.pset = pset
+            self.deap_code = gp.PrimitiveTree.from_string(self.rpn, self.pset)
+            self.tree_structure = Acyclic_Tree(self.rpn, self.pset)
+        if type(input) == Acyclic_Tree:
+            self.tree_structure = input
+        self.parse_tree()
+        self.graph = nx.DiGraph()
+        self.node_counter = {}
+        self.node_labels = {}
+        
+    def get_tree_structure(self):
+        return Acyclic_Tree(self.rpn, self.pset)
     def get_abbrnsub(self, ac_tree, substr, flag=0, count=0):
         flag = max(flag - 1, 0)
         abbr = ac_tree.root_node.name + '('
@@ -151,33 +162,44 @@ class RPN_Parser:
             max_depth = max(max_depth, node_depth)
         return max_depth + 1
 
-    def tree2str(self, tree):
+    def tree2str(self,tree):
         depth = self.get_tree_depth(tree)
         abbr, _, _ = self.get_abbrnsub(tree, '', depth)
         return abbr
-
-    def get_tree_structure(self):
-        self.tree_structure = Acyclic_Tree(self.rpn, self.pset)
-        return self.tree_structure
-
-    def plot_tree(self, node=None, level=0):
-        if self.tree_structure is None:
-            self.get_tree_structure()
-
-        if node is None:
-            node = self.tree_structure
-
-        # 打印当前节点
-        indent = "    " * level
-        node_label = node.root_node.name if isinstance(node.root_node, gp.Primitive) else node.root_node.value
-        print(f"{indent}{node_label}")
-
-        # 递归打印子节点
+    
+    def tree2lst(self,tree):
+        if type(tree) == list:
+            return [self.tree2str(x) for x in tree]
+        else:
+            return self.tree2str(tree)
+    def get_graph(self, node,parent=None):
+        root = node.root_node.name
+        root = self.get_unique_id(root)
+        self.graph.add_node(root)
+        print(root)
+        if parent:
+            self.graph.add_edge(parent,root)
         for child in node.nodes:
             if isinstance(child, Acyclic_Tree):
-                self.plot_tree(child, level + 1)
+                self.get_graph(child,root)
             else:
-                print(f"    " * (level + 1) + str(child.value))
+                node_name = child.value
+                node_name = self.get_unique_id(node_name)
+                self.graph.add_node(node_name)
+                self.graph.add_edge(root,node_name)
+    def get_unique_id(self,name):
+        self.node_counter[name] = self.node_counter.get(name,0) + 1
+        freq = self.node_counter[name]
+        unique_id = f'{name}_{freq - 1}'
+        self.node_labels[unique_id] = name
+        return unique_id
+    def plot_tree(self):
+        self.get_graph(self.tree_structure)
+        plt.figure(figsize=(30, 20))
+        pos = nx.nx_agraph.graphviz_layout(self.graph, prog="dot")  # 使用 Graphviz 布局
+        nx.draw(self.graph, pos,labels = self.node_labels, with_labels=True, node_color="lightblue", node_size=2000, font_size=12, edge_color="gray")
+        plt.show()
+
 
     def parse_tree(self):
         abbr_tree, sub_tree, _ = self.get_abbrnsub(self.tree_structure, 'subtree')
@@ -277,9 +299,7 @@ class RPN_Parser:
             seed_str = seed_str.replace(value, key)
         return seed_str
 
-    def tree2dict(self):
-        if not self.tree:
-            self.parse_tree()
+    def tree2dict_abbr(self):
         self.tree_dict = {
             'tree': [self.tree['abbreviation']],
             'subtree': [self.subtree['abbreviation']],
@@ -289,7 +309,16 @@ class RPN_Parser:
             'seed': [self.argnorm(seed) for seed in self.seed['abbreviation']]
         }
         return self.tree_dict
-
+    def tree2dict_full(self):
+        full_dict = {
+            'tree': self.tree2lst(self.tree['tree_mode']),
+            'subtree': self.tree2lst(self.subtree['tree_mode']),
+            'branch': self.tree2lst(self.branch['tree_mode']),
+            'trunk': self.tree2lst(self.trunk['tree_mode']),
+            'root': self.tree2lst(self.root['tree_mode']),
+            'seed': self.tree2lst(self.seed['tree_mode'])
+        }
+        return full_dict 
 
 class RPN_Compiler:
     def __init__(self, year_list, device=torch.device("cuda")):
@@ -392,7 +421,7 @@ class RPN_Compiler:
         for i in range(len(D_tensor)):
             locals()[f'D_tensor_all{i}'] = D_tensor[i]
 
-        template = torch.full((len(self.day_list), len(self.data_reader.DailyDataReader.StockCodes)), float('nan'))
+        template = torch.full((len(self.day_list), len(self.data_reader.StockCodes)), float('nan'))
         for i, day in tqdm(enumerate(self.day_list)):
             M_O, M_H, M_L, M_C, M_V = self.data_reader.get_Minute_data_daily(day)
             M_O, M_H, M_L, M_C, M_V = [i.to(self.device) for i in [M_O, M_H, M_L, M_C, M_V]]
@@ -456,12 +485,48 @@ if __name__ == "__main__":
     # 测试RPN_Producer类
     producer = RPN_Producer()
     producer.run()
-    # print("生成的树：", producer.tree[0])
-    # print(producer.subtree[0])
+    print("生成的树：", producer.tree[0])
 
-    # # 测试RPN_Compiler类
+    
+
     # parser = RPN_Parser(producer.tree[0])
+    atree = Acyclic_Tree(producer.tree[0],general_pset.pset)
+    parser = RPN_Parser(atree)
 
+    # tree_structure = parser.tree_structure
+
+    # print("Root Node:")
+    # print(tree_structure.root_node.name)
+
+    # print("Nodes (Each node is either an Acyclic_Tree instance or a value):")
+    # print([node if isinstance(node, Acyclic_Tree) else node for node in tree_structure.nodes])
+
+    # print("Tree Structure:")
+    # print(parser.tree)
+
+    # print("Subtree:")
+    # print(parser.subtree)
+
+    # print("Branch:")
+    # print(parser.branch)
+
+    # print("Trunk:")
+    # print(parser.trunk)
+
+    # print("Root:")
+    # print(parser.root)
+
+    # print("Seed:")
+    # print(parser.seed)
+
+    # print("Tree to Abbreviation Dict:")
+    # print(parser.tree2dict_abbr())
+
+    # print("Tree to Full Dict:")
+    # print(parser.tree2dict_full())
+
+    print("Plotting the Tree:")
+    parser.plot_tree()
 
     # # compiler.prepare_data([2020])  # 假设准备2020年的数据
     # # compiled_func = compiler.compile(producer.tree[0])  # 编译生成的树中的第一个RPN表达式
@@ -485,20 +550,10 @@ if __name__ == "__main__":
     #             print(f"  Terminal: {terminal}")
 
 
-    # # print_primitives(parser.pset)
-    # # print_terminals(parser.pset)
-    # # print('####',type(parser.deap_code))
-    # tree_structure = parser.get_tree_structure()
+    # print_primitives(parser.pset)
+    # print_terminals(parser.pset)
+    # print('####',type(parser.deap_code))
 
-    # # 输出树结构
-    # # print("Root Node:", tree_structure.root_node.name)
-    # # print("Nodes:", [node if isinstance(node, Acyclic_Tree) else node for node in tree_structure.nodes])
-    # parser.plot_tree()
-    # parser.parse_tree()
-    # print(parser.tree)
-    # print(parser.subtree)
-    # print(parser.branch)
-    # print(parser.trunk)
-    # print(parser.root)
-    # print(parser.seed)
-    # print(parser.tree2str(parser.tree['tree_mode']))
+    # 输出树结构
+    # print("Root Node:", tree_structure.root_node.name)
+    # print("Nodes:", [node if isinstance(node, Acyclic_Tree) else node for node in tree_structure.nodes])
