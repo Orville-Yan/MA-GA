@@ -176,7 +176,6 @@ class RPN_Parser:
         root = node.root_node.name
         root = self.get_unique_id(root)
         self.graph.add_node(root)
-        print(root)
         if parent:
             self.graph.add_edge(parent,root)
         for child in node.nodes:
