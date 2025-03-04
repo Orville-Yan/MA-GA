@@ -302,8 +302,8 @@ class RPN_Parser:
         self.tree_dict = {
             'tree': [self.tree['abbreviation']],
             'subtree': [self.subtree['abbreviation']],
-            'branch': self.branch['abbreviation'],
             'trunk': self.trunk['abbreviation'],
+            'branch': self.branch['abbreviation'],
             'root': self.root['abbreviation'],
             'seed': [self.argnorm(seed) for seed in self.seed['abbreviation']]
         }
@@ -312,12 +312,43 @@ class RPN_Parser:
         full_dict = {
             'tree': self.tree2lst(self.tree['tree_mode']),
             'subtree': self.tree2lst(self.subtree['tree_mode']),
-            'branch': self.tree2lst(self.branch['tree_mode']),
             'trunk': self.tree2lst(self.trunk['tree_mode']),
+            'branch': self.tree2lst(self.branch['tree_mode']),
             'root': self.tree2lst(self.root['tree_mode']),
             'seed': self.tree2lst(self.seed['tree_mode'])
         }
         return full_dict 
+    @staticmethod
+    def dict2str(d0: dict):
+        d = {key: value[:] for key, value in d0.items() if value}
+        def expand(expr):
+            args = [arg for arg in d.keys() if f"{arg}_ARG" in expr]
+            for arg in reversed(args):
+                for i in reversed(range(len(d[arg]))): 
+                    expr = expr.replace(f"{arg}_ARG{i}", d[arg][i])
+            return expr
+        map = {
+            'ARG0': 'D_O',
+            'ARG1': 'D_C',
+            'ARG2': 'D_H',
+            'ARG3': 'D_L',
+            'ARG4': 'D_V',
+            'ARG5': 'M_O',
+            'ARG6': 'M_C',
+            'ARG7': 'M_H',
+            'ARG8': 'M_L',
+            'ARG9': 'M_V'
+            }
+        for key, value in reversed(map.items()):
+            seeds = [seed.replace(key,value) for seed in d['seed']]
+            d['seed'] = seeds
+        for key in reversed(d.keys()):
+            d[key] = [expand(expr) for expr in d[key]]
+        return d["tree"]
+
+
+
+
 
 class RPN_Compiler:
     def __init__(self, year_list, device=torch.device("cuda")):
@@ -485,12 +516,15 @@ if __name__ == "__main__":
     producer = RPN_Producer()
     producer.run()
     print("生成的树：", producer.tree[0])
+    deap_str = producer.tree[0]
 
     
 
-    # parser = RPN_Parser(producer.tree[0])
-    atree = Acyclic_Tree(producer.tree[0],general_pset.pset)
-    parser = RPN_Parser(atree)
+    parser = RPN_Parser(deap_str)
+    result = RPN_Parser.dict2str(parser.tree2dict_abbr())[0]
+    print(deap_str == result)
+    # atree = Acyclic_Tree(producer.tree[0],general_pset.pset)
+    # parser = RPN_Parser(atree)
 
     # tree_structure = parser.tree_structure
 
@@ -524,8 +558,8 @@ if __name__ == "__main__":
     # print("Tree to Full Dict:")
     # print(parser.tree2dict_full())
 
-    print("Plotting the Tree:")
-    parser.plot_tree()
+    # print("Plotting the Tree:")
+    # parser.plot_tree()
 
     # # compiler.prepare_data([2020])  # 假设准备2020年的数据
     # # compiled_func = compiler.compile(producer.tree[0])  # 编译生成的树中的第一个RPN表达式
