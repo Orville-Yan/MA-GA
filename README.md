@@ -1,4 +1,5 @@
 # 备注
+- 本项目只需要看NEWCODE1这个文件
 - 项目推进见飞书文档 https://x1rzpzd8gc3.feishu.cn/wiki/Flozw2hg9iXrzKkf1JLc3YQ1nKc
 - OLDCODE里面加了G3GP这个文件，是遗传算法的主要框架，大家可以从这里面看如何添加Terminal和Primitives。
 
